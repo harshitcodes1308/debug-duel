@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import Link from 'next/link';
 import { 
   Play, Users, Award, Trophy, Zap, 
-  Calendar, History, ShieldAlert, Sparkles, Flame 
+  Calendar, History, ShieldAlert, Sparkles, Flame,
+  Swords, UserPlus, Copy, Check
 } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 
 interface LeaderboardEntry {
   id: string;
@@ -43,6 +45,114 @@ export default function Dashboard() {
   const [claiming, setClaiming] = useState(false);
   const [claimMessage, setClaimMessage] = useState('');
   const [gameCategory, setGameCategory] = useState<'coders' | 'uiux' | 'growth'>('coders');
+
+  // Friends System states
+  const [friends, setFriends] = useState<any[]>([]);
+  const [friendKeyInput, setFriendKeyInput] = useState('');
+  const [addingFriend, setAddingFriend] = useState(false);
+  const [addFriendError, setAddFriendError] = useState('');
+  const [addFriendSuccess, setAddFriendSuccess] = useState('');
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  // Challenge Modal states
+  const [challengeFriend, setChallengeFriend] = useState<any | null>(null);
+  const [challengeLang, setChallengeLang] = useState<'javascript' | 'python' | 'java'>('javascript');
+  const [challengeDifficulty, setChallengeDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [challengeBet, setChallengeBet] = useState(50);
+  const [challengeError, setChallengeError] = useState('');
+  const [challengeLoading, setChallengeLoading] = useState(false);
+
+  const socketRef = useRef<Socket | null>(null);
+
+  // Initialize socket for invites
+  useEffect(() => {
+    if (!user) return;
+    const socket = io('http://localhost:5001');
+    socketRef.current = socket;
+
+    socket.emit('register_user', { userId: user.id });
+
+    socket.on('invite_sent', ({ duelId }) => {
+      window.location.href = `/duel/lobby/${duelId}`;
+    });
+
+    socket.on('invite_failed', ({ error }) => {
+      setChallengeError(error);
+      setChallengeLoading(false);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+
+  const fetchFriends = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`http://localhost:5001/api/friends?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFriends(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch friends list", e);
+    }
+  };
+
+  // Poll friends list
+  useEffect(() => {
+    fetchFriends();
+    const interval = setInterval(fetchFriends, 4000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  const handleAddFriend = async () => {
+    if (!user || !friendKeyInput.trim()) return;
+    setAddingFriend(true);
+    setAddFriendError('');
+    setAddFriendSuccess('');
+    try {
+      const res = await fetch('http://localhost:5001/api/friends/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, friendKey: friendKeyInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAddFriendSuccess(`Added @${data.friend.username}!`);
+        setFriendKeyInput('');
+        fetchFriends();
+      } else {
+        setAddFriendError(data.error || "Failed to add friend.");
+      }
+    } catch (e) {
+      setAddFriendError("Failed to connect to backend.");
+    } finally {
+      setAddingFriend(false);
+    }
+  };
+
+  const handleCopyFriendKey = () => {
+    if (!user?.friendKey) return;
+    navigator.clipboard.writeText(user.friendKey);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const handleSendChallenge = () => {
+    if (!socketRef.current || !challengeFriend || !user) return;
+    setChallengeLoading(true);
+    setChallengeError('');
+
+    socketRef.current.emit('send_duel_invite', {
+      hostId: user.id,
+      hostUsername: user.username,
+      friendId: challengeFriend.id,
+      language: challengeLang,
+      difficulty: challengeDifficulty,
+      betAmount: challengeBet
+    });
+  };
 
   // Fetch Leaderboard
   useEffect(() => {
@@ -165,7 +275,7 @@ export default function Dashboard() {
           </div>
 
           {/* Tab Content */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
             {gameCategory === 'coders' && (
               <>
                 {/* DebugDuel Card */}
@@ -182,6 +292,23 @@ export default function Dashboard() {
                   </div>
                   <Link href="/duel/create" className="btn btn-primary" style={{ alignSelf: 'flex-start', marginTop: '16px' }}>
                     <Play size={16} fill="black" /> Enter Arena
+                  </Link>
+                </div>
+
+                {/* Code KBC Card */}
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px', border: '1px solid rgba(245, 166, 35, 0.2)' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <Trophy size={24} color="var(--accent-amber)" />
+                      <span className="badge badge-js" style={{ borderColor: 'rgba(245, 166, 35, 0.3)', color: 'var(--accent-amber)', background: 'rgba(245, 166, 35, 0.05)' }}>Active</span>
+                    </div>
+                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>Code KBC</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                      Test your coding knowledge. Climb the ladder. Beat your friends.
+                    </p>
+                  </div>
+                  <Link href="/kbc" className="btn btn-success" style={{ alignSelf: 'flex-start', marginTop: '16px' }}>
+                    <Play size={16} fill="black" /> Play Now
                   </Link>
                 </div>
 
@@ -460,6 +587,142 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Friends list panel */}
+        <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="flex-center" style={{ gap: '8px' }}>
+              <Users size={18} color="var(--accent-purple)" />
+              <h2 style={{ fontSize: '18px' }}>Friends List</h2>
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{friends.length} Friends</span>
+          </div>
+
+          {/* Copy Key */}
+          {user.friendKey && (
+            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>YOUR FRIEND KEY</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <code style={{ fontSize: '12px', color: 'var(--accent-blue)', wordBreak: 'break-all' }}>{user.friendKey}</code>
+                <button 
+                  onClick={handleCopyFriendKey}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: copiedKey ? 'var(--accent-green)' : 'var(--text-secondary)' }}
+                >
+                  {copiedKey ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add Friend Input */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                placeholder="Paste Friend Key sk_dd_..."
+                value={friendKeyInput}
+                onChange={(e) => setFriendKeyInput(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#141419',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '13px',
+                  outline: 'none'
+                }}
+              />
+              <button
+                onClick={handleAddFriend}
+                disabled={addingFriend || !friendKeyInput.trim()}
+                className="btn btn-primary"
+                style={{ padding: '8px 14px', fontSize: '13px', borderRadius: '6px' }}
+              >
+                Add
+              </button>
+            </div>
+            {addFriendError && <span style={{ fontSize: '11px', color: 'var(--accent-red)' }}>{addFriendError}</span>}
+            {addFriendSuccess && <span style={{ fontSize: '11px', color: 'var(--accent-green)' }}>{addFriendSuccess}</span>}
+          </div>
+
+          {/* Friends List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+            {friends.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-secondary)', fontSize: '12px', border: '1px dashed var(--border)', borderRadius: '8px' }}>
+                No friends added yet.<br/>Share your key to start dueling!
+              </div>
+            ) : (
+              friends.map((friend) => {
+                const maxElo = Math.max(friend.eloJS, friend.eloPython, friend.eloJava);
+                const statusColors = {
+                  online: 'var(--accent-green)',
+                  ingame: 'var(--accent-amber)',
+                  offline: 'var(--text-secondary)'
+                };
+                const statusLabel = {
+                  online: 'Online',
+                  ingame: 'In Game',
+                  offline: 'Offline'
+                };
+                
+                return (
+                  <div key={friend.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
+                        border: `1px solid ${statusColors[friend.status as 'online'|'ingame'|'offline']}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        position: 'relative'
+                      }}>
+                        {friend.username[0].toUpperCase()}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '-1px',
+                          right: '-1px',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: statusColors[friend.status as 'online'|'ingame'|'offline'],
+                          border: '1px solid var(--bg-primary)'
+                        }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 'bold' }}>@{friend.username}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                          {friend.rank} • {maxElo} ELO
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      {friend.status === 'online' ? (
+                        <button
+                          onClick={() => setChallengeFriend(friend)}
+                          className="btn btn-primary"
+                          style={{ padding: '6px 10px', fontSize: '11px', height: '28px', borderRadius: '4px' }}
+                        >
+                          <Swords size={12} /> Challenge
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                          {statusLabel[friend.status as 'online'|'ingame'|'offline']}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
         {/* Leaderboard panel */}
         <div className="glass-panel" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -582,6 +845,124 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* Challenge Invitation Modal */}
+      {challengeFriend && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, width: '100vw', height: '100vh',
+          background: 'rgba(13, 13, 18, 0.85)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'Inter, sans-serif'
+        }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <h2 style={{ fontSize: '22px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Swords size={22} color="var(--accent-purple)" /> Challenge @{challengeFriend.username}
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+              Configure the duel parameters. Both players must wager the specified tokens.
+            </p>
+
+            {challengeError && (
+              <div style={{ background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', borderRadius: '6px', padding: '10px', color: 'var(--accent-red)', fontSize: '12px' }}>
+                {challengeError}
+              </div>
+            )}
+
+            {/* Language */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>LANGUAGE</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                {['javascript', 'python', 'java'].map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setChallengeLang(lang as any)}
+                    className={`btn ${challengeLang === lang ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ height: '36px', fontSize: '12px', textTransform: 'capitalize' }}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Difficulty */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>DIFFICULTY</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                {['easy', 'medium', 'hard'].map((diff) => (
+                  <button
+                    key={diff}
+                    type="button"
+                    onClick={() => setChallengeDifficulty(diff as any)}
+                    className={`btn ${
+                      challengeDifficulty === diff 
+                        ? (diff === 'easy' ? 'btn-success' : diff === 'medium' ? 'btn-primary' : 'btn-danger') 
+                        : 'btn-secondary'
+                    }`}
+                    style={{
+                      height: '36px',
+                      fontSize: '12px',
+                      textTransform: 'capitalize',
+                      background: challengeDifficulty === diff && diff === 'medium' ? 'var(--accent-amber)' : undefined,
+                      borderColor: challengeDifficulty === diff && diff === 'medium' ? 'var(--accent-amber)' : undefined,
+                      color: challengeDifficulty === diff && diff !== 'hard' ? 'black' : 'white'
+                    }}
+                  >
+                    {diff}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bet Amount */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>WAGER BET (TOKENS)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
+                {[25, 50, 100, 250].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setChallengeBet(val)}
+                    className={`btn ${challengeBet === val ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ height: '36px', fontSize: '12px' }}
+                    disabled={val > user.tokens}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={handleSendChallenge}
+                disabled={challengeLoading}
+                className="btn btn-success"
+                style={{ flex: 1, height: '44px' }}
+              >
+                {challengeLoading ? "Sending invite..." : "Send Invitation"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setChallengeFriend(null); setChallengeError(''); }}
+                disabled={challengeLoading}
+                className="btn btn-secondary"
+                style={{ flex: 1, height: '44px' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

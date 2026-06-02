@@ -14,6 +14,7 @@ export interface UserProfile {
   currentStreak: number;
   bestStreak: number;
   rank: string;
+  friendKey?: string;
 }
 
 export interface Bug {
