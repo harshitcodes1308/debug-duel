@@ -8,6 +8,7 @@ export interface UserProfile {
   eloJS: number;
   eloPython: number;
   eloJava: number;
+  eloUIUX: number;
   totalWins: number;
   totalDuels: number;
   currentStreak: number;

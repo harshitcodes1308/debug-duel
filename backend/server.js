@@ -206,6 +206,7 @@ app.post('/api/user/sync', async (req, res) => {
           eloJS: 1000,
           eloPython: 1000,
           eloJava: 1000,
+          eloUIUX: 1000,
           rank: "Bug Hunter"
         }
       });
@@ -268,10 +269,11 @@ app.get('/api/profile/:username', async (req, res) => {
 
 // Leaderboard Top 50
 app.get('/api/leaderboard', async (req, res) => {
-  const { language } = req.query; // "javascript" | "python" | "java"
+  const { language } = req.query; // "javascript" | "python" | "java" | "uiux"
   let orderByField = "eloJS";
   if (language === "python") orderByField = "eloPython";
   if (language === "java") orderByField = "eloJava";
+  if (language === "uiux") orderByField = "eloUIUX";
 
   try {
     const topPlayers = await prisma.user.findMany({
@@ -286,7 +288,7 @@ app.get('/api/leaderboard', async (req, res) => {
 
 // Create Duel Lobby
 app.post('/api/duel/create', async (req, res) => {
-  const { userId, language, difficulty, betAmount } = req.body;
+  const { userId, gameType = "debug", language, difficulty, betAmount } = req.body;
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -295,25 +297,38 @@ app.post('/api/duel/create', async (req, res) => {
       return res.status(400).json({ error: "Insufficient tokens for this bet." });
     }
 
-    // Select random bug matching parameters
-    const bugsMatching = await prisma.bug.findMany({
-      where: { language, difficulty }
-    });
+    let targetColor = null;
+    let newDuelData = {
+      gameType,
+      status: "waiting",
+      betAmount: Number(betAmount),
+    };
 
-    if (bugsMatching.length === 0) {
-      return res.status(404).json({ error: `No bugs found in database for language ${language} and difficulty ${difficulty}. Seed your database.` });
+    if (gameType === "color_match") {
+      const r = Math.floor(Math.random() * 256);
+      const g = Math.floor(Math.random() * 256);
+      const b = Math.floor(Math.random() * 256);
+      targetColor = `rgb(${r}, ${g}, ${b})`;
+      newDuelData.targetColor = targetColor;
+      newDuelData.difficulty = "medium";
+    } else {
+      // Select random bug matching parameters
+      const bugsMatching = await prisma.bug.findMany({
+        where: { language, difficulty }
+      });
+
+      if (bugsMatching.length === 0) {
+        return res.status(404).json({ error: `No bugs found in database for language ${language} and difficulty ${difficulty}. Seed your database.` });
+      }
+
+      const randomBug = bugsMatching[Math.floor(Math.random() * bugsMatching.length)];
+      newDuelData.bugId = randomBug.id;
+      newDuelData.language = language;
+      newDuelData.difficulty = difficulty;
     }
 
-    const randomBug = bugsMatching[Math.floor(Math.random() * bugsMatching.length)];
-
     const newDuel = await prisma.duel.create({
-      data: {
-        bugId: randomBug.id,
-        status: "waiting",
-        betAmount: Number(betAmount),
-        language,
-        difficulty
-      }
+      data: newDuelData
     });
 
     // Create participant record for host
@@ -348,7 +363,7 @@ app.get('/api/duel/:id', async (req, res) => {
     if (!duel) return res.status(404).json({ error: "Duel not found" });
 
     // Security check: Remove fixedCode and explanation if not completed
-    if (duel.status !== "completed") {
+    if (duel.status !== "completed" && duel.bug) {
       duel.bug.fixedCode = "";
       duel.bug.explanation = "";
     }
@@ -392,6 +407,16 @@ const FOMO_MESSAGES = [
   "They're close. Can you feel it?",
   "{opponent} slowed down 👀",
   "The gap is closing..."
+];
+
+const COLOR_FOMO_MESSAGES = [
+  "{opponent} is adjusting their sliders...",
+  "{opponent} is 40% confident...",
+  "{opponent} is analyzing the palette...",
+  "{opponent} is fine-tuning the blue level...",
+  "{opponent} is experimenting with green...",
+  "{opponent} has locked in a value...",
+  "{opponent} is double-checking their guess..."
 ];
 
 io.on('connection', (socket) => {
@@ -462,18 +487,27 @@ io.on('connection', (socket) => {
             }
           });
 
-          // Fetch bug solution securely hidden in code
-          const secureBug = { ...updatedDuel.bug };
-          secureBug.fixedCode = "";
-          secureBug.explanation = "";
+          if (updatedDuel.gameType === 'color_match') {
+            io.to(`duel:${duelId}`).emit('duel_started', {
+              targetColor: updatedDuel.targetColor,
+              startTime: Date.now()
+            });
+          } else {
+            // Fetch bug solution securely hidden in code
+            const secureBug = updatedDuel.bug ? { ...updatedDuel.bug } : null;
+            if (secureBug) {
+              secureBug.fixedCode = "";
+              secureBug.explanation = "";
+            }
 
-          io.to(`duel:${duelId}`).emit('duel_started', {
-            bug: secureBug,
-            startTime: Date.now()
-          });
+            io.to(`duel:${duelId}`).emit('duel_started', {
+              bug: secureBug,
+              startTime: Date.now()
+            });
+          }
 
           // Start FOMO Engine interval
-          startFomoEngine(duelId, updatedDuel.participants);
+          startFomoEngine(duelId, updatedDuel.participants, updatedDuel.gameType);
         }, 3000);
       }
     } catch (e) {
@@ -512,6 +546,204 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error(error);
       socket.emit('code_judged', { passed: false, reason: "Verification server error." });
+    }
+  });
+
+  // Submit color guess
+  socket.on('submit_color_guess', async ({ duelId, userId, r, g, b }) => {
+    try {
+      const duel = await prisma.duel.findUnique({
+        where: { id: duelId },
+        include: {
+          participants: { include: { user: true } }
+        }
+      });
+
+      if (!duel || duel.status !== 'active') {
+        socket.emit('color_guess_submitted', { success: false, reason: "Duel is not active." });
+        return;
+      }
+
+      // Parse target color: e.g. "rgb(120, 80, 200)"
+      const targetMatch = duel.targetColor.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+      if (!targetMatch) {
+        socket.emit('color_guess_submitted', { success: false, reason: "Invalid target color format." });
+        return;
+      }
+
+      const tr = parseInt(targetMatch[1]);
+      const tg = parseInt(targetMatch[2]);
+      const tb = parseInt(targetMatch[3]);
+
+      // Calculate score based on Euclidean distance
+      const distance = Math.sqrt(Math.pow(r - tr, 2) + Math.pow(g - tg, 2) + Math.pow(b - tb, 2));
+      const maxDistance = Math.sqrt(Math.pow(255, 2) * 3); // ~441.67
+      const score = Math.max(0, Math.round(1000 * (1 - (distance / maxDistance))));
+
+      const submittedColor = `rgb(${r}, ${g}, ${b})`;
+      const submitTime = Math.round((Date.now() - new Date(duel.startedAt).getTime()) / 1000);
+
+      // Save user submission
+      await prisma.duelParticipant.updateMany({
+        where: { duelId, userId },
+        data: {
+          submittedColor,
+          colorScore: score,
+          submitTime
+        }
+      });
+
+      // Notify user that guess is submitted
+      socket.emit('color_guess_submitted', { success: true, score, submittedColor });
+
+      // Notify opponent
+      socket.to(`duel:${duelId}`).emit('opponent_submitted', { message: "Your opponent has locked in their color guess!" });
+
+      // Check if both participants have submitted
+      const updatedDuel = await prisma.duel.findUnique({
+        where: { id: duelId },
+        include: {
+          participants: true
+        }
+      });
+
+      const allSubmitted = updatedDuel.participants.every(p => p.submittedColor !== null);
+      if (allSubmitted) {
+        // Stop FOMO
+        stopFomoEngine(duelId);
+
+        // Determine winner
+        const p1 = updatedDuel.participants[0];
+        const p2 = updatedDuel.participants[1];
+
+        let winnerId = null;
+        let loserId = null;
+        let isDraw = false;
+
+        if (p1.colorScore > p2.colorScore) {
+          winnerId = p1.userId;
+          loserId = p2.userId;
+        } else if (p2.colorScore > p1.colorScore) {
+          winnerId = p2.userId;
+          loserId = p1.userId;
+        } else {
+          // Tiebreaker: faster submitTime
+          if (p1.submitTime < p2.submitTime) {
+            winnerId = p1.userId;
+            loserId = p2.userId;
+          } else if (p2.submitTime < p1.submitTime) {
+            winnerId = p2.userId;
+            loserId = p1.userId;
+          } else {
+            isDraw = true;
+          }
+        }
+
+        let eloChanges = {};
+        let tokenChanges = {};
+
+        if (!isDraw && winnerId && loserId) {
+          const winnerUser = await prisma.user.findUnique({ where: { id: winnerId } });
+          const loserUser = await prisma.user.findUnique({ where: { id: loserId } });
+
+          if (winnerUser && loserUser) {
+            // ELO UIUX calculation
+            const ratingW = winnerUser.eloUIUX || 1000;
+            const ratingL = loserUser.eloUIUX || 1000;
+
+            const changeW = calculateElo(ratingW, ratingL, 1);
+            const changeL = calculateElo(ratingL, ratingW, 0);
+
+            eloChanges[winnerId] = changeW;
+            eloChanges[loserId] = changeL;
+
+            const bet = duel.betAmount;
+            const streakBonus = winnerUser.currentStreak >= 2 ? 15 : 0;
+            // Closeness bonus: add up to 20 tokens based on how close they were (score/50)
+            const closenessBonus = Math.round(p1.userId === winnerId ? p1.colorScore / 50 : p2.colorScore / 50); // max 20 tokens
+            const totalBonus = 50 + bet + streakBonus + closenessBonus;
+
+            tokenChanges[winnerId] = totalBonus;
+            tokenChanges[loserId] = -bet;
+
+            // DB Updates: Winner
+            const newStreak = winnerUser.currentStreak + 1;
+            const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
+            await prisma.user.update({
+              where: { id: winnerId },
+              data: {
+                eloUIUX: { increment: changeW },
+                tokens: { increment: totalBonus },
+                totalWins: { increment: 1 },
+                totalDuels: { increment: 1 },
+                currentStreak: newStreak,
+                bestStreak,
+                rank: getRankTier(winnerUser.eloUIUX + changeW)
+              }
+            });
+
+            // DB Updates: Loser
+            await prisma.user.update({
+              where: { id: loserId },
+              data: {
+                eloUIUX: { increment: changeL },
+                tokens: { decrement: bet },
+                totalDuels: { increment: 1 },
+                currentStreak: 0,
+                rank: getRankTier(loserUser.eloUIUX + changeL)
+              }
+            });
+          }
+
+          // Update participants isWinner
+          await prisma.duelParticipant.updateMany({
+            where: { duelId, userId: winnerId },
+            data: { isWinner: true }
+          });
+
+          await prisma.duelParticipant.updateMany({
+            where: { duelId, userId: loserId },
+            data: { isWinner: false }
+          });
+
+          // Update duel
+          await prisma.duel.update({
+            where: { id: duelId },
+            data: {
+              status: "completed",
+              winnerId,
+              endedAt: new Date()
+            }
+          });
+
+        } else {
+          // Draw/No winners (or tie score + time)
+          tokenChanges[p1.userId] = 0;
+          tokenChanges[p2.userId] = 0;
+          eloChanges[p1.userId] = 0;
+          eloChanges[p2.userId] = 0;
+
+          await prisma.duel.update({
+            where: { id: duelId },
+            data: {
+              status: "completed",
+              endedAt: new Date()
+            }
+          });
+        }
+
+        // Broadcast results
+        io.to(`duel:${duelId}`).emit('duel_result', {
+          winnerId,
+          isDraw,
+          eloChanges,
+          tokenChanges
+        });
+      }
+
+    } catch (e) {
+      console.error(e);
+      socket.emit('color_guess_submitted', { success: false, reason: "Server processing error." });
     }
   });
 
@@ -676,7 +908,7 @@ io.on('connection', (socket) => {
       const loserUser = await prisma.user.findUnique({ where: { id: loserId } });
       const winnerUser = winnerId ? await prisma.user.findUnique({ where: { id: winnerId } }) : null;
 
-      const languageKey = duel.language === 'javascript' ? 'eloJS' : duel.language === 'python' ? 'eloPython' : 'eloJava';
+      const languageKey = duel.gameType === 'color_match' ? 'eloUIUX' : (duel.language === 'javascript' ? 'eloJS' : duel.language === 'python' ? 'eloPython' : 'eloJava');
 
       if (loserUser && winnerUser) {
         const ratingW = winnerUser[languageKey];
@@ -698,23 +930,29 @@ io.on('connection', (socket) => {
         await prisma.user.update({
           where: { id: winnerId },
           data: {
-            [languageKey]: { increment: changeW },
+            eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
+            eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
+            eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
+            eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
             tokens: { increment: totalBonus },
             totalWins: { increment: 1 },
             totalDuels: { increment: 1 },
             currentStreak: { increment: 1 },
-            rank: getRankTier(winnerUser[languageKey] + changeW)
+            rank: getRankTier((winnerUser[languageKey] || 1000) + changeW)
           }
         });
 
         await prisma.user.update({
           where: { id: loserId },
           data: {
-            [languageKey]: { increment: changeL },
+            eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
+            eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
+            eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
+            eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
             tokens: { decrement: bet },
             totalDuels: { increment: 1 },
             currentStreak: 0,
-            rank: getRankTier(loserUser[languageKey] + changeL)
+            rank: getRankTier((loserUser[languageKey] || 1000) + changeL)
           }
         });
       }
@@ -754,13 +992,15 @@ io.on('connection', (socket) => {
 });
 
 // FOMO loop helper
-function startFomoEngine(duelId, participants) {
+function startFomoEngine(duelId, participants, gameType = "debug") {
   if (activeDuels.has(duelId)) return;
 
   let progress = {
     [participants[0].userId]: 0,
     [participants[1].userId]: 0
   };
+
+  const messages = gameType === "color_match" ? COLOR_FOMO_MESSAGES : FOMO_MESSAGES;
 
   const intervalId = setInterval(async () => {
     try {
@@ -770,8 +1010,8 @@ function startFomoEngine(duelId, participants) {
 
       // Opponent for each
       // Player A sees message about Player B, Player B sees message about Player A
-      const randMsgA = FOMO_MESSAGES[Math.floor(Math.random() * FOMO_MESSAGES.length)];
-      const randMsgB = FOMO_MESSAGES[Math.floor(Math.random() * FOMO_MESSAGES.length)];
+      const randMsgA = messages[Math.floor(Math.random() * messages.length)];
+      const randMsgB = messages[Math.floor(Math.random() * messages.length)];
 
       // Random progress increment (simulating work)
       progress[p1.userId] = Math.min(95, progress[p1.userId] + Math.floor(Math.random() * 8) + 2);

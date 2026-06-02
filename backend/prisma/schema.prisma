@@ -4,7 +4,8 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
 }
 
 model User {
@@ -15,6 +16,7 @@ model User {
   eloJS         Int      @default(1000)
   eloPython     Int      @default(1000)
   eloJava       Int      @default(1000)
+  eloUIUX       Int      @default(1000)
   totalWins     Int      @default(0)
   totalDuels    Int      @default(0)
   currentStreak Int      @default(0)
@@ -39,13 +41,15 @@ model Bug {
 
 model Duel {
   id           String   @id @default(cuid())
-  bugId        String
-  bug          Bug      @relation(fields: [bugId], references: [id])
+  gameType     String   @default("debug") // "debug" | "color_match"
+  bugId        String?
+  bug          Bug?     @relation(fields: [bugId], references: [id])
   status       String   @default("waiting") // "waiting" | "active" | "completed"
   betAmount    Int      @default(50)
   winnerId     String?
-  language     String
-  difficulty   String
+  language     String?
+  difficulty   String?
+  targetColor  String?  // for color matching game e.g., "rgb(120, 80, 200)"
   startedAt    DateTime?
   endedAt      DateTime?
   createdAt    DateTime @default(now())
@@ -60,6 +64,8 @@ model DuelParticipant {
   user            User     @relation(fields: [userId], references: [id])
   submittedCode   String?
   explanation     String?
+  submittedColor  String?  // for color matching game e.g., "rgb(120, 85, 195)"
+  colorScore      Int?     // score out of 1000
   submitTime      Int?     // seconds from duel start
   explanationScore Int?    // 0-20, AI judged
   isWinner        Boolean  @default(false)
