@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -22,6 +22,10 @@ model User {
   rank          String   @default("Bug Hunter")
   createdAt     DateTime @default(now())
   duels         DuelParticipant[]
+  
+  friendKey     String   @unique @default(cuid())
+  friends       Friendship[] @relation("UserFriends")
+  friendOf      Friendship[] @relation("FriendUsers")
 }
 
 model Bug {
@@ -64,4 +68,15 @@ model DuelParticipant {
   explanationScore Int?    // 0-20, AI judged
   isWinner        Boolean  @default(false)
   progressPercent Int      @default(0) // for FOMO signals
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  user      User     @relation("UserFriends", fields: [userId], references: [id])
+  friend    User     @relation("FriendUsers", fields: [friendId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
 }

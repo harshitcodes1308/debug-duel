@@ -188,6 +188,15 @@ Player explanation: ${playerExplanation}`;
 
 // ==================== REST ENDPOINTS ====================
 
+function generateFriendKey() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let key = 'sk_dd_';
+  for (let i = 0; i < 8; i++) {
+    key += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return key;
+}
+
 // User sync (Login / Register)
 app.post('/api/user/sync', async (req, res) => {
   const { clerkId, username } = req.body;
@@ -206,14 +215,127 @@ app.post('/api/user/sync', async (req, res) => {
           eloJS: 1000,
           eloPython: 1000,
           eloJava: 1000,
-          rank: "Bug Hunter"
+          rank: "Bug Hunter",
+          friendKey: generateFriendKey()
         }
+      });
+    } else if (!user.friendKey || !user.friendKey.startsWith('sk_dd_')) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { friendKey: generateFriendKey() }
       });
     }
     res.json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Database sync failed" });
+  }
+});
+
+// Friends list with live statuses
+app.get('/api/friends', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  try {
+    const friendships = await prisma.friendship.findMany({
+      where: { userId },
+      include: {
+        friend: {
+          select: {
+            id: true,
+            username: true,
+            eloJS: true,
+            eloPython: true,
+            eloJava: true,
+            rank: true,
+            tokens: true
+          }
+        }
+      }
+    });
+
+    const friendsList = await Promise.all(friendships.map(async (f) => {
+      const friend = f.friend;
+      let status = 'offline';
+      
+      if (onlineUsers.has(friend.id)) {
+        status = 'online';
+        // Check if in active duel
+        const activeDuel = await prisma.duelParticipant.findFirst({
+          where: {
+            userId: friend.id,
+            duel: {
+              status: 'active'
+            }
+          }
+        });
+        if (activeDuel) {
+          status = 'ingame';
+        }
+      }
+
+      return {
+        id: friend.id,
+        username: friend.username,
+        eloJS: friend.eloJS,
+        eloPython: friend.eloPython,
+        eloJava: friend.eloJava,
+        rank: friend.rank,
+        status
+      };
+    }));
+
+    res.json(friendsList);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch friends" });
+  }
+});
+
+// Add friend by key
+app.post('/api/friends/add', async (req, res) => {
+  const { userId, friendKey } = req.body;
+  if (!userId || !friendKey) {
+    return res.status(400).json({ error: "Missing userId or friendKey" });
+  }
+
+  try {
+    const friend = await prisma.user.findUnique({
+      where: { friendKey }
+    });
+
+    if (!friend) {
+      return res.status(404).json({ error: "User with this friend key not found." });
+    }
+
+    if (friend.id === userId) {
+      return res.status(400).json({ error: "You cannot add yourself as a friend." });
+    }
+
+    const existing = await prisma.friendship.findFirst({
+      where: {
+        userId,
+        friendId: friend.id
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: "You are already friends with this user." });
+    }
+
+    await prisma.$transaction([
+      prisma.friendship.create({
+        data: { userId, friendId: friend.id }
+      }),
+      prisma.friendship.create({
+        data: { userId: friend.id, friendId: userId }
+      })
+    ]);
+
+    res.json({ success: true, friend: { id: friend.id, username: friend.username } });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to add friend." });
   }
 });
 
@@ -380,6 +502,7 @@ app.get('/api/bugs/random', async (req, res) => {
 // ==================== REAL-TIME WEBSOCKET (SOCKET.IO) ====================
 
 const activeDuels = new Map(); // tracks running state, timers, FOMO loops
+const onlineUsers = new Map(); // userId -> Set of socket.ids
 
 const FOMO_MESSAGES = [
   "{opponent} is typing fast 🔥",
@@ -396,6 +519,153 @@ const FOMO_MESSAGES = [
 
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
+
+  // Register user online
+  socket.on('register_user', ({ userId }) => {
+    if (!userId) return;
+    if (!onlineUsers.has(userId)) {
+      onlineUsers.set(userId, new Set());
+    }
+    onlineUsers.get(userId).add(socket.id);
+    socket.join(`user:${userId}`);
+    console.log(`Socket registered user ${userId}. Total online: ${onlineUsers.size}`);
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    for (const [userId, socketIds] of onlineUsers.entries()) {
+      if (socketIds.has(socket.id)) {
+        socketIds.delete(socket.id);
+        if (socketIds.size === 0) {
+          onlineUsers.delete(userId);
+        }
+        console.log(`Socket disconnected user ${userId}. Total online: ${onlineUsers.size}`);
+        break;
+      }
+    }
+  });
+
+  // Send duel invite
+  socket.on('send_duel_invite', async ({ hostId, hostUsername, friendId, language, difficulty, betAmount }) => {
+    try {
+      const host = await prisma.user.findUnique({ where: { id: hostId } });
+      const friend = await prisma.user.findUnique({ where: { id: friendId } });
+
+      if (!host || !friend) {
+        socket.emit('invite_failed', { error: "User not found." });
+        return;
+      }
+
+      if (host.tokens < betAmount) {
+        socket.emit('invite_failed', { error: `You don't have enough tokens (${host.tokens}) for this bet.` });
+        return;
+      }
+
+      if (friend.tokens < betAmount) {
+        socket.emit('invite_failed', { error: `${friend.username} doesn't have enough tokens (${friend.tokens}) to accept this bet.` });
+        return;
+      }
+
+      if (!onlineUsers.has(friendId)) {
+        socket.emit('invite_failed', { error: `${friend.username} is offline right now.` });
+        return;
+      }
+
+      const bugs = await prisma.bug.findMany({ where: { language, difficulty } });
+      if (bugs.length === 0) {
+        socket.emit('invite_failed', { error: "No bugs found for this language and difficulty." });
+        return;
+      }
+      const bug = bugs[Math.floor(Math.random() * bugs.length)];
+
+      const duel = await prisma.duel.create({
+        data: {
+          bugId: bug.id,
+          status: "waiting",
+          betAmount,
+          language,
+          difficulty,
+          participants: {
+            create: {
+              userId: hostId
+            }
+          }
+        }
+      });
+
+      io.to(`user:${friendId}`).emit('duel_invite_received', {
+        duelId: duel.id,
+        hostId,
+        hostUsername,
+        language,
+        difficulty,
+        betAmount
+      });
+
+      socket.emit('invite_sent', { duelId: duel.id });
+    } catch (e) {
+      console.error(e);
+      socket.emit('invite_failed', { error: "Internal server error creating duel invite." });
+    }
+  });
+
+  // Decline duel invite
+  socket.on('decline_duel_invite', async ({ duelId }) => {
+    try {
+      const duel = await prisma.duel.findUnique({ where: { id: duelId } });
+      if (duel && duel.status === 'waiting') {
+        await prisma.duel.update({
+          where: { id: duelId },
+          data: { status: 'completed' }
+        });
+        io.to(`duel:${duelId}`).emit('duel_invite_declined', { message: "Invitation declined." });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  });
+
+  // Accept duel invite
+  socket.on('accept_duel_invite', async ({ duelId, friendId }) => {
+    try {
+      const duel = await prisma.duel.findUnique({
+        where: { id: duelId },
+        include: { participants: true }
+      });
+
+      if (!duel) {
+        socket.emit('error_message', { message: "Duel not found or expired." });
+        return;
+      }
+
+      if (duel.status !== 'waiting' || duel.participants.length >= 2) {
+        socket.emit('error_message', { message: "Duel is no longer joinable." });
+        return;
+      }
+
+      const friend = await prisma.user.findUnique({ where: { id: friendId } });
+      if (friend.tokens < duel.betAmount) {
+        socket.emit('error_message', { message: "You don't have enough tokens to accept this wager." });
+        return;
+      }
+
+      const isParticipant = duel.participants.some(p => p.userId === friendId);
+      if (!isParticipant) {
+        await prisma.duelParticipant.create({
+          data: {
+            duelId: duel.id,
+            userId: friendId
+          }
+        });
+      }
+
+      socket.emit('invite_accepted_confirm', { duelId });
+      io.to(`duel:${duelId}`).emit('duel_invite_accepted', { duelId });
+    } catch (e) {
+      console.error(e);
+      socket.emit('error_message', { message: "Internal error accepting invite." });
+    }
+  });
 
   // Join lobby
   socket.on('join_duel', async ({ duelId, userId }) => {

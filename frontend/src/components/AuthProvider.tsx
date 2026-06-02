@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useStore, UserProfile } from '@/store/useStore';
 import { useUser, useClerk } from '@clerk/nextjs';
+import { io } from 'socket.io-client';
 
 interface AuthContextType {
   isDevMode: boolean;
@@ -39,6 +40,130 @@ const syncUserWithBackend = async (username: string, clerkId: string, setUser: (
   }
   return null;
 };
+
+function SocketNotificationWrapper({ children }: { children: React.ReactNode }) {
+  const { user } = useStore();
+  const [invite, setInvite] = useState<{
+    duelId: string;
+    hostUsername: string;
+    language: string;
+    difficulty: string;
+    betAmount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = io('http://localhost:5001');
+
+    socket.emit('register_user', { userId: user.id });
+
+    socket.on('duel_invite_received', (data) => {
+      setInvite(data);
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.1); // A5
+          gain.gain.setValueAtTime(0.1, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    });
+
+    socket.on('duel_invite_accepted', ({ duelId }) => {
+      window.location.href = `/duel/lobby/${duelId}`;
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+
+  const handleAccept = () => {
+    if (!invite || !user) return;
+    const socket = io('http://localhost:5001');
+    socket.emit('accept_duel_invite', { duelId: invite.duelId, friendId: user.id });
+    
+    socket.once('invite_accepted_confirm', ({ duelId }) => {
+      socket.disconnect();
+      window.location.href = `/duel/lobby/${duelId}`;
+    });
+    
+    setInvite(null);
+  };
+
+  const handleDecline = () => {
+    if (!invite) return;
+    const socket = io('http://localhost:5001');
+    socket.emit('decline_duel_invite', { duelId: invite.duelId });
+    socket.disconnect();
+    setInvite(null);
+  };
+
+  return (
+    <>
+      {children}
+      {invite && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '360px',
+          background: 'rgba(26, 26, 34, 0.95)',
+          backdropFilter: 'blur(12px)',
+          border: '2px solid var(--accent-purple)',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 8px 32px rgba(139, 92, 246, 0.25)',
+          zIndex: 9999,
+          fontFamily: 'Inter, sans-serif',
+          animation: 'slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}>
+          <style>{`
+            @keyframes slideIn {
+              from { transform: translateY(100px) scale(0.9); opacity: 0; }
+              to { transform: translateY(0) scale(1); opacity: 1; }
+            }
+          `}</style>
+          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#fff', marginBottom: '6px' }}>⚔️ CHALLENGE RECEIVED!</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '18px', marginBottom: '14px' }}>
+            <strong style={{ color: 'var(--accent-blue)' }}>@{invite.hostUsername}</strong> has challenged you to a{' '}
+            <span style={{ textTransform: 'capitalize', fontWeight: '600' }}>{invite.language}</span>{' '}
+            <strong style={{ color: 'var(--accent-amber)' }}>{invite.difficulty}</strong> duel wagering{' '}
+            <strong style={{ color: 'var(--accent-green)' }}>{invite.betAmount}</strong> tokens!
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleAccept}
+              className="btn btn-success"
+              style={{ flex: 1, height: '36px', fontSize: '13px', padding: 0 }}
+            >
+              Accept
+            </button>
+            <button
+              onClick={handleDecline}
+              className="btn btn-secondary"
+              style={{ flex: 1, height: '36px', fontSize: '13px', padding: 0 }}
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 // 1. CLERK AUTH PROVIDER COMPONENT
 function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
@@ -77,7 +202,7 @@ function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ isDevMode: false, loginAsDev, logout, loading: false }}>
-      {children}
+      <SocketNotificationWrapper>{children}</SocketNotificationWrapper>
     </AuthContext.Provider>
   );
 }
@@ -196,7 +321,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ isDevMode: true, loginAsDev, logout, loading: false }}>
-      {children}
+      <SocketNotificationWrapper>{children}</SocketNotificationWrapper>
     </AuthContext.Provider>
   );
 }
