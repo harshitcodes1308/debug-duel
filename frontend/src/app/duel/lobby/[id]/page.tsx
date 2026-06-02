@@ -7,6 +7,82 @@ import Link from 'next/link';
 import { io, Socket } from 'socket.io-client';
 import { Copy, Check, Users, ShieldAlert, Zap, ArrowLeft } from 'lucide-react';
 
+const MOCK_PROFILES = [
+  { username: 'stack_overflow', color: 'var(--accent-blue)' },
+  { username: 'caffeine_dev', color: 'var(--accent-purple)' },
+  { username: 'debugger_x', color: 'var(--accent-amber)' },
+  { username: 'bug_slayer', color: 'var(--accent-red)' },
+  { username: 'binary_beast', color: 'var(--accent-green)' },
+  { username: 'byte_bandit', color: '#ff6b6b' },
+  { username: 'curly_brackets', color: '#4ecdc4' },
+  { username: 'sudo_solve', color: '#ffe66d' }
+];
+
+const playSound = (type: 'tick' | 'match' | 'countdown') => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    
+    switch (type) {
+      case 'tick': {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        gain.gain.setValueAtTime(0.015, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.04);
+        break;
+      }
+      case 'match': {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc1.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+        
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(659.25, ctx.currentTime);
+        osc2.frequency.setValueAtTime(783.99, ctx.currentTime + 0.08);
+        
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc1.start();
+        osc2.start();
+        osc1.stop(ctx.currentTime + 0.35);
+        osc2.stop(ctx.currentTime + 0.35);
+        break;
+      }
+      case 'countdown': {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+        break;
+      }
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+};
+
 export default function DuelLobby() {
   const { id: duelId } = useParams();
   const router = useRouter();
@@ -17,15 +93,19 @@ export default function DuelLobby() {
   const [status, setStatus] = useState<string>('waiting');
   const [error, setError] = useState('');
   
+  // Spinning Slot Machine states
+  const [mockIndex, setMockIndex] = useState(0);
+  const [isSpinning, setIsSpinning] = useState(true);
+  const [realOpponent, setRealOpponent] = useState<any>(null);
+  const [activeOpponent, setActiveOpponent] = useState<any>(null);
+
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     if (!user || !duelId) return;
 
-    // Reset store state on entering new lobby
     resetDuelState();
 
-    // Connect to WebSocket server
     const socket = io('http://localhost:5001');
     socketRef.current = socket;
 
@@ -38,28 +118,29 @@ export default function DuelLobby() {
 
     socket.on('countdown_started', ({ duration }) => {
       setCountdown(duration);
+      playSound('countdown');
       const interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev === null || prev <= 1) {
             clearInterval(interval);
             return 0;
           }
+          playSound('countdown');
           return prev - 1;
         });
       }, 1000);
     });
 
     socket.on('duel_started', ({ bug }) => {
-      // Store current duel data
       setCurrentDuel({
         id: duelId as string,
         bugId: bug.id,
         bug,
         status: 'active',
-        betAmount: 50, // will sync from fetch
+        betAmount: 50,
         language: bug.language,
         difficulty: bug.difficulty,
-        participants: [] // will update inside arena
+        participants: []
       });
       router.push(`/duel/${duelId}`);
     });
@@ -72,6 +153,46 @@ export default function DuelLobby() {
       socket.disconnect();
     };
   }, [user, duelId]);
+
+  // Spinning Reel effect
+  useEffect(() => {
+    if (!isSpinning) return;
+    
+    let delay = 150;
+    let timerId: NodeJS.Timeout;
+    
+    const tick = () => {
+      setMockIndex((prev) => (prev + 1) % MOCK_PROFILES.length);
+      playSound('tick');
+      
+      if (realOpponent) {
+        delay += 100;
+        if (delay >= 600) {
+          setIsSpinning(false);
+          setActiveOpponent(realOpponent);
+          playSound('match');
+          return;
+        }
+      }
+      
+      timerId = setTimeout(tick, delay);
+    };
+    
+    timerId = setTimeout(tick, delay);
+    return () => clearTimeout(timerId);
+  }, [isSpinning, realOpponent]);
+
+  // Sync real opponent
+  useEffect(() => {
+    const opp = participants.find((p: any) => p.userId !== user?.id);
+    if (opp) {
+      setRealOpponent(opp);
+    } else {
+      setRealOpponent(null);
+      setIsSpinning(true);
+      setActiveOpponent(null);
+    }
+  }, [participants, user?.id]);
 
   // Fetch initial details
   const [duelDetails, setDuelDetails] = useState<any>(null);
@@ -220,19 +341,39 @@ export default function DuelLobby() {
             justifyContent: 'center',
             border: '1px solid var(--border)'
           }}>VS</div>
-
           {/* Opponent Player */}
           <div className="glass-panel" style={{
-            background: opponent ? 'rgba(255,255,255,0.02)' : 'rgba(255, 255, 255, 0.01)',
-            borderStyle: opponent ? 'solid' : 'dashed',
+            background: 'rgba(255,255,255,0.02)',
+            borderStyle: 'solid',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '12px',
             padding: '24px 16px',
-            borderColor: opponent ? 'var(--border)' : 'rgba(255,255,255,0.1)'
+            borderColor: activeOpponent && !isSpinning ? 'var(--border)' : 'var(--accent-purple)',
+            boxShadow: activeOpponent && !isSpinning ? 'none' : '0 0 15px rgba(139, 92, 246, 0.15)',
+            position: 'relative',
+            overflow: 'hidden',
+            transition: 'all 0.3s ease'
           }}>
-            {opponent ? (
+            {isSpinning && (
+              <div style={{
+                position: 'absolute',
+                top: 0, left: 0, width: '100%', height: '2px',
+                background: 'linear-gradient(90deg, transparent, var(--accent-purple), transparent)',
+                animation: 'scannerLine 2s infinite linear'
+              }}>
+                <style>{`
+                  @keyframes scannerLine {
+                    0% { transform: translateY(0); opacity: 0.2; }
+                    50% { transform: translateY(140px); opacity: 0.8; }
+                    100% { transform: translateY(0); opacity: 0.2; }
+                  }
+                `}</style>
+              </div>
+            )}
+
+            {activeOpponent && !isSpinning ? (
               <>
                 <div style={{
                   width: '56px',
@@ -244,13 +385,14 @@ export default function DuelLobby() {
                   fontSize: '24px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)'
                 }}>
-                  {opponent.user.username[0].toUpperCase()}
+                  {activeOpponent.user.username[0].toUpperCase()}
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '15px' }}>@{opponent.user.username}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Opponent • {opponent.user.rank}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '15px', color: 'var(--accent-green)' }}>@{activeOpponent.user.username}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>Opponent • {activeOpponent.user.rank}</div>
                 </div>
               </>
             ) : (
@@ -259,16 +401,25 @@ export default function DuelLobby() {
                   width: '56px',
                   height: '56px',
                   borderRadius: '50%',
-                  border: '1px dashed rgba(255,255,255,0.15)',
+                  background: MOCK_PROFILES[mockIndex].color,
+                  color: '#000',
+                  fontWeight: 'bold',
+                  fontSize: '24px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  transition: 'background 0.1s ease',
+                  opacity: 0.6
                 }}>
-                  <Users size={20} color="var(--text-secondary)" style={{ opacity: 0.5 }} />
+                  {MOCK_PROFILES[mockIndex].username[0].toUpperCase()}
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-secondary)' }}>Waiting for challenger...</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>Ready to battle</div>
+                <div style={{ textAlign: 'center', opacity: 0.8 }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                    @{MOCK_PROFILES[mockIndex].username}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                    {realOpponent ? "LOCKING IN MATCH..." : "WAITING FOR FRIEND..."}
+                  </div>
                 </div>
               </>
             )}
@@ -277,7 +428,7 @@ export default function DuelLobby() {
         </div>
 
         {/* Invite Link copy */}
-        {!opponent && (
+        {!realOpponent && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>INVITE YOUR FRIEND</label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -314,7 +465,7 @@ export default function DuelLobby() {
         )}
 
         {/* Back Link */}
-        {!opponent && (
+        {!realOpponent && (
           <Link href="/" style={{
             display: 'inline-flex',
             alignItems: 'center',
