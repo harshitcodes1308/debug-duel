@@ -164,7 +164,7 @@ export default function Dashboard() {
           </div>
 
           {/* Tab Content */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
             {gameCategory === 'coders' && (
               <>
                 {/* DebugDuel Card */}
@@ -181,6 +181,23 @@ export default function Dashboard() {
                   </div>
                   <Link href="/duel/create" className="btn btn-primary" style={{ alignSelf: 'flex-start', marginTop: '16px' }}>
                     <Play size={16} fill="black" /> Enter Arena
+                  </Link>
+                </div>
+
+                {/* Code KBC Card */}
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px', border: '1px solid rgba(245, 166, 35, 0.2)' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <Trophy size={24} color="var(--accent-amber)" />
+                      <span className="badge badge-js" style={{ borderColor: 'rgba(245, 166, 35, 0.3)', color: 'var(--accent-amber)', background: 'rgba(245, 166, 35, 0.05)' }}>Active</span>
+                    </div>
+                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>Code KBC</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                      Test your coding knowledge. Climb the ladder. Beat your friends.
+                    </p>
+                  </div>
+                  <Link href="/kbc" className="btn btn-success" style={{ alignSelf: 'flex-start', marginTop: '16px' }}>
+                    <Play size={16} fill="black" /> Play Now
                   </Link>
                 </div>
 

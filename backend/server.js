@@ -803,7 +803,19 @@ function stopFomoEngine(duelId) {
   }
 }
 
+// ==================== CODE KBC MODULES ====================
+const kbcRouter = require('./routes/kbc');
+const setupKbcSocket = require('./socket/kbc');
+
+// Register Code KBC REST API routes
+app.use('/api/kbc', kbcRouter);
+
+// Register Code KBC Socket.io event handlers
+setupKbcSocket(io);
+// ==========================================================
+
 // Start Server
 server.listen(PORT, () => {
   console.log(`DebugDuel Backend listening on port ${PORT}`);
 });
+
