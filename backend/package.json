@@ -1,0 +1,26 @@
+{
+  "name": "debugduel-backend",
+  "version": "1.0.0",
+  "description": "Backend for DebugDuel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:db-push": "prisma db push"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.11.0",
+    "@prisma/client": "^5.14.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "openai": "^4.47.1",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.2",
+    "prisma": "^5.14.0"
+  }
+}

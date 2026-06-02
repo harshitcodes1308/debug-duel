@@ -1,0 +1,67 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String   @unique
+  username      String   @unique
+  tokens        Int      @default(500)
+  eloJS         Int      @default(1000)
+  eloPython     Int      @default(1000)
+  eloJava       Int      @default(1000)
+  totalWins     Int      @default(0)
+  totalDuels    Int      @default(0)
+  currentStreak Int      @default(0)
+  bestStreak    Int      @default(0)
+  rank          String   @default("Bug Hunter")
+  createdAt     DateTime @default(now())
+  duels         DuelParticipant[]
+}
+
+model Bug {
+  id          String   @id @default(cuid())
+  language    String   // "javascript" | "python" | "java"
+  difficulty  String   // "easy" | "medium" | "hard"
+  title       String
+  brokenCode  String
+  fixedCode   String
+  explanation String
+  category    String   // "logic" | "syntax" | "runtime" | "off-by-one" | "null-ref" | "async"
+  createdAt   DateTime @default(now())
+  duels       Duel[]
+}
+
+model Duel {
+  id           String   @id @default(cuid())
+  bugId        String
+  bug          Bug      @relation(fields: [bugId], references: [id])
+  status       String   @default("waiting") // "waiting" | "active" | "completed"
+  betAmount    Int      @default(50)
+  winnerId     String?
+  language     String
+  difficulty   String
+  startedAt    DateTime?
+  endedAt      DateTime?
+  createdAt    DateTime @default(now())
+  participants DuelParticipant[]
+}
+
+model DuelParticipant {
+  id              String   @id @default(cuid())
+  duelId          String
+  duel            Duel     @relation(fields: [duelId], references: [id])
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  submittedCode   String?
+  explanation     String?
+  submitTime      Int?     // seconds from duel start
+  explanationScore Int?    // 0-20, AI judged
+  isWinner        Boolean  @default(false)
+  progressPercent Int      @default(0) // for FOMO signals
+}
