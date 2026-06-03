@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export interface LadderStep {
   level: number;
@@ -31,22 +31,42 @@ interface PrizeLadderProps {
 }
 
 export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
-  // Translate currentStepIndex (0-14, where 0 is Q1/Level 1) to match PRIZE_LADDER index (0 is Level 15)
   const activeLevelNumber = currentStepIndex + 1;
+  const activeStepRef = useRef<HTMLDivElement | null>(null);
+
+  // Centering scroll after level transitions
+  useEffect(() => {
+    if (activeStepRef.current) {
+      activeStepRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+    }
+  }, [currentStepIndex]);
 
   return (
     <div className="glass-panel" style={{
       width: '100%',
       background: 'rgba(13, 9, 36, 0.5)',
-      borderColor: 'rgba(245, 166, 35, 0.1)',
+      borderColor: 'rgba(245, 166, 35, 0.15)',
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
-      padding: '20px'
+      padding: '20px',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
     }}>
+      <style>{`
+        @keyframes activePulse {
+          0% { box-shadow: 0 0 10px rgba(245, 166, 35, 0.4); border-color: rgba(245, 166, 35, 0.6); }
+          50% { box-shadow: 0 0 20px rgba(245, 166, 35, 0.8); border-color: rgba(245, 166, 35, 1); }
+          100% { box-shadow: 0 0 10px rgba(245, 166, 35, 0.4); border-color: rgba(245, 166, 35, 0.6); }
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
-        <h3 style={{ fontSize: '15px', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+        <h3 style={{ fontSize: '15px', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 'bold' }}>
           XP Prize Ladder
         </h3>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px' }}>
@@ -62,9 +82,10 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: '6px',
-        maxHeight: '420px',
+        maxHeight: '380px',
         overflowY: 'auto',
-        paddingRight: '4px'
+        paddingRight: '4px',
+        scrollBehavior: 'smooth'
       }}>
         {PRIZE_LADDER.map((step) => {
           const isActive = step.level === activeLevelNumber;
@@ -72,8 +93,8 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
 
           // Color themes based on milestones or active state
           let textColor = 'var(--text-secondary)';
-          let bgColor = 'transparent';
-          let borderStyle = '1px solid transparent';
+          let bgColor = 'rgba(255, 255, 255, 0.01)';
+          let borderStyle = '1px solid rgba(255, 255, 255, 0.03)';
 
           if (isActive) {
             textColor = '#000';
@@ -81,8 +102,10 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
             borderStyle = '1px solid var(--accent-amber)';
           } else if (step.isMilestone) {
             textColor = 'var(--accent-amber)';
+            borderStyle = '1px solid rgba(245, 166, 35, 0.15)';
+            bgColor = 'rgba(245, 166, 35, 0.02)';
           } else if (isCleared) {
-            textColor = 'rgba(255, 255, 255, 0.4)';
+            textColor = 'rgba(255, 255, 255, 0.35)';
           } else {
             textColor = 'var(--text-primary)';
           }
@@ -90,31 +113,32 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
           return (
             <div 
               key={step.level} 
+              ref={isActive ? activeStepRef : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '8px 12px',
+                padding: '10px 14px',
                 borderRadius: '6px',
                 background: bgColor,
                 border: borderStyle,
                 color: textColor,
                 fontSize: '13px',
                 fontWeight: step.isMilestone || isActive ? 'bold' : 'normal',
-                opacity: isCleared ? 0.6 : 1,
-                boxShadow: isActive ? '0 0 15px rgba(245, 166, 35, 0.4)' : 'none',
-                transition: 'all 0.2s ease-in-out'
+                opacity: isCleared ? 0.5 : 1,
+                animation: isActive ? 'activePulse 1.8s infinite ease-in-out' : 'none',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ 
                   fontSize: '11px', 
-                  opacity: isActive ? 0.8 : 0.5,
+                  opacity: isActive ? 0.8 : 0.4,
                   minWidth: '20px'
                 }}>
                   {step.level.toString().padStart(2, '0')}
                 </span>
-                <span>{step.isMilestone ? '💎 Milestone' : 'Question'}</span>
+                <span>{step.isMilestone ? '💎 Safety Milestone' : 'Question'}</span>
               </div>
               <span style={{ 
                 fontFamily: 'JetBrains Mono, monospace',

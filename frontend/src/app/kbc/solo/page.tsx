@@ -3,11 +3,13 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Clock, AlertCircle, BookOpen, ChevronRight, Brain } from 'lucide-react';
+import { ArrowLeft, Clock, AlertCircle, BookOpen, ChevronRight, Brain, MessageSquare } from 'lucide-react';
+import { useStore } from '@/store/useStore';
 import QuestionCard from '@/components/kbc/QuestionCard';
 import PrizeLadder, { PRIZE_LADDER } from '@/components/kbc/PrizeLadder';
 import LifelinesPanel, { LifelineState } from '@/components/kbc/LifelinesPanel';
 import EndScreen from '@/components/kbc/EndScreen';
+import { KbcAudio } from '@/utils/kbc/audio';
 
 interface Question {
   id: string;
@@ -23,6 +25,7 @@ interface Question {
 function SoloChallengeGame() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, setUser } = useStore();
 
   // Engine States
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -31,7 +34,7 @@ function SoloChallengeGame() {
   const [gameState, setGameState] = useState<'playing' | 'win' | 'lost' | 'timeout'>('playing');
 
   // Question Iteration States
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // 0 to 14
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); 
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [lockedOptionIndex, setLockedOptionIndex] = useState<number | null>(null);
   const [revealedAnswer, setRevealedAnswer] = useState(false);
@@ -49,6 +52,27 @@ function SoloChallengeGame() {
   });
   const [eliminatedOptionIndices, setEliminatedOptionIndices] = useState<number[]>([]);
 
+  // Immersive Experience States
+  const [hostMessage, setHostMessage] = useState('Welcome to the Hot Seat! Ready to prove your coding supremacy?');
+  const [timePerQuestion, setTimePerQuestion] = useState<number[]>([]);
+  const [persistedStats, setPersistedStats] = useState<{
+    accuracy: number;
+    fastestAnswerTime: number;
+    lifelinesUsedCount: number;
+    tokensEarned: number;
+  } | null>(null);
+
+  const optionLetters = ['A', 'B', 'C', 'D'];
+
+  // Start Theme music on load
+  useEffect(() => {
+    KbcAudio.playIntro();
+    return () => {
+      // Audio cleanup on route change
+      KbcAudio.stopSuspense();
+    };
+  }, []);
+
   // Load questions on mount
   useEffect(() => {
     async function fetchQuestions() {
@@ -62,6 +86,8 @@ function SoloChallengeGame() {
           const data = await res.json();
           if (data && data.length === 15) {
             setQuestions(data);
+            setHostMessage(`We have loaded 15 progressive ${category} questions. Let's start with Level 1.`);
+            KbcAudio.playReveal();
           } else {
             setError("Server returned an invalid question set. Ensure the seed data is populated.");
           }
@@ -79,17 +105,69 @@ function SoloChallengeGame() {
     fetchQuestions();
   }, [searchParams]);
 
+  // Submit Run outcome to Backend
+  const persistSoloRunOutcome = async (finalState: 'win' | 'lost' | 'timeout', clearedLevel: number) => {
+    if (!user) return;
+
+    KbcAudio.stopSuspense();
+
+    const lifelinesArray = Object.keys(usedLifelines).filter(
+      k => usedLifelines[k as keyof typeof usedLifelines]
+    );
+
+    try {
+      const res = await fetch('http://localhost:5001/api/kbc/solo/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          questionsCleared: clearedLevel,
+          timePerQuestion,
+          lifelinesUsed: lifelinesArray,
+          status: finalState
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPersistedStats({
+          accuracy: data.accuracy,
+          fastestAnswerTime: data.fastestAnswerTime,
+          lifelinesUsedCount: lifelinesArray.length,
+          tokensEarned: data.prizeEarned
+        });
+        
+        // Sync user tokens in local store
+        setUser({ ...user, tokens: data.newTokens });
+      }
+    } catch (e) {
+      console.error("Failed to persist KBC Solo Stats:", e);
+    }
+  };
+
   // Game Loop Timer logic
   useEffect(() => {
-    // Start countdown timer if we are playing and haven't locked an answer yet
     if (gameState === 'playing' && lockedOptionIndex === null && !loading && !error) {
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timerRef.current!);
             setGameState('timeout');
+            setHostMessage("Time is up! The clock has got the better of you on this hot seat.");
+            persistSoloRunOutcome('timeout', currentQuestionIndex);
             return 0;
           }
+          
+          // Play countdown tick on last 10 seconds
+          if (prev <= 11) {
+            KbcAudio.playSelect(); // high pitch pluck as tick sound
+          }
+
+          // Suspense ticking sound for last 10 seconds
+          if (prev === 11) {
+            KbcAudio.startSuspense(true);
+          }
+
           return prev - 1;
         });
       }, 1000);
@@ -98,7 +176,7 @@ function SoloChallengeGame() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gameState, lockedOptionIndex, loading, error, currentQuestionIndex]);
+  }, [gameState, lockedOptionIndex, loading, error, currentQuestionIndex, timePerQuestion]);
 
   if (loading) {
     return (
@@ -159,7 +237,6 @@ function SoloChallengeGame() {
         failedQuestion={isLoss ? questions[currentQuestionIndex] : null}
         userAnswerIndex={isLoss ? lockedOptionIndex : null}
         onReset={() => {
-          // Reset game states
           setCurrentQuestionIndex(0);
           setSelectedOptionIndex(null);
           setLockedOptionIndex(null);
@@ -172,10 +249,15 @@ function SoloChallengeGame() {
             skip: false
           });
           setEliminatedOptionIndices([]);
+          setTimePerQuestion([]);
+          setPersistedStats(null);
           setGameState('playing');
-          // Reload page
-          router.refresh();
+          KbcAudio.playIntro();
         }}
+        accuracy={persistedStats?.accuracy}
+        fastestAnswerTime={persistedStats?.fastestAnswerTime}
+        lifelinesUsedCount={persistedStats?.lifelinesUsedCount}
+        tokensEarned={persistedStats?.tokensEarned}
       />
     );
   }
@@ -186,6 +268,8 @@ function SoloChallengeGame() {
   // Option select handler
   const handleSelectOption = (idx: number) => {
     setSelectedOptionIndex(idx);
+    KbcAudio.playSelect();
+    setHostMessage(`Option ${optionLetters[idx]} chosen. Are you ready to lock it in?`);
   };
 
   // Option lock handler
@@ -195,15 +279,46 @@ function SoloChallengeGame() {
     
     // Stop the timer
     if (timerRef.current) clearInterval(timerRef.current);
+    KbcAudio.stopSuspense();
+    KbcAudio.playLock();
 
-    // Pause briefly to simulate suspense, then check correctness
+    // Track answer speed
+    const secondsTaken = 30 - timeLeft;
+    setTimePerQuestion(prev => [...prev, secondsTaken]);
+
+    setHostMessage(`Locking Option ${optionLetters[selectedOptionIndex]}... Let's see if this is correct.`);
+
+    // Start suspense ticker loop
+    KbcAudio.startSuspense(false);
+
+    // Simulate suspense, then check correctness
     setTimeout(() => {
+      KbcAudio.stopSuspense();
       setRevealedAnswer(true);
       const isCorrect = currentQuestion.correctAnswer === selectedOptionIndex;
-      if (!isCorrect) {
-        setGameState('lost');
+      
+      if (isCorrect) {
+        KbcAudio.playCorrect();
+        if (activeLevelNumber === 5) {
+          setHostMessage("Sensational! You have cleared Level 5 and reached your first safety milestone!");
+        } else if (activeLevelNumber === 10) {
+          setHostMessage("Splendid work! Level 10 cleared. Milestone safety guaranteed!");
+        } else if (activeLevelNumber === 15) {
+          setHostMessage("Astonishing! Jackpot cleared! You are officially an Expert KBC Developer!");
+          setGameState('win');
+          persistSoloRunOutcome('win', 15);
+        } else {
+          setHostMessage(`Correct answer! You have cleared Level ${activeLevelNumber} and unlocked more XP.`);
+        }
+      } else {
+        KbcAudio.playWrong();
+        setHostMessage(`Oh no! Option ${optionLetters[selectedOptionIndex]} is incorrect. The correct answer was Option ${optionLetters[currentQuestion.correctAnswer]}.`);
+        setTimeout(() => {
+          setGameState('lost');
+          persistSoloRunOutcome('lost', currentQuestionIndex);
+        }, 3000);
       }
-    }, 1500);
+    }, 2500);
   };
 
   // Lifelines Activation handler
@@ -211,29 +326,25 @@ function SoloChallengeGame() {
     if (usedLifelines[type]) return;
 
     if (type === 'fiftyFifty') {
-      // Find two incorrect options
       const correctIdx = currentQuestion.correctAnswer;
       const incorrectIdxs = [0, 1, 2, 3].filter(idx => idx !== correctIdx);
       
-      // Shuffle incorrect and select two
       const shuffledIncorrect = [...incorrectIdxs].sort(() => Math.random() - 0.5);
       const toEliminate = shuffledIncorrect.slice(0, 2);
 
       setEliminatedOptionIndices(toEliminate);
       setUsedLifelines(prev => ({ ...prev, fiftyFifty: true }));
+      setHostMessage("50-50 Activated. Two incorrect options have vanished.");
       
-      // If the selected option is one of the eliminated ones, deselect it
       if (selectedOptionIndex !== null && toEliminate.includes(selectedOptionIndex)) {
         setSelectedOptionIndex(null);
       }
     } else if (type === 'skip') {
-      // Fetch a replacement question from same category/difficulty
       try {
         const category = searchParams.get('category') || 'general_tech';
         const res = await fetch(`http://localhost:5001/api/kbc/questions?category=${category}`);
         if (res.ok) {
           const data: Question[] = await res.json();
-          // Find replacement with matching difficulty not already in set
           const replacement = data.find(q => 
             q.difficulty === currentQuestion.difficulty && 
             !questions.some(existing => existing.id === q.id)
@@ -247,6 +358,8 @@ function SoloChallengeGame() {
             setSelectedOptionIndex(null);
             setEliminatedOptionIndices([]);
             setTimeLeft(30);
+            setHostMessage("Question Skipped. A new technical puzzle has been loaded in its place.");
+            KbcAudio.playReveal();
           } else {
             alert("No unused questions remaining in this category/difficulty to skip.");
           }
@@ -254,9 +367,12 @@ function SoloChallengeGame() {
       } catch (err) {
         console.error("Failed to skip question:", err);
       }
-    } else {
-      // For Audience and Expert, LifelinesPanel manages the mock modal triggers
-      setUsedLifelines(prev => ({ ...prev, [type]: true }));
+    } else if (type === 'audiencePoll') {
+      setUsedLifelines(prev => ({ ...prev, audiencePoll: true }));
+      setHostMessage("Consulting the live developer audience poll...");
+    } else if (type === 'expertAdvice') {
+      setUsedLifelines(prev => ({ ...prev, expertAdvice: true }));
+      setHostMessage("Requesting consulting recommendations from our expert engineer...");
     }
   };
 
@@ -264,18 +380,25 @@ function SoloChallengeGame() {
   const handleNextQuestion = () => {
     if (currentQuestionIndex >= 14) {
       setGameState('win');
+      persistSoloRunOutcome('win', 15);
       return;
     }
 
-    // Go to next level
+    KbcAudio.playLadder();
     setCurrentQuestionIndex(prev => prev + 1);
-    
-    // Clear question status
     setSelectedOptionIndex(null);
     setLockedOptionIndex(null);
     setRevealedAnswer(false);
     setEliminatedOptionIndices([]);
     setTimeLeft(30);
+    setHostMessage(`Proceeding to Level ${currentQuestionIndex + 2}. Let's see the question.`);
+  };
+
+  // Circular timer color mapping
+  const getTimerColor = () => {
+    if (timeLeft > 15) return 'var(--accent-green)';
+    if (timeLeft > 10) return 'var(--accent-amber)';
+    return 'var(--accent-red)';
   };
 
   return (
@@ -286,6 +409,17 @@ function SoloChallengeGame() {
       color: '#FFF',
       fontFamily: 'Inter, sans-serif'
     }}>
+      <style>{`
+        @keyframes timerFlash {
+          0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255, 68, 68, 0.4)); }
+          50% { transform: scale(1.08); filter: drop-shadow(0 0 15px rgba(255, 68, 68, 0.8)); }
+          100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255, 68, 68, 0.4)); }
+        }
+        .timer-warning {
+          animation: timerFlash 0.5s infinite ease-in-out;
+        }
+      `}</style>
+
       <div className="container" style={{
         display: 'grid',
         gridTemplateColumns: '1fr 300px',
@@ -294,7 +428,7 @@ function SoloChallengeGame() {
       }}>
         
         {/* LEFT COLUMN: Main Game Play Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Header area */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -315,6 +449,40 @@ function SoloChallengeGame() {
             </div>
           </div>
 
+          {/* Virtual Host Box */}
+          <div style={{
+            background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, rgba(74, 158, 255, 0.05) 100%)',
+            border: '1px solid rgba(139, 92, 246, 0.25)',
+            borderRadius: '10px',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'var(--accent-purple)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '20px',
+              boxShadow: '0 0 10px rgba(139, 92, 246, 0.5)'
+            }}>
+              🎙️
+            </div>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                KBC Host
+              </span>
+              <p style={{ fontSize: '13.5px', color: '#E2E8F0', marginTop: '2px', lineHeight: '18px', fontWeight: '500' }}>
+                &ldquo;{hostMessage}&rdquo;
+              </p>
+            </div>
+          </div>
+
           {/* Central Section: Timer & Question */}
           <div className="glass-panel" style={{
             display: 'flex',
@@ -326,8 +494,10 @@ function SoloChallengeGame() {
             padding: '36px'
           }}>
             {/* Circular Timer UI */}
-            <div style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center' }}>
-              {/* Circular track */}
+            <div 
+              className={timeLeft <= 10 && lockedOptionIndex === null ? 'timer-warning' : ''}
+              style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}
+            >
               <svg width="90" height="90" style={{ transform: 'rotate(-90deg)', position: 'absolute' }}>
                 <circle cx="45" cy="45" r="38" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
                 <circle 
@@ -335,13 +505,12 @@ function SoloChallengeGame() {
                   cy="45" 
                   r="38" 
                   fill="transparent" 
-                  stroke={timeLeft <= 10 ? 'var(--accent-red)' : 'var(--accent-amber)'} 
+                  stroke={getTimerColor()} 
                   strokeWidth="6" 
                   strokeDasharray={2 * Math.PI * 38}
                   strokeDashoffset={2 * Math.PI * 38 * (1 - timeLeft / 30)}
                   style={{
-                    transition: 'stroke-dashoffset 1s linear',
-                    filter: timeLeft <= 10 ? 'drop-shadow(0 0 5px rgba(255,68,68,0.5))' : 'none'
+                    transition: 'stroke-dashoffset 1s linear, stroke 0.3s ease',
                   }}
                 />
               </svg>
@@ -350,9 +519,10 @@ function SoloChallengeGame() {
                 flexDirection: 'column', 
                 gap: '2px', 
                 zIndex: 10,
-                color: timeLeft <= 10 ? 'var(--accent-red)' : 'var(--accent-amber)',
+                color: getTimerColor(),
                 fontWeight: 'bold',
-                fontFamily: 'Space Grotesk, sans-serif'
+                fontFamily: 'Space Grotesk, sans-serif',
+                transition: 'color 0.3s'
               }}>
                 <Clock size={16} />
                 <span style={{ fontSize: '18px' }}>{timeLeft}s</span>
@@ -402,7 +572,12 @@ function SoloChallengeGame() {
                     color: '#000',
                     fontWeight: 'bold',
                     padding: '12px 32px',
-                    gap: '6px'
+                    gap: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center'
                   }}
                 >
                   {currentQuestionIndex === 14 ? 'Claim Jackpot!' : 'Proceed to Next Level'}

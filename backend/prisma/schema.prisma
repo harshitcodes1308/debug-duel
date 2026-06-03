@@ -26,6 +26,7 @@ model User {
   dailyStreak     Int      @default(0)
   createdAt     DateTime @default(now())
   duels         DuelParticipant[]
+  kbcSoloRuns   KbcSoloRun[]
   
   friendKey     String   @unique @default(cuid())
   friends       Friendship[] @relation("UserFriends")
@@ -87,4 +88,16 @@ model Friendship {
   createdAt DateTime @default(now())
 
   @@unique([userId, friendId])
+}
+
+model KbcSoloRun {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  questionsAnswered Int
+  accuracy          Float
+  fastestAnswerTime Int
+  lifelinesUsed     String
+  prizeEarned       Int
+  createdAt         DateTime @default(now())
 }

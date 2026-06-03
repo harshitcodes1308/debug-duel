@@ -38,10 +38,6 @@ export default function QuestionCard({
 
   const getOptionStyle = (idx: number): React.CSSProperties => {
     const isEliminated = eliminatedOptionIndices.includes(idx);
-    if (isEliminated) {
-      return { visibility: 'hidden' };
-    }
-
     const isSelected = selectedOptionIndex === idx;
     const isLocked = lockedOptionIndex === idx;
     const isCorrect = question.correctAnswer === idx;
@@ -54,31 +50,27 @@ export default function QuestionCard({
 
     if (revealedAnswer) {
       if (isCorrect) {
-        // Correct option glows green
         border = '1px solid var(--accent-green)';
         background = 'rgba(0, 255, 148, 0.15)';
         color = 'var(--accent-green)';
         cursor = 'default';
       } else if (isLocked && !isCorrect) {
-        // Wrong option chosen glows red
         border = '1px solid var(--accent-red)';
         background = 'rgba(255, 68, 68, 0.15)';
         color = 'var(--accent-red)';
         cursor = 'default';
       } else {
-        opacity: 0.3;
+        color = 'rgba(255, 255, 255, 0.2)';
         cursor = 'default';
       }
     } else if (isLocked) {
-      // Locked option glows gold
       border = '1px solid var(--accent-amber)';
       background = 'rgba(245, 166, 35, 0.2)';
       color = 'var(--accent-amber)';
       cursor = 'default';
     } else if (isSelected) {
-      // Selected option has border highlight
       border = '1px solid var(--accent-blue)';
-      background = 'rgba(74, 158, 255, 0.1)';
+      background = 'rgba(74, 158, 255, 0.15)';
       color = '#FFF';
     }
 
@@ -94,9 +86,16 @@ export default function QuestionCard({
       fontFamily: 'Inter, sans-serif',
       fontSize: '15px',
       textAlign: 'left',
-      transition: 'all 0.2s ease-in-out',
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
       position: 'relative',
-      gap: '12px'
+      gap: '12px',
+      opacity: isEliminated ? 0 : 1,
+      transform: isEliminated ? 'scale(0.92)' : 'scale(1)',
+      pointerEvents: isEliminated ? 'none' : undefined,
+      animation: revealedAnswer 
+        ? (isCorrect ? 'revealCorrect 0.6s ease forwards' : 'none')
+        : (isLocked ? 'pulseGlow 1.5s infinite ease-in-out' : 'fadeInUp 0.6s ease forwards'),
+      animationDelay: revealedAnswer ? '0s' : `${idx * 0.15}s`
     };
   };
 
@@ -107,6 +106,43 @@ export default function QuestionCard({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+      {/* CSS Keyframe Animations */}
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes pulseGlow {
+          0% {
+            box-shadow: 0 0 5px rgba(245, 166, 35, 0.3), inset 0 0 5px rgba(245, 166, 35, 0.1);
+            border-color: rgba(245, 166, 35, 0.4);
+          }
+          50% {
+            box-shadow: 0 0 25px rgba(245, 166, 35, 0.7), inset 0 0 12px rgba(245, 166, 35, 0.3);
+            border-color: rgba(245, 166, 35, 1);
+          }
+          100% {
+            box-shadow: 0 0 5px rgba(245, 166, 35, 0.3), inset 0 0 5px rgba(245, 166, 35, 0.1);
+            border-color: rgba(245, 166, 35, 0.4);
+          }
+        }
+        @keyframes revealCorrect {
+          0% { background: rgba(26, 26, 34, 0.4); border-color: var(--border); }
+          50% { background: rgba(0, 255, 148, 0.35); border-color: var(--accent-green); box-shadow: 0 0 20px rgba(0, 255, 148, 0.4); }
+          100% { background: rgba(0, 255, 148, 0.15); border-color: var(--accent-green); }
+        }
+        @keyframes textReveal {
+          from { opacity: 0; filter: blur(4px); }
+          to { opacity: 1; filter: blur(0); }
+        }
+      `}</style>
+
       {/* Question statement frame */}
       <div 
         className="glass-panel" 
@@ -116,7 +152,8 @@ export default function QuestionCard({
           boxShadow: 'inset 0 0 15px rgba(255,255,255,0.02)',
           padding: '36px',
           textAlign: 'center',
-          position: 'relative'
+          position: 'relative',
+          animation: 'textReveal 0.8s ease-out'
         }}
       >
         <span style={{
@@ -150,7 +187,7 @@ export default function QuestionCard({
       }}>
         {question.options.map((opt, idx) => (
           <button
-            key={idx}
+            key={`${question.id}-${idx}`}
             onClick={() => handleOptionClick(idx)}
             style={getOptionStyle(idx)}
             disabled={disabled || lockedOptionIndex !== null || revealedAnswer || eliminatedOptionIndices.includes(idx)}
@@ -158,11 +195,13 @@ export default function QuestionCard({
               if (disabled || lockedOptionIndex !== null || revealedAnswer || selectedOptionIndex === idx) return;
               e.currentTarget.style.borderColor = 'rgba(74, 158, 255, 0.5)';
               e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(74, 158, 255, 0.15)';
             }}
             onMouseLeave={(e) => {
               if (disabled || lockedOptionIndex !== null || revealedAnswer || selectedOptionIndex === idx) return;
               e.currentTarget.style.borderColor = 'var(--border)';
               e.currentTarget.style.background = 'rgba(26, 26, 34, 0.4)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
             <span style={{ 
@@ -190,7 +229,12 @@ export default function QuestionCard({
               color: '#000',
               fontWeight: 'bold',
               gap: '10px',
-              boxShadow: '0 0 20px rgba(245, 166, 35, 0.3)'
+              boxShadow: '0 0 20px rgba(245, 166, 35, 0.3)',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center'
             }}
             onClick={onLockOption}
           >

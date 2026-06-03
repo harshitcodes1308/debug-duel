@@ -156,5 +156,95 @@ router.get('/config', (req, res) => {
   });
 });
 
+// End KBC Solo Challenge run and store stats & rewards
+router.post('/solo/end', async (req, res) => {
+  const { userId, questionsCleared, timePerQuestion, lifelinesUsed, status } = req.body;
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
+
+  const cleared = Number(questionsCleared || 0);
+  const attempted = status === 'win' || cleared === 15 ? 15 : cleared + 1;
+  const questionsAnswered = Math.min(15, Math.max(1, attempted));
+  
+  // Calculate accuracy
+  const accuracy = Math.round((cleared / questionsAnswered) * 100 * 10) / 10;
+
+  // Calculate fastest answer
+  let fastestAnswerTime = 0;
+  if (Array.isArray(timePerQuestion) && timePerQuestion.length > 0) {
+    const validTimes = timePerQuestion.filter(t => t !== null && t !== undefined && typeof t === 'number');
+    if (validTimes.length > 0) {
+      fastestAnswerTime = Math.min(...validTimes);
+    }
+  }
+
+  // Determine safety milestone prize (KBC Safety guarantees at Level 5 and 10)
+  let prizeEarned = 0;
+  if (status === 'win' || cleared === 15) {
+    prizeEarned = 500;
+  } else if (cleared >= 10) {
+    prizeEarned = 200;
+  } else if (cleared >= 5) {
+    prizeEarned = 50;
+  } else {
+    prizeEarned = cleared * 10;
+  }
+
+  const lifelinesStr = Array.isArray(lifelinesUsed) ? lifelinesUsed.join(',') : '';
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Row-level lock to prevent concurrency race conditions
+      const users = await tx.$queryRaw`SELECT tokens FROM "User" WHERE id = ${userId} FOR UPDATE`;
+      if (!users || users.length === 0) {
+        throw new Error("USER_NOT_FOUND");
+      }
+
+      // 1. Create run log
+      const runLog = await tx.kbcSoloRun.create({
+        data: {
+          userId,
+          questionsAnswered,
+          accuracy,
+          fastestAnswerTime,
+          lifelinesUsed: lifelinesStr,
+          prizeEarned
+        }
+      });
+
+      // 2. Increment user tokens
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          tokens: { increment: prizeEarned }
+        }
+      });
+
+      return {
+        runId: runLog.id,
+        newTokens: updatedUser.tokens
+      };
+    });
+
+    res.json({
+      success: true,
+      prizeEarned,
+      newTokens: result.newTokens,
+      runId: result.runId,
+      accuracy,
+      fastestAnswerTime
+    });
+
+  } catch (error) {
+    console.error("Failed to save KBC Solo run:", error);
+    if (error.message === "USER_NOT_FOUND") {
+      res.status(404).json({ error: "User not found" });
+    } else {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+});
+
 module.exports = router;
 
