@@ -3,6 +3,7 @@ const kbcRooms = require('../../services/kbc/rooms');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { awardXP } = require('../../utils/xp');
+const { checkAchievements } = require('../../services/achievements');
 
 // Helper to serialize room state safely
 function serializeRoom(room) {
@@ -284,6 +285,14 @@ async function endGame(roomCode, io) {
           } else {
             hostRewards.tokenChange = -wager;
           }
+        }
+
+        // Audit achievements
+        if (winnerId) {
+          await checkAchievements(winnerId, tx, io);
+        }
+        if (loserId) {
+          await checkAchievements(loserId, tx, io);
         }
 
         // Update Duel record

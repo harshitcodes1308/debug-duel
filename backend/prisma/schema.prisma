@@ -29,6 +29,7 @@ model User {
   createdAt     DateTime @default(now())
   duels         DuelParticipant[]
   kbcSoloRuns   KbcSoloRun[]
+  achievements  UserAchievement[]
   
   friendKey     String   @unique @default(cuid())
   friends       Friendship[] @relation("UserFriends")
@@ -102,4 +103,27 @@ model KbcSoloRun {
   lifelinesUsed     String
   prizeEarned       Int
   createdAt         DateTime @default(now())
+}
+
+model Achievement {
+  id           String            @id
+  title        String
+  description  String
+  icon         String
+  rarity       String            // "Common" | "Rare" | "Epic" | "Legendary"
+  category     String            // "Combat" | "Streak" | "Progression" | "KBC" | "Consistency" | "Social" | "Special"
+  xpReward     Int
+  tokenReward  Int
+  users        UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
 }

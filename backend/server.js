@@ -11,6 +11,7 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 const { awardXP } = require('./utils/xp');
+const { seedAchievements, checkAchievements } = require('./services/achievements');
 const app = express();
 const server = http.createServer(app);
 
@@ -26,6 +27,7 @@ const io = new Server(server, {
     methods: ['GET', 'POST']
   }
 });
+app.set('io', io);
 
 const PORT = process.env.PORT || 5000;
 
@@ -334,6 +336,10 @@ app.post('/api/friends/add', async (req, res) => {
       })
     ]);
 
+    const io = req.app.get('io');
+    await checkAchievements(userId, null, io);
+    await checkAchievements(friend.id, null, io);
+
     res.json({ success: true, friend: { id: friend.id, username: friend.username } });
   } catch (error) {
     console.error(error);
@@ -419,12 +425,21 @@ app.post('/api/user/dailylogin', async (req, res) => {
         }
       });
 
+      // Audit achievements
+      const io = req.app.get('io');
+      await checkAchievements(userId, tx, io);
+
+      // Fetch final user record to ensure accurate return values
+      const finalUser = await tx.user.findUnique({
+        where: { id: userId }
+      });
+
       return {
-        tokens: updatedUser.tokens,
+        tokens: finalUser.tokens,
         streak: newStreak,
         added: totalReward,
-        xp: updatedUser.xp,
-        level: updatedUser.level
+        xp: finalUser.xp,
+        level: finalUser.level
       };
     });
 
@@ -461,6 +476,11 @@ app.get('/api/profile/:username', async (req, res) => {
           },
           orderBy: { id: 'desc' },
           take: 5
+        },
+        achievements: {
+          include: {
+            achievement: true
+          }
         }
       }
     });
@@ -1051,6 +1071,10 @@ io.on('connection', (socket) => {
                   rank: getRankTier(loserUser.eloUIUX + changeL)
                 }
               });
+
+              // Audit achievements
+              await checkAchievements(winnerId, tx, io);
+              await checkAchievements(loserId, tx, io);
             }
 
             // Update participant isWinner
@@ -1219,6 +1243,12 @@ io.on('connection', (socket) => {
               }
             });
           }
+
+          // Audit achievements
+          await checkAchievements(winnerId, tx, io);
+          if (loserId) {
+            await checkAchievements(loserId, tx, io);
+          }
         }
 
         // Update participant records
@@ -1354,6 +1384,10 @@ io.on('connection', (socket) => {
               rank: getRankTier(ratingL + changeL)
             }
           });
+
+          // Audit achievements
+          await checkAchievements(winnerId, tx, io);
+          await checkAchievements(loserId, tx, io);
         }
 
         if (winnerId) {
@@ -1463,5 +1497,6 @@ setupKbcSocket(io);
 // Start Server
 server.listen(PORT, () => {
   console.log(`DebugDuel Backend listening on port ${PORT}`);
+  seedAchievements();
 });
 

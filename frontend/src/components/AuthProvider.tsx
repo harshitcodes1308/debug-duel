@@ -4,7 +4,10 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useStore, UserProfile } from '@/store/useStore';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { io } from 'socket.io-client';
-import { Swords } from 'lucide-react';
+import { 
+  Swords, Zap, Trophy, Award, Flame, 
+  Shield, Play, Calendar, Users, Lock, X
+} from 'lucide-react';
 
 interface AuthContextType {
   isDevMode: boolean;
@@ -42,6 +45,55 @@ const syncUserWithBackend = async (username: string, clerkId: string, setUser: (
   return null;
 };
 
+const renderToastIcon = (iconName: string, size = 20) => {
+  switch (iconName) {
+    case 'Swords': return <Swords size={size} />;
+    case 'Zap': return <Zap size={size} />;
+    case 'Trophy': return <Trophy size={size} />;
+    case 'Award': return <Award size={size} />;
+    case 'Flame': return <Flame size={size} />;
+    case 'Shield': return <Shield size={size} />;
+    case 'Play': return <Play size={size} />;
+    case 'Calendar': return <Calendar size={size} />;
+    case 'Users': return <Users size={size} />;
+    default: return <Award size={size} />;
+  }
+};
+
+const getToastRarityStyles = (rarity: string) => {
+  switch (rarity) {
+    case 'Rare':
+      return {
+        borderColor: 'rgba(96, 165, 250, 0.4)',
+        boxShadow: '0 8px 32px rgba(96, 165, 250, 0.2)',
+        color: '#60A5FA',
+        background: 'rgba(15, 23, 42, 0.95)'
+      };
+    case 'Epic':
+      return {
+        borderColor: 'rgba(192, 132, 252, 0.5)',
+        boxShadow: '0 8px 32px rgba(192, 132, 252, 0.25)',
+        color: '#C084FC',
+        background: 'rgba(24, 15, 41, 0.95)'
+      };
+    case 'Legendary':
+      return {
+        borderColor: 'rgba(251, 191, 36, 0.6)',
+        boxShadow: '0 8px 32px rgba(251, 191, 36, 0.35)',
+        color: '#FBBF24',
+        background: 'rgba(28, 22, 10, 0.95)'
+      };
+    case 'Common':
+    default:
+      return {
+        borderColor: 'rgba(148, 163, 184, 0.3)',
+        boxShadow: '0 8px 32px rgba(148, 163, 184, 0.15)',
+        color: '#94A3B8',
+        background: 'rgba(30, 41, 59, 0.95)'
+      };
+  }
+};
+
 function SocketNotificationWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useStore();
   const [invite, setInvite] = useState<{
@@ -56,6 +108,20 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
     roomCode: string;
     hostUsername: string;
   } | null>(null);
+
+  const [toasts, setToasts] = useState<any[]>([]);
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  const addToast = (achievement: any) => {
+    const id = Date.now() + Math.random().toString();
+    setToasts(prev => [...prev, { ...achievement, id }]);
+    setTimeout(() => {
+      removeToast(id);
+    }, 5000);
+  };
 
   const playInviteSound = () => {
     try {
@@ -73,6 +139,32 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
         gain.connect(ctx.destination);
         osc.start();
         osc.stop(ctx.currentTime + 0.3);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const playUnlockSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        const ctx = new AudioContextClass();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+        osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+        
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(now + 0.6);
       }
     } catch (e) {
       console.warn(e);
@@ -98,6 +190,11 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
 
     socket.on('duel_invite_accepted', ({ duelId }) => {
       window.location.href = `/duel/lobby/${duelId}`;
+    });
+
+    socket.on('achievement_unlocked', (data) => {
+      addToast(data);
+      playUnlockSound();
     });
 
     return () => {
@@ -231,6 +328,105 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
           </div>
         </div>
       )}
+      {/* Achievement Unlocked Toast container */}
+      <div style={{
+        position: 'fixed',
+        bottom: '24px',
+        left: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        zIndex: 10000,
+        fontFamily: 'Inter, sans-serif'
+      }}>
+        <style>{`
+          @keyframes slideUpFadeIn {
+            from { transform: translateY(40px) scale(0.95); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+          }
+        `}</style>
+        {toasts.map((toast) => {
+          const styles = getToastRarityStyles(toast.rarity);
+          return (
+            <div 
+              key={toast.id}
+              style={{
+                width: '340px',
+                background: styles.background,
+                backdropFilter: 'blur(12px)',
+                border: `1px solid ${styles.borderColor}`,
+                borderRadius: '12px',
+                padding: '16px',
+                boxShadow: styles.boxShadow,
+                animation: 'slideUpFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                display: 'flex',
+                gap: '14px',
+                position: 'relative'
+              }}
+            >
+              {/* Icon Frame */}
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: `1px solid ${styles.borderColor}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: styles.color,
+                flexShrink: 0
+              }}>
+                {renderToastIcon(toast.icon)}
+              </div>
+
+              {/* Text info */}
+              <div style={{ flexGrow: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: styles.color
+                  }}>
+                    Achievement Unlocked
+                  </span>
+                  <button 
+                    onClick={() => removeToast(toast.id)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff' }}>
+                  {toast.title}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.4 }}>
+                  {toast.description}
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>
+                    +{toast.xpReward} XP
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-amber)' }}>
+                    +{toast.tokenReward} Tokens
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </>
   );
 }

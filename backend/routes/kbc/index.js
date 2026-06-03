@@ -5,6 +5,7 @@ const kbcRooms = require('../../services/kbc/rooms');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { awardXP } = require('../../utils/xp');
+const { checkAchievements } = require('../../services/achievements');
 
 // Helper to generate a 6-character room code
 function generateRoomCode() {
@@ -225,11 +226,20 @@ router.post('/solo/end', async (req, res) => {
         }
       });
 
+      // Audit achievements
+      const io = req.app.get('io');
+      await checkAchievements(userId, tx, io);
+
+      // Fetch final user record to ensure accurate return values
+      const finalUser = await tx.user.findUnique({
+        where: { id: userId }
+      });
+
       return {
         runId: runLog.id,
-        newTokens: updatedUser.tokens,
-        xp: updatedUser.xp,
-        level: updatedUser.level
+        newTokens: finalUser.tokens,
+        xp: finalUser.xp,
+        level: finalUser.level
       };
     });
 

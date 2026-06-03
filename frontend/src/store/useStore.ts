@@ -1,5 +1,24 @@
 import { create } from 'zustand';
 
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  rarity: 'Common' | 'Rare' | 'Epic' | 'Legendary';
+  category: 'Combat' | 'Streak' | 'Progression' | 'KBC' | 'Consistency' | 'Social' | 'Special';
+  xpReward: number;
+  tokenReward: number;
+}
+
+export interface UserAchievement {
+  id: string;
+  userId: string;
+  achievementId: string;
+  unlockedAt: string;
+  achievement: Achievement;
+}
+
 export interface UserProfile {
   id: string;
   clerkId: string;
@@ -17,6 +36,7 @@ export interface UserProfile {
   xp?: number;
   level?: number;
   friendKey?: string;
+  achievements?: UserAchievement[];
 }
 
 export interface Bug {
