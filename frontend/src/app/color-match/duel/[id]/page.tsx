@@ -62,6 +62,45 @@ export default function ColorMatchArena() {
     };
   };
 
+  const rgbToHsv = (r: number, g: number, b: number) => {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    let h = 0;
+    const s = max === 0 ? 0 : (d / max) * 100;
+    const v = max * 100;
+
+    if (max !== min) {
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h *= 60;
+    }
+    return { h: Math.round(h), s: Math.round(s), v: Math.round(v) };
+  };
+
+  const rgbToHex = (r: number, g: number, b: number) => {
+    const toHex = (c: number) => {
+      const hex = c.toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+  };
+
+  const handleRgbChange = (channel: 'r' | 'g' | 'b', value: number) => {
+    setGuessColor(prev => {
+      const nextRgb = { ...prev, [channel]: value };
+      const nextHsv = rgbToHsv(nextRgb.r, nextRgb.g, nextRgb.b);
+      setHsvState(nextHsv);
+      return nextRgb;
+    });
+  };
+
   const handleColorSelection = (clientX: number, clientY: number, rect: DOMRect) => {
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
@@ -109,6 +148,7 @@ export default function ColorMatchArena() {
 
     const handleGlobalTouchMove = (e: TouchEvent) => {
       if (!isDragging || e.touches.length === 0) return;
+      e.preventDefault();
       const wheelEl = document.getElementById('color-wheel-container');
       if (!wheelEl) return;
       const rect = wheelEl.getBoundingClientRect();
@@ -122,7 +162,7 @@ export default function ColorMatchArena() {
     if (isDragging) {
       window.addEventListener('mousemove', handleGlobalMouseMove);
       window.addEventListener('mouseup', handleGlobalMouseUp);
-      window.addEventListener('touchmove', handleGlobalTouchMove);
+      window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
       window.addEventListener('touchend', handleGlobalMouseUp);
     }
 
@@ -307,7 +347,7 @@ export default function ColorMatchArena() {
   const opponent = currentDuel.participants?.find(p => p.userId !== user?.id)?.user || { username: 'Opponent' };
 
   // Calculate coordinates for the dot indicator on the wheel
-  const maxRadius = 90; // Let's make the wheel 180px wide (radius 90px) to fit beautifully
+  const maxRadius = 90; // radius of the wheel (180px diameter)
   const xOffset = (hsvState.s / 100) * maxRadius * Math.cos((hsvState.h * Math.PI) / 180);
   const yOffset = (hsvState.s / 100) * maxRadius * Math.sin((hsvState.h * Math.PI) / 180);
 
@@ -373,7 +413,7 @@ export default function ColorMatchArena() {
           
           {/* ================= STATE 1: MEMORIZE ================= */}
           {gameState === 'memorize' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%', maxWidth: '480px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%', maxWidth: '480px', animation: 'fadeIn 0.3s ease-out' }}>
               <span style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 'bold', letterSpacing: '0.15em' }}>
                 MEMORIZE THIS COLOR CARD
               </span>
@@ -383,26 +423,57 @@ export default function ColorMatchArena() {
                 height: '220px',
                 backgroundColor: targetColorString,
                 borderRadius: '16px',
-                border: '2px solid rgba(255,255,255,0.1)',
+                border: '2px solid rgba(255,255,255,0.15)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: `0 12px 40px ${targetColorString.replace('rgb', 'rgba').replace(')', ', 0.3)')}`
+                boxShadow: `0 12px 40px ${targetColorString.replace('rgb', 'rgba').replace(')', ', 0.4)')}`,
+                transition: 'all 0.3s ease-in-out'
               }}>
-                {/* Countdown display */}
+                {/* Countdown circular SVG indicator */}
                 <div style={{
-                  background: 'rgba(0,0,0,0.65)',
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
+                  position: 'relative',
+                  width: '100px',
+                  height: '100px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '24px',
-                  fontWeight: 'bold',
-                  border: '1px solid rgba(255,255,255,0.2)'
                 }}>
-                  {phaseTimer}
+                  <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', position: 'absolute', top: 0, left: 0 }}>
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="transparent"
+                      stroke="rgba(0, 0, 0, 0.4)"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="transparent"
+                      stroke="var(--accent-purple)"
+                      strokeWidth="6"
+                      strokeDasharray={2 * Math.PI * 42}
+                      strokeDashoffset={(2 * Math.PI * 42) * (1 - phaseTimer / 6)}
+                      strokeLinecap="round"
+                      style={{
+                        transition: 'stroke-dashoffset 1s linear, stroke 0.3s',
+                        stroke: phaseTimer <= 2 ? 'var(--accent-red)' : 'var(--accent-purple)',
+                      }}
+                    />
+                  </svg>
+                  <div style={{
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    fontFamily: 'Space Grotesk, sans-serif',
+                    color: phaseTimer <= 2 ? 'var(--accent-red)' : '#fff',
+                    transition: 'color 0.3s',
+                    zIndex: 1
+                  }}>
+                    {phaseTimer}
+                  </div>
                 </div>
               </div>
             </div>
@@ -410,7 +481,7 @@ export default function ColorMatchArena() {
 
           {/* ================= STATE 2: GUESS ================= */}
           {gameState === 'guess' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '480px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '480px', animation: 'fadeIn 0.3s ease-out' }}>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 {/* Target box (Hidden) */}
@@ -431,7 +502,7 @@ export default function ColorMatchArena() {
                   </div>
                 </div>
                 
-                {/* Guess box (Live Preview) */}
+                {/* Guess box (Live Preview with dynamic glow shadow) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>YOUR GUESS</span>
                   <div style={{
@@ -439,59 +510,55 @@ export default function ColorMatchArena() {
                     height: '110px',
                     backgroundColor: `rgb(${guessColor.r}, ${guessColor.g}, ${guessColor.b})`,
                     borderRadius: '12px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: `0 4px 20px rgba(${guessColor.r}, ${guessColor.g}, ${guessColor.b}, 0.2)`
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    boxShadow: `0 8px 30px rgba(${guessColor.r}, ${guessColor.g}, ${guessColor.b}, 0.35)`,
+                    transition: 'background-color 0.05s ease-out, box-shadow 0.05s ease-out'
                   }} />
                 </div>
               </div>
 
-              {/* Color Wheel Picker & Lightness Slider */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '32px', width: '100%' }}>
+              {/* Controls Layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px', marginTop: '10px' }}>
+                
+                {/* Left Column: Redesigned Chromatic Donut Wheel */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', textAlign: 'center' }}>
+                    COLOR WHEEL RING
+                  </span>
                   
-                  {/* Wheel Container */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>DRAG TO SELECT HUE & SATURATION</span>
+                  <div className="color-wheel-outer">
                     <div 
                       id="color-wheel-container"
                       onMouseDown={handleMouseDown}
                       onTouchStart={handleTouchStart}
-                      style={{
-                        position: 'relative',
-                        width: '180px',
-                        height: '180px',
-                        borderRadius: '50%',
-                        cursor: 'crosshair',
-                        background: `
-                          radial-gradient(circle, #ffffff 0%, transparent 100%),
-                          conic-gradient(from 90deg, red, yellow, lime, cyan, blue, magenta, red)
-                        `,
-                        border: '3px solid rgba(255, 255, 255, 0.12)',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4), inset 0 2px 6px rgba(0,0,0,0.3)',
-                        userSelect: 'none',
-                        touchAction: 'none'
-                      }}
+                      className="color-wheel-dial"
                     >
-                      {/* Selector indicator */}
-                      <div style={{
-                        position: 'absolute',
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        border: '2px solid #ffffff',
-                        boxShadow: '0 0 3px rgba(0, 0, 0, 0.7), inset 0 0 1px rgba(0,0,0,0.5)',
-                        left: `calc(50% + ${xOffset}px - 7px)`,
-                        top: `calc(50% + ${yOffset}px - 7px)`,
-                        pointerEvents: 'none',
-                        backgroundColor: `rgb(${guessColor.r}, ${guessColor.g}, ${guessColor.b})`,
-                        transition: isDragging ? 'none' : 'all 0.15s ease-out'
-                      }} />
+                      {/* Selector indicator target reticle */}
+                      <div 
+                        className="color-wheel-pointer"
+                        style={{
+                          left: `calc(50% + ${xOffset}px)`,
+                          top: `calc(50% + ${yOffset}px)`,
+                        }}
+                      >
+                        <div className="color-wheel-pointer-inner" />
+                      </div>
+                    </div>
+                    
+                    {/* Clean donut mask in center */}
+                    <div className="color-wheel-inner">
+                      <span className="color-wheel-inner-label">HEX</span>
+                      <span className="color-wheel-inner-value">
+                        {rgbToHex(guessColor.r, guessColor.g, guessColor.b)}
+                      </span>
                     </div>
                   </div>
-
-                  {/* Lightness (Value) Slider */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1, minWidth: '160px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>ADJUST BRIGHTNESS (VALUE)</span>
+                  
+                  {/* Clean Lightness Slider */}
+                  <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', textAlign: 'center' }}>
+                      BRIGHTNESS (VALUE)
+                    </span>
                     <input 
                       type="range"
                       min="0"
@@ -506,43 +573,105 @@ export default function ColorMatchArena() {
                           return nextHsv;
                         });
                       }}
+                      className="clean-slider"
                       style={{
-                        width: '100%',
-                        height: '18px',
                         cursor: 'pointer',
-                        WebkitAppearance: 'none',
                         background: `linear-gradient(to right, #000000, rgb(${hsvToRgb(hsvState.h, hsvState.s, 100).r}, ${hsvToRgb(hsvState.h, hsvState.s, 100).g}, ${hsvToRgb(hsvState.h, hsvState.s, 100).b}))`,
-                        borderRadius: '9px',
-                        outline: 'none',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                        accentColor: 'var(--accent-blue)'
                       }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      <span>0% (Black)</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                      <span>0%</span>
                       <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{hsvState.v}%</span>
-                      <span>100% (Full Color)</span>
+                      <span>100%</span>
                     </div>
                   </div>
                 </div>
 
-                {/* RGB Value Display */}
-                <div style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  padding: '8px 24px',
-                  display: 'flex',
-                  gap: '24px',
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '13px',
-                  marginTop: '6px'
-                }}>
-                  <div><span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>R:</span> {guessColor.r}</div>
-                  <div><span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>G:</span> {guessColor.g}</div>
-                  <div><span style={{ color: 'var(--accent-blue)', fontWeight: 'bold' }}>B:</span> {guessColor.b}</div>
+                {/* Right Column: RGB Sliders */}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '16px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', textAlign: 'center' }}>
+                    RGB CHANNELS (FINE-TUNE)
+                  </span>
+
+                  {/* Red Channel Slider */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                      <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>RED (R)</span>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent-red)' }}>{guessColor.r}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="255"
+                      value={guessColor.r}
+                      onChange={(e) => handleRgbChange('r', parseInt(e.target.value))}
+                      style={{
+                        width: '100%',
+                        height: '12px',
+                        cursor: 'pointer',
+                        WebkitAppearance: 'none',
+                        background: `linear-gradient(to right, rgb(0, ${guessColor.g}, ${guessColor.b}), rgb(255, ${guessColor.g}, ${guessColor.b}))`,
+                        borderRadius: '6px',
+                        outline: 'none',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        accentColor: 'var(--accent-red)'
+                      }}
+                    />
+                  </div>
+
+                  {/* Green Channel Slider */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                      <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>GREEN (G)</span>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent-green)' }}>{guessColor.g}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="255"
+                      value={guessColor.g}
+                      onChange={(e) => handleRgbChange('g', parseInt(e.target.value))}
+                      style={{
+                        width: '100%',
+                        height: '12px',
+                        cursor: 'pointer',
+                        WebkitAppearance: 'none',
+                        background: `linear-gradient(to right, rgb(${guessColor.r}, 0, ${guessColor.b}), rgb(${guessColor.r}, 255, ${guessColor.b}))`,
+                        borderRadius: '6px',
+                        outline: 'none',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        accentColor: 'var(--accent-green)'
+                      }}
+                    />
+                  </div>
+
+                  {/* Blue Channel Slider */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                      <span style={{ color: 'var(--accent-blue)', fontWeight: 'bold' }}>BLUE (B)</span>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--accent-blue)' }}>{guessColor.b}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="255"
+                      value={guessColor.b}
+                      onChange={(e) => handleRgbChange('b', parseInt(e.target.value))}
+                      style={{
+                        width: '100%',
+                        height: '12px',
+                        cursor: 'pointer',
+                        WebkitAppearance: 'none',
+                        background: `linear-gradient(to right, rgb(${guessColor.r}, ${guessColor.g}, 0), rgb(${guessColor.r}, ${guessColor.g}, 255))`,
+                        borderRadius: '6px',
+                        outline: 'none',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        accentColor: 'var(--accent-blue)'
+                      }}
+                    />
+                  </div>
                 </div>
+
               </div>
             </div>
           )}

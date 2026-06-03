@@ -39,6 +39,40 @@ export default function ColorMatchResult() {
   const [loading, setLoading] = useState(true);
   const [duel, setDuel] = useState<DuelResultData | null>(null);
   const [rematching, setRematching] = useState(false);
+  const [animatedUserScore, setAnimatedUserScore] = useState<number>(0);
+  const [animatedOpponentScore, setAnimatedOpponentScore] = useState<number>(0);
+
+  useEffect(() => {
+    if (!duel || loading) return;
+
+    const pUser = duel.participants.find(p => p.userId === user?.id);
+    const pOpponent = duel.participants.find(p => p.userId !== user?.id);
+
+    const userTarget = pUser?.colorScore ?? 0;
+    const opponentTarget = pOpponent?.colorScore ?? 0;
+
+    const duration = 1200; // 1.2s count up
+    const startTime = performance.now();
+    let animId: number;
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeProgress = progress * (2 - progress); // Ease out quad
+
+      setAnimatedUserScore(Math.round(easeProgress * userTarget));
+      setAnimatedOpponentScore(Math.round(easeProgress * opponentTarget));
+
+      if (progress < 1) {
+        animId = requestAnimationFrame(animate);
+      }
+    };
+
+    animId = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, [duel, loading, user?.id]);
 
   useEffect(() => {
     async function fetchResult() {
@@ -331,7 +365,7 @@ export default function ColorMatchResult() {
             height: '140px',
             backgroundColor: pUser?.submittedColor || 'rgb(128, 128, 128)',
             borderRadius: '10px',
-            boxShadow: pUser?.submittedColor ? `0 8px 24px ${pUser.submittedColor.replace('rgb', 'rgba').replace(')', ', 0.2)')}` : 'none',
+            boxShadow: pUser?.submittedColor ? `0 8px 24px ${pUser.submittedColor.replace('rgb', 'rgba').replace(')', ', 0.25)')}` : 'none',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             alignItems: 'center',
@@ -345,7 +379,7 @@ export default function ColorMatchResult() {
               {pUser?.submittedColor || 'rgb(N/A)'}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '6px', fontSize: '12px' }}>
-              <span style={{ color: 'var(--accent-purple)' }}>Score: <strong>{pUser?.colorScore ?? 0}/1000</strong></span>
+              <span style={{ color: 'var(--accent-purple)' }}>Score: <strong>{animatedUserScore}/1000</strong></span>
               <span style={{ color: 'var(--text-secondary)' }}>|</span>
               <span style={{ color: 'var(--accent-blue)' }}>Time: <strong>{pUser?.submitTime ?? 0}s</strong></span>
             </div>
@@ -369,7 +403,7 @@ export default function ColorMatchResult() {
             height: '140px',
             backgroundColor: pOpponent?.submittedColor || 'rgb(128, 128, 128)',
             borderRadius: '10px',
-            boxShadow: pOpponent?.submittedColor ? `0 8px 24px ${pOpponent.submittedColor.replace('rgb', 'rgba').replace(')', ', 0.2)')}` : 'none',
+            boxShadow: pOpponent?.submittedColor ? `0 8px 24px ${pOpponent.submittedColor.replace('rgb', 'rgba').replace(')', ', 0.25)')}` : 'none',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             alignItems: 'center',
@@ -383,7 +417,7 @@ export default function ColorMatchResult() {
               {pOpponent?.submittedColor || 'rgb(N/A)'}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '6px', fontSize: '12px' }}>
-              <span style={{ color: 'var(--accent-purple)' }}>Score: <strong>{pOpponent?.colorScore ?? 0}/1000</strong></span>
+              <span style={{ color: 'var(--accent-purple)' }}>Score: <strong>{animatedOpponentScore}/1000</strong></span>
               <span style={{ color: 'var(--text-secondary)' }}>|</span>
               <span style={{ color: 'var(--accent-blue)' }}>Time: <strong>{pOpponent?.submitTime ?? 0}s</strong></span>
             </div>
