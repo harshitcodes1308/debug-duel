@@ -217,7 +217,7 @@ export default function KbcMultiplayerHub() {
         </div>
 
         {/* Inner Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+        <div className="kbc-multiplayer-grid">
           
           {/* Main Area: Room Creation and Joining */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -241,7 +241,7 @@ export default function KbcMultiplayerHub() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="form-row-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>SELECT TOPIC</label>
                   <select

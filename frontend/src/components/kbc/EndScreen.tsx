@@ -276,7 +276,7 @@ export default function EndScreen({
             {status === 'win' ? 'Play Again' : 'Try Again'}
           </button>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="kbc-endscreen-actions">
             <Link 
               href="/kbc/categories" 
               className="btn btn-secondary"

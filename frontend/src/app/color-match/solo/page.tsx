@@ -422,7 +422,7 @@ export default function ColorMatchSolo() {
             </div>
 
             {/* Comparison boxes */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="form-row-grid">
               {/* Target box (Hidden) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>TARGET COLOR</span>
@@ -457,7 +457,7 @@ export default function ColorMatchSolo() {
             </div>
 
             {/* Controls Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px', marginTop: '10px' }}>
+            <div className="color-match-controls-grid">
               
               {/* Left Column: Redesigned Chromatic Donut Wheel */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
@@ -663,7 +663,7 @@ export default function ColorMatchSolo() {
             </div>
 
             {/* Side-by-side color reveal */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="form-row-grid">
               {/* Target color */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>TARGET COLOR</span>

@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { 
   Play, Users, Award, Trophy, Zap, 
   Calendar, History, ShieldAlert, Sparkles, Flame,
-  Swords, UserPlus, Copy, Check, Code, Palette, TrendingUp
+  Swords, UserPlus, Copy, Check, Code, Palette, TrendingUp,
+  Clock, Coins, Activity
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import AnimatedCounter from '@/components/AnimatedCounter';
@@ -36,6 +37,7 @@ interface RecentBattle {
   participants: Array<{
     userId: string;
     isWinner: boolean;
+    submitTime?: number;
     user: {
       username: string;
     }
@@ -228,34 +230,218 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  return (
-    <div className="container" style={{ padding: '40px 24px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '32px' }}>
+  // Calculations for Performance Overview
+  const totalTokensWon = recentBattles.reduce((acc, battle) => {
+    const myParticipant = battle.participants?.find(p => p.userId === user?.id);
+    if (myParticipant?.isWinner) {
+      return acc + (battle.betAmount || 0) + 50; // bet amount + 50 base bonus
+    }
+    return acc;
+  }, 0);
+
+  const solveTimes = recentBattles
+    .map(battle => {
+      const myParticipant = battle.participants?.find(p => p.userId === user?.id);
+      return myParticipant?.submitTime;
+    })
+    .filter((time): time is number => typeof time === 'number' && time > 0);
+
+  const averageSolveTime = solveTimes.length > 0
+    ? Math.round(solveTimes.reduce((a, b) => a + b, 0) / solveTimes.length)
+    : 0;
+
+  const getEloTrendPoints = () => {
+    const currentElo = user.eloJS;
+    const points = [currentElo];
+    let tempElo = currentElo;
+    
+    for (let i = recentBattles.length - 1; i >= 0; i--) {
+      const battle = recentBattles[i];
+      const myParticipant = battle.participants?.find(p => p.userId === user.id);
+      const isWinner = myParticipant?.isWinner;
+      const isDraw = !isWinner && (!battle.participants?.find(p => p.userId !== user.id) || !battle.participants?.find(p => p.userId !== user.id)?.isWinner) && battle.status === 'completed';
       
-      {/* LEFT COLUMN: Main dashboard options */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        
-        {/* Banner header */}
-        <div className="glass-panel" style={{
-          background: 'linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%)',
-          borderColor: 'rgba(74, 158, 255, 0.2)',
-          padding: '36px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-blue)', fontWeight: 'bold', letterSpacing: '0.1em' }}>WELCOME BACK TO THE ARENA</span>
-            <h1 style={{ fontSize: '36px', marginTop: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>
-              Ready to code, <span style={{ color: 'var(--accent-green)' }}>@{user.username}</span>?
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px', maxWidth: '500px' }}>
-              Choose Javascript, Python, or Java. Pick your bet size, invite a rival, and race to debug in real-time.
-            </p>
-          </div>
-          <div className="float-anim" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', padding: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Swords size={48} color="var(--accent-blue)" />
+      if (isWinner) {
+        tempElo -= 20;
+      } else if (!isDraw && battle.status === 'completed') {
+        tempElo += 15;
+      }
+      points.unshift(tempElo);
+    }
+    return points;
+  };
+
+  const renderSparkline = () => {
+    const points = getEloTrendPoints();
+    const width = 140;
+    const height = 44;
+    const padding = 4;
+    
+    if (points.length < 2) {
+      return (
+        <svg width={width} height={height} style={{ opacity: 0.3 }}>
+          <line x1="0" y1={height/2} x2={width} y2={height/2} stroke="var(--accent-blue)" strokeWidth="2" strokeDasharray="3,3" />
+        </svg>
+      );
+    }
+    
+    const min = Math.min(...points);
+    const max = Math.max(...points);
+    const range = max - min === 0 ? 1 : max - min;
+    
+    const coords = points.map((p, index) => {
+      const x = padding + (index / (points.length - 1)) * (width - 2 * padding);
+      const y = height - padding - ((p - min) / range) * (height - 2 * padding);
+      return { x, y };
+    });
+    
+    const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x} ${c.y}`).join(' ');
+    const areaPath = `${linePath} L ${coords[coords.length - 1].x} ${height} L ${coords[0].x} ${height} Z`;
+    
+    return (
+      <svg width={width} height={height} style={{ overflow: 'visible' }}>
+        <defs>
+          <linearGradient id="sparkline-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="var(--accent-blue)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={areaPath} fill="url(#sparkline-grad)" />
+        <path d={linePath} fill="none" stroke="var(--accent-blue)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={coords[coords.length - 1].x} cy={coords[coords.length - 1].y} r="3" fill="var(--accent-blue)" />
+        <circle cx={coords[coords.length - 1].x} cy={coords[coords.length - 1].y} r="6" fill="var(--accent-blue)" opacity="0.3" />
+      </svg>
+    );
+  };
+
+  return (
+    <div className="container dashboard-grid">
+      
+      <div className="dashboard-column-left">
+        {/* 1. HERO WELCOME BANNER */}
+        <div className="dashboard-hero">
+          <div className="glass-panel" style={{
+            background: 'linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%)',
+            borderColor: 'rgba(74, 158, 255, 0.2)',
+            padding: '36px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-blue)', fontWeight: 'bold', letterSpacing: '0.1em' }}>WELCOME BACK TO THE ARENA</span>
+              <h1 style={{ fontSize: '36px', marginTop: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>
+                Ready to code, <span style={{ color: 'var(--accent-green)' }}>@{user.username}</span>?
+              </h1>
+              <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px', maxWidth: '500px' }}>
+                Choose Javascript, Python, or Java. Pick your bet size, invite a rival, and race to debug in real-time.
+              </p>
+            </div>
+            <div className="float-anim" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', padding: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Swords size={48} color="var(--accent-blue)" />
+            </div>
           </div>
         </div>
+
+        {/* PERFORMANCE OVERVIEW SECTION */}
+        <div className="glass-panel card-shine" style={{
+          padding: '20px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: 'rgba(255, 255, 255, 0.01)',
+          border: '1px solid var(--border)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: 'var(--text-secondary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <Activity size={14} color="var(--accent-blue)" /> Performance Overview
+            </h3>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              Recent ELO Trend
+            </span>
+          </div>
+
+          <div className="performance-overview-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+            
+            {/* 2-column Stat Strip */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(130px, 1fr))',
+              gap: '16px 24px',
+              flex: 1
+            }}>
+              {/* Stat 1: Win Rate */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <Award size={18} color="var(--accent-green)" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Win Rate</span>
+                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-green)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                    <AnimatedCounter value={user.totalDuels > 0 ? Math.round((user.totalWins / user.totalDuels) * 100) : 0} />%
+                  </span>
+                </div>
+              </div>
+
+              {/* Stat 2: Current Streak */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <Flame size={18} color="var(--accent-red)" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Current Streak</span>
+                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-red)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                    <AnimatedCounter value={user.currentStreak} />
+                  </span>
+                </div>
+              </div>
+
+              {/* Stat 3: Total Tokens Won */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <Coins size={18} color="var(--accent-amber)" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Recent Winnings</span>
+                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                    <AnimatedCounter value={totalTokensWon} />
+                  </span>
+                </div>
+              </div>
+
+              {/* Stat 4: Average Solve Time */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                  <Clock size={18} color="var(--accent-blue)" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Avg Solve Time</span>
+                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                    {averageSolveTime > 0 ? `${averageSolveTime}s` : '--'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Visualization Component */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '140px' }}>
+              {renderSparkline()}
+            </div>
+
+          </div>
+        </div>
+
+      {/* 2. GAME ARENAS CATEGORIES & CARDS */}
+      <div className="dashboard-games" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
         {/* Game Arenas categories */}
         <div>
@@ -437,6 +623,10 @@ export default function Dashboard() {
             Warm Up
           </Link>
         </div>
+      </div>
+
+      {/* 3. PERFORMANCE STATS & RECENT BATTLES */}
+      <div className="dashboard-stats" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         {/* Recent Battles */}
         <div>
@@ -611,7 +801,7 @@ export default function Dashboard() {
         <div style={{ marginTop: '16px' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>Performance & Analytics</h2>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '20px', alignItems: 'stretch' }}>
+          <div className="performance-visualization-grid">
             {/* Stats Cards Grid */}
             <div className="glass-panel" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', padding: '24px' }}>
               {/* Stat 1: Win Rate */}
@@ -715,11 +905,14 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* RIGHT COLUMN: Player Card & Leaderboard */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      </div> {/* End of dashboard-column-left */}
+
+      <div className="dashboard-column-right">
+
+      {/* 4. PLAYER PROFILE SUMMARY CARD */}
+      <div className="dashboard-profile">
         
         {/* Player Profile Summary */}
         <div className="card-base card-shine glow-purple" style={{
@@ -840,6 +1033,10 @@ export default function Dashboard() {
             <div style={{ fontSize: '12px', color: 'var(--accent-green)', fontWeight: 'bold' }}>{claimMessage}</div>
           )}
         </div>
+      </div>
+
+      {/* 5. LEADERBOARD & FRIENDS LIST */}
+      <div className="dashboard-leaderboard">
 
         {/* Friends list panel */}
         <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1114,8 +1311,9 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-
       </div>
+
+      </div> {/* End of dashboard-column-right */}
 
       {/* Challenge Invitation Modal */}
       {challengeFriend && (

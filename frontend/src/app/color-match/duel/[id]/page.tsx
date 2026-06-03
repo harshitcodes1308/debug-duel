@@ -393,12 +393,7 @@ export default function ColorMatchArena() {
         </div>
       </div>
 
-      {/* 2. BODY GRID */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) 280px',
-        overflow: 'hidden'
-      }}>
+      <div className="duel-page-grid">
         
         {/* Game Area */}
         <div style={{
@@ -483,7 +478,7 @@ export default function ColorMatchArena() {
           {gameState === 'guess' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '480px', animation: 'fadeIn 0.3s ease-out' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="form-row-grid">
                 {/* Target box (Hidden) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>TARGET COLOR</span>
@@ -518,7 +513,7 @@ export default function ColorMatchArena() {
               </div>
 
               {/* Controls Layout */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '28px', marginTop: '10px' }}>
+              <div className="color-match-controls-grid">
                 
                 {/* Left Column: Redesigned Chromatic Donut Wheel */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>

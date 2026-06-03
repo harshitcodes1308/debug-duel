@@ -34,7 +34,7 @@ export default function Header() {
       <Link href="/" style={{ textDecoration: 'none' }}>
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Swords size={20} color="var(--accent-blue)" />
-          <span>DebugDuel</span>
+          <span className="header-logo-text">DebugDuel</span>
         </div>
       </Link>
 
@@ -76,7 +76,7 @@ export default function Header() {
             <span style={{ fontWeight: 700, fontSize: '13px', color: '#FFF' }}>
               {user.tokens}
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>tokens</span>
+            <span className="header-tokens-label" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>tokens</span>
           </div>
 
           {/* Streak */}
@@ -116,10 +116,10 @@ export default function Header() {
           }}
           >
             <Award size={15} color="var(--accent-blue)" />
-            <span style={{ fontWeight: 600, fontSize: '13px' }}>
+            <span className="header-username" style={{ fontWeight: 600, fontSize: '13px' }}>
               @{user.username}
             </span>
-            <span style={{
+            <span className="header-elo-badge" style={{
               fontSize: '10px',
               background: 'var(--accent-purple)',
               color: '#FFF',

@@ -161,12 +161,7 @@ export default function PracticeArena() {
         </div>
       </div>
 
-      {/* 2. BODY GRID */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) 340px',
-        overflow: 'hidden'
-      }}>
+      <div className="practice-page-grid">
         
         {/* Editor Area */}
         <div style={{

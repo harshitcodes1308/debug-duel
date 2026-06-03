@@ -79,7 +79,7 @@ export default function LifelinesPanel({
         Lifelines Available
       </h3>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+      <div className="kbc-lifelines-grid">
         {/* 50-50 */}
         <button
           onClick={() => handleUseLifeline('fiftyFifty')}

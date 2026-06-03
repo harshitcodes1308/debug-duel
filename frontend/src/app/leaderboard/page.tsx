@@ -122,98 +122,100 @@ export default function LeaderboardPage() {
             No rankings logged yet. Be the first to win a duel!
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)', color: 'var(--text-secondary)' }}>
-                <th style={{ padding: '16px 24px', fontWeight: '600' }}>RANK</th>
-                <th style={{ padding: '16px 24px', fontWeight: '600' }}>PLAYER</th>
-                <th style={{ padding: '16px 24px', fontWeight: '600' }}>TIER</th>
-                <th style={{ padding: '16px 24px', fontWeight: '600' }}>DUELS (W/L)</th>
-                <th style={{ padding: '16px 24px', fontWeight: '600' }}>TOKENS</th>
-                <th style={{ padding: '16px 24px', fontWeight: '600', textAlign: 'right' }}>ELO RATING</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((entry, index) => {
-                const elo = language === 'javascript' ? entry.eloJS : language === 'python' ? entry.eloPython : entry.eloJava;
-                const isCurrentUser = entry.username === user.username;
-                const isTopThree = index < 3;
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px', minWidth: '500px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '16px 24px', fontWeight: '600' }}>RANK</th>
+                  <th style={{ padding: '16px 24px', fontWeight: '600' }}>PLAYER</th>
+                  <th className="hidden-mobile" style={{ padding: '16px 24px', fontWeight: '600' }}>TIER</th>
+                  <th className="hidden-mobile" style={{ padding: '16px 24px', fontWeight: '600' }}>DUELS (W/L)</th>
+                  <th className="hidden-tablet" style={{ padding: '16px 24px', fontWeight: '600' }}>TOKENS</th>
+                  <th style={{ padding: '16px 24px', fontWeight: '600', textAlign: 'right' }}>ELO RATING</th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((entry, index) => {
+                  const elo = language === 'javascript' ? entry.eloJS : language === 'python' ? entry.eloPython : entry.eloJava;
+                  const isCurrentUser = entry.username === user.username;
+                  const isTopThree = index < 3;
 
-                return (
-                  <tr key={entry.id} style={{
-                    borderBottom: '1px solid var(--border)',
-                    background: isCurrentUser ? 'rgba(74, 158, 255, 0.04)' : 'transparent',
-                    transition: 'var(--transition)',
-                    animationDelay: `${index * 40}ms`,
-                    opacity: 0
-                  }} className={`slide-up-anim ${isCurrentUser ? 'pulse-glow' : ''}`}>
-                    {/* Rank Number */}
-                    <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>
-                      {isTopThree ? (
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '28px',
-                          height: '28px',
-                          background: index === 0 ? 'rgba(245, 158, 11, 0.1)' : index === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(205, 127, 50, 0.1)',
-                          border: `1px solid ${index === 0 ? 'var(--accent-amber)' : index === 1 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(205, 127, 50, 0.3)'}`,
-                          borderRadius: '50%'
+                  return (
+                    <tr key={entry.id} style={{
+                      borderBottom: '1px solid var(--border)',
+                      background: isCurrentUser ? 'rgba(74, 158, 255, 0.04)' : 'transparent',
+                      transition: 'var(--transition)',
+                      animationDelay: `${index * 40}ms`,
+                      opacity: 0
+                    }} className={`slide-up-anim ${isCurrentUser ? 'pulse-glow' : ''}`}>
+                      {/* Rank Number */}
+                      <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>
+                        {isTopThree ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '28px',
+                            height: '28px',
+                            background: index === 0 ? 'rgba(245, 158, 11, 0.1)' : index === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(205, 127, 50, 0.1)',
+                            border: `1px solid ${index === 0 ? 'var(--accent-amber)' : index === 1 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(205, 127, 50, 0.3)'}`,
+                            borderRadius: '50%'
+                          }}>
+                            <Medal size={16} color={index === 0 ? 'var(--accent-amber)' : index === 1 ? '#E5E7EB' : '#CD7F32'} />
+                          </span>
+                        ) : (
+                          <span style={{ paddingLeft: '10px', color: 'var(--text-secondary)', fontFamily: 'Space Grotesk' }}>{index + 1}</span>
+                        )}
+                      </td>
+
+                      {/* Username */}
+                      <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>
+                        <Link href={`/profile/${entry.username}`} className="flex-center" style={{ color: '#fff', textDecoration: 'none', gap: '6px', justifyContent: 'flex-start', transition: 'var(--transition)' }}>
+                          <span onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-blue)'} onMouseLeave={(e) => e.currentTarget.style.color = '#fff'}>
+                            @{entry.username}
+                          </span>
+                          {isCurrentUser && <span style={{ fontSize: '9px', background: 'rgba(74, 158, 255, 0.1)', color: 'var(--accent-blue)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(74, 158, 255, 0.2)', fontWeight: 'bold' }}>YOU</span>}
+                        </Link>
+                      </td>
+
+                      {/* Tier badge */}
+                      <td className="hidden-mobile" style={{ padding: '16px 24px' }}>
+                        <span className="badge" style={{
+                          background: 'rgba(139, 92, 246, 0.06)',
+                          border: '1px solid rgba(139, 92, 246, 0.15)',
+                          color: 'var(--accent-purple)',
+                          fontSize: '11px',
+                          fontWeight: 'bold'
                         }}>
-                          <Medal size={16} color={index === 0 ? 'var(--accent-amber)' : index === 1 ? '#E5E7EB' : '#CD7F32'} />
+                          {entry.rank}
                         </span>
-                      ) : (
-                        <span style={{ paddingLeft: '10px', color: 'var(--text-secondary)', fontFamily: 'Space Grotesk' }}>{index + 1}</span>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Username */}
-                    <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>
-                      <Link href={`/profile/${entry.username}`} className="flex-center" style={{ color: '#fff', textDecoration: 'none', gap: '6px', justifyContent: 'flex-start', transition: 'var(--transition)' }}>
-                        <span onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-blue)'} onMouseLeave={(e) => e.currentTarget.style.color = '#fff'}>
-                          @{entry.username}
-                        </span>
-                        {isCurrentUser && <span style={{ fontSize: '9px', background: 'rgba(74, 158, 255, 0.1)', color: 'var(--accent-blue)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(74, 158, 255, 0.2)', fontWeight: 'bold' }}>YOU</span>}
-                      </Link>
-                    </td>
+                      {/* Duels (W/L) */}
+                      <td className="hidden-mobile" style={{ padding: '16px 24px', color: 'var(--text-secondary)' }}>
+                        {entry.totalDuels} ({entry.totalWins}W / {entry.totalDuels - entry.totalWins}L)
+                      </td>
 
-                    {/* Tier badge */}
-                    <td style={{ padding: '16px 24px' }}>
-                      <span className="badge" style={{
-                        background: 'rgba(139, 92, 246, 0.06)',
-                        border: '1px solid rgba(139, 92, 246, 0.15)',
-                        color: 'var(--accent-purple)',
-                        fontSize: '11px',
-                        fontWeight: 'bold'
-                      }}>
-                        {entry.rank}
-                      </span>
-                    </td>
+                      {/* Tokens */}
+                      <td className="hidden-tablet" style={{ padding: '16px 24px' }}>
+                        <div className="flex-center" style={{ gap: '6px', justifyContent: 'flex-start' }}>
+                          <Coins size={14} color="var(--accent-amber)" />
+                          <span style={{ fontWeight: 'bold' }}>
+                            <AnimatedCounter value={entry.tokens} />
+                          </span>
+                        </div>
+                      </td>
 
-                    {/* Duels (W/L) */}
-                    <td style={{ padding: '16px 24px', color: 'var(--text-secondary)' }}>
-                      {entry.totalDuels} ({entry.totalWins}W / {entry.totalDuels - entry.totalWins}L)
-                    </td>
-
-                    {/* Tokens */}
-                    <td style={{ padding: '16px 24px' }}>
-                      <div className="flex-center" style={{ gap: '6px', justifyContent: 'flex-start' }}>
-                        <Coins size={14} color="var(--accent-amber)" />
-                        <span style={{ fontWeight: 'bold' }}>
-                          <AnimatedCounter value={entry.tokens} />
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* ELO Rating */}
-                    <td style={{ padding: '16px 24px', fontWeight: 'bold', color: 'var(--accent-blue)', textAlign: 'right', fontSize: '16px' }}>
-                      <AnimatedCounter value={elo} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {/* ELO Rating */}
+                      <td style={{ padding: '16px 24px', fontWeight: 'bold', color: 'var(--accent-blue)', textAlign: 'right', fontSize: '16px' }}>
+                        <AnimatedCounter value={elo} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

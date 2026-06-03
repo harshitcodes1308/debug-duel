@@ -181,11 +181,7 @@ export default function QuestionCard({
       </div>
 
       {/* Grid options A, B, C, D */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: 'var(--space-4)'
-      }}>
+      <div className="kbc-options-grid">
         {question.options.map((opt, idx) => (
           <button
             key={`${question.id}-${idx}`}

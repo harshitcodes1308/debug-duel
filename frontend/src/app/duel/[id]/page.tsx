@@ -269,11 +269,7 @@ export default function DuelArena() {
       </div>
 
       {/* 2. BODY GRID: EDITOR (LEFT) & FOMO PANEL (RIGHT) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) 280px',
-        overflow: 'hidden'
-      }}>
+      <div className="duel-page-grid">
         
         {/* Monaco Editor Container */}
         <div style={{

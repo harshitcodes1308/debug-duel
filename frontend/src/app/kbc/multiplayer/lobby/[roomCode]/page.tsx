@@ -231,8 +231,7 @@ export default function KbcLobbyRoom() {
           </div>
         )}
 
-        {/* Players View */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '20px', padding: '10px 0' }}>
+        <div className="matchup-grid">
           
           {/* Host Display */}
           <div className="glass-panel" style={{
