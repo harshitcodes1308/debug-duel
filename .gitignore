@@ -22,12 +22,15 @@ dist/
 .env.production.local
 backend/.env
 frontend/.env.local
+**/.env
+**/.env.local
+**/.env.*
 
 # SQLite local DB instances (exclude seed and schema)
 *.db
 *.db-journal
-backend/prisma/dev.db
-backend/prisma/dev.db-journal
+backend/prisma/dev.db*
+**/dev.db*
 
 # OS files
 .DS_Store
