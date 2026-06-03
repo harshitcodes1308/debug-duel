@@ -3,8 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
-import { Trophy, ShieldAlert, RotateCcw, Home, BookOpen, AlertCircle, Sparkles, Clock, Percent, ShieldCheck } from 'lucide-react';
-import { KbcAudio } from '@/utils/kbc/audio';
+import { Trophy, ShieldAlert, RotateCcw, Home, BookOpen, AlertCircle } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -21,7 +20,6 @@ interface EndScreenProps {
   failedQuestion: Question | null;
   userAnswerIndex: number | null;
   onReset: () => void;
-  // Persistent backend stats
   accuracy?: number;
   fastestAnswerTime?: number;
   lifelinesUsedCount?: number;
@@ -43,8 +41,8 @@ export default function EndScreen({
   // Safety Milestone XP calculation
   const calculateFinalXp = (): number => {
     if (status === 'win') return 1000000;
-    if (questionsCleared >= 10) return 32000; 
-    if (questionsCleared >= 5) return 1000;   
+    if (questionsCleared >= 10) return 32000; // Level 10 Milestone
+    if (questionsCleared >= 5) return 1000;   // Level 5 Milestone
     return 0;
   };
 
@@ -53,9 +51,6 @@ export default function EndScreen({
 
   useEffect(() => {
     if (status === 'win') {
-      // Trigger game win fanfare sound
-      KbcAudio.playWin();
-
       // Trigger fireworks confetti
       const duration = 5 * 1000;
       const animationEnd = Date.now() + duration;
@@ -73,14 +68,12 @@ export default function EndScreen({
         }
 
         const particleCount = 50 * (timeLeft / duration);
+        // Confetti shoots from left/right sides
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
       }, 250);
 
       return () => clearInterval(interval);
-    } else {
-      // Trigger game over sound
-      KbcAudio.playGameOver();
     }
   }, [status]);
 
@@ -97,10 +90,10 @@ export default function EndScreen({
         className="glass-panel" 
         style={{
           width: '100%',
-          maxWidth: '680px',
+          maxWidth: '640px',
           padding: '48px 40px',
           textAlign: 'center',
-          background: 'rgba(20, 16, 45, 0.55)',
+          background: 'rgba(20, 16, 45, 0.5)',
           borderColor: status === 'win' ? 'var(--accent-amber)' : 'rgba(255,255,255,0.08)',
           boxShadow: status === 'win' 
             ? '0 20px 50px rgba(245, 166, 35, 0.15), inset 0 0 30px rgba(245, 166, 35, 0.05)' 
@@ -108,8 +101,7 @@ export default function EndScreen({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '32px',
-          borderRadius: '12px'
+          gap: '32px'
         }}
       >
         {/* Banner Graphics */}
@@ -192,93 +184,27 @@ export default function EndScreen({
         {/* Stats Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gridTemplateColumns: '1fr 1fr',
           width: '100%',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           padding: '24px 0',
-          gap: '20px'
+          gap: '16px'
         }}>
           <div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk, sans-serif' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk, sans-serif' }}>
               {finalXp.toLocaleString()}
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-              XP EARNED
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
+              XP POINTS EARNED
             </div>
           </div>
-
           <div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#FFF', fontFamily: 'Space Grotesk, sans-serif' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#FFF', fontFamily: 'Space Grotesk, sans-serif' }}>
               {questionsCleared} / 15
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-              LEVELS CLEARED
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-green)', fontFamily: 'Space Grotesk, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-              +{tokensEarned} 🪙
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-              TOKENS REWARD
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-blue)', fontFamily: 'Space Grotesk, sans-serif' }}>
-              {accuracy}%
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-              ACCURACY
-            </div>
-          </div>
-        </div>
-
-        {/* Extended Stats Panel */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          width: '100%',
-          gap: '12px',
-          marginTop: '-12px'
-        }}>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '8px',
-            padding: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            textAlign: 'left'
-          }}>
-            <Clock size={20} color="var(--accent-blue)" />
-            <div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Fastest Answer</div>
-              <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#FFF' }}>
-                {fastestAnswerTime > 0 ? `${fastestAnswerTime}s` : 'N/A'}
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '8px',
-            padding: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            textAlign: 'left'
-          }}>
-            <ShieldCheck size={20} color="var(--accent-purple)" />
-            <div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Lifelines Used</div>
-              <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#FFF' }}>
-                {lifelinesUsedCount} / 4
-              </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
+              QUESTIONS CLEARED
             </div>
           </div>
         </div>
@@ -343,12 +269,7 @@ export default function EndScreen({
               padding: '16px',
               fontWeight: 'bold',
               gap: '10px',
-              fontSize: '16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              fontSize: '16px'
             }}
           >
             <RotateCcw size={18} />
@@ -359,7 +280,7 @@ export default function EndScreen({
             <Link 
               href="/kbc/categories" 
               className="btn btn-secondary"
-              style={{ padding: '14px', fontSize: '14px', gap: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ padding: '14px', fontSize: '14px', gap: '8px' }}
             >
               <BookOpen size={16} />
               Categories
@@ -367,7 +288,7 @@ export default function EndScreen({
             <Link 
               href="/" 
               className="btn btn-secondary"
-              style={{ padding: '14px', fontSize: '14px', gap: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ padding: '14px', fontSize: '14px', gap: '8px' }}
             >
               <Home size={16} />
               Home Dashboard

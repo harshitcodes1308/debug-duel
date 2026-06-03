@@ -44,58 +44,59 @@ export default function QuestionCard({
 
     // Base Styles
     let border = '1px solid var(--border)';
-    let background = 'rgba(26, 26, 34, 0.4)';
+    let background = 'rgba(255, 255, 255, 0.01)';
     let color = 'var(--text-primary)';
     let cursor = disabled ? 'not-allowed' : 'pointer';
 
     if (revealedAnswer) {
       if (isCorrect) {
         border = '1px solid var(--accent-green)';
-        background = 'rgba(0, 255, 148, 0.15)';
+        background = 'rgba(16, 185, 129, 0.08)';
         color = 'var(--accent-green)';
         cursor = 'default';
       } else if (isLocked && !isCorrect) {
         border = '1px solid var(--accent-red)';
-        background = 'rgba(255, 68, 68, 0.15)';
+        background = 'rgba(239, 68, 68, 0.08)';
         color = 'var(--accent-red)';
         cursor = 'default';
       } else {
-        color = 'rgba(255, 255, 255, 0.2)';
+        color = 'var(--text-secondary)';
+        background = 'rgba(255, 255, 255, 0.005)';
         cursor = 'default';
       }
     } else if (isLocked) {
       border = '1px solid var(--accent-amber)';
-      background = 'rgba(245, 166, 35, 0.2)';
+      background = 'rgba(245, 158, 11, 0.08)';
       color = 'var(--accent-amber)';
       cursor = 'default';
     } else if (isSelected) {
       border = '1px solid var(--accent-blue)';
-      background = 'rgba(74, 158, 255, 0.15)';
+      background = 'rgba(59, 130, 246, 0.08)';
       color = '#FFF';
     }
 
     return {
       display: 'flex',
       alignItems: 'center',
-      padding: '18px 24px',
-      borderRadius: '8px',
+      padding: 'var(--space-4) var(--space-5)',
+      borderRadius: 'var(--radius-md)',
       border,
       background,
       color,
       cursor,
       fontFamily: 'Inter, sans-serif',
-      fontSize: '15px',
+      fontSize: '14px',
       textAlign: 'left',
-      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: 'var(--transition)',
       position: 'relative',
-      gap: '12px',
+      gap: 'var(--space-3)',
       opacity: isEliminated ? 0 : 1,
       transform: isEliminated ? 'scale(0.92)' : 'scale(1)',
       pointerEvents: isEliminated ? 'none' : undefined,
       animation: revealedAnswer 
         ? (isCorrect ? 'revealCorrect 0.6s ease forwards' : 'none')
         : (isLocked ? 'pulseGlow 1.5s infinite ease-in-out' : 'fadeInUp 0.6s ease forwards'),
-      animationDelay: revealedAnswer ? '0s' : `${idx * 0.15}s`
+      animationDelay: revealedAnswer ? '0s' : `${idx * 0.1}s`
     };
   };
 
@@ -145,12 +146,12 @@ export default function QuestionCard({
 
       {/* Question statement frame */}
       <div 
-        className="glass-panel" 
+        className="card-base" 
         style={{
-          background: 'rgba(20, 16, 40, 0.6)',
-          borderColor: 'rgba(255,255,255,0.08)',
-          boxShadow: 'inset 0 0 15px rgba(255,255,255,0.02)',
-          padding: '36px',
+          background: 'var(--bg-secondary)',
+          borderColor: 'var(--border)',
+          boxShadow: 'var(--shadow-md)',
+          padding: 'var(--space-8)',
           textAlign: 'center',
           position: 'relative',
           animation: 'textReveal 0.8s ease-out'
@@ -160,17 +161,17 @@ export default function QuestionCard({
           position: 'absolute',
           top: '12px',
           left: '20px',
-          fontSize: '11px',
+          fontSize: '10px',
           color: 'var(--accent-blue)',
           textTransform: 'uppercase',
           letterSpacing: '0.05em',
-          fontWeight: 'bold'
+          fontWeight: 700
         }}>
           {question.category} • {question.difficulty}
         </span>
         <h2 style={{ 
-          fontSize: '20px', 
-          lineHeight: '30px', 
+          fontSize: '18px', 
+          lineHeight: '28px', 
           color: '#FFF', 
           fontFamily: 'Space Grotesk, sans-serif',
           marginTop: '8px'
@@ -183,7 +184,7 @@ export default function QuestionCard({
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '16px'
+        gap: 'var(--space-4)'
       }}>
         {question.options.map((opt, idx) => (
           <button
@@ -193,22 +194,22 @@ export default function QuestionCard({
             disabled={disabled || lockedOptionIndex !== null || revealedAnswer || eliminatedOptionIndices.includes(idx)}
             onMouseEnter={(e) => {
               if (disabled || lockedOptionIndex !== null || revealedAnswer || selectedOptionIndex === idx) return;
-              e.currentTarget.style.borderColor = 'rgba(74, 158, 255, 0.5)';
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-              e.currentTarget.style.boxShadow = '0 0 12px rgba(74, 158, 255, 0.15)';
+              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
             }}
             onMouseLeave={(e) => {
               if (disabled || lockedOptionIndex !== null || revealedAnswer || selectedOptionIndex === idx) return;
               e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.background = 'rgba(26, 26, 34, 0.4)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)';
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
             <span style={{ 
-              fontWeight: 'bold', 
+              fontWeight: 700, 
               color: selectedOptionIndex === idx || lockedOptionIndex === idx ? 'inherit' : 'var(--accent-amber)',
               fontFamily: 'Space Grotesk, sans-serif',
-              fontSize: '16px'
+              fontSize: '15px'
             }}>
               {optionLetters[idx]}
             </span>
@@ -219,28 +220,57 @@ export default function QuestionCard({
 
       {/* Action lock button */}
       {selectedOptionIndex !== null && lockedOptionIndex === null && !revealedAnswer && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-2)' }}>
           <button 
             className="btn btn-success" 
             style={{
-              padding: '14px 48px',
-              fontSize: '15px',
+              padding: '12px 36px',
+              fontSize: '14px',
               background: 'var(--accent-amber)',
-              color: '#000',
-              fontWeight: 'bold',
-              gap: '10px',
-              boxShadow: '0 0 20px rgba(245, 166, 35, 0.3)',
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: '8px',
+              borderColor: 'rgba(245, 158, 11, 0.4)',
+              color: '#000000',
+              fontWeight: 700,
+              gap: 'var(--space-2)',
+              boxShadow: 'var(--shadow-md)',
+              borderRadius: 'var(--radius-md)',
               display: 'flex',
               alignItems: 'center'
             }}
             onClick={onLockOption}
           >
-            <Lock size={16} />
+            <Lock size={15} />
             Lock Option {optionLetters[selectedOptionIndex]}
           </button>
+        </div>
+      )}
+
+      {/* Locked Suspense Banner */}
+      {lockedOptionIndex !== null && !revealedAnswer && (
+        <div 
+          className="slide-up-anim"
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '12px',
+            background: 'rgba(245, 158, 11, 0.05)',
+            border: '1px dashed rgba(245, 158, 11, 0.3)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px var(--space-4)',
+            color: 'var(--accent-amber)',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginTop: '8px'
+          }}
+        >
+          <span style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: 'var(--accent-amber)',
+            display: 'inline-block'
+          }} className="pulse-glow" />
+          <span>Lock Confirmed. Processing answer...</span>
         </div>
       )}
     </div>

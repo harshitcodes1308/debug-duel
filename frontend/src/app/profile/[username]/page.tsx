@@ -8,6 +8,7 @@ import {
   ArrowLeft, Award, Flame, Zap, Shield, 
   History, Swords, TrendingUp, Sparkles 
 } from 'lucide-react';
+import AnimatedCounter from '@/components/AnimatedCounter';
 
 interface ParticipantDetails {
   userId: string;
@@ -100,58 +101,63 @@ export default function PlayerProfile() {
     : 0;
 
   return (
-    <div className="container" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div className="container" style={{ padding: 'var(--space-10) var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
       
       {/* Back Link */}
       <Link href="/" style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '8px',
+        gap: 'var(--space-2)',
         color: 'var(--text-secondary)',
         textDecoration: 'none',
-        fontSize: '14px',
-        alignSelf: 'flex-start'
-      }}>
-        <ArrowLeft size={16} /> Back to Dashboard
+        fontSize: '13px',
+        fontWeight: 500,
+        alignSelf: 'flex-start',
+        transition: 'var(--transition)'
+      }}
+      className="btn-ghost"
+      >
+        <ArrowLeft size={14} /> Back to Dashboard
       </Link>
 
       {/* Banner info */}
-      <div className="glass-panel" style={{
-        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(20, 20, 25, 0.8) 100%)',
+      <div className="card-base" style={{
+        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(20, 20, 25, 0.6) 100%)',
+        borderColor: 'rgba(139, 92, 246, 0.15)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '36px',
+        padding: 'var(--space-8)',
         flexWrap: 'wrap',
-        gap: '24px'
+        gap: 'var(--space-6)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
           {/* Avatar frame */}
           <div style={{
-            width: '90px',
-            height: '90px',
+            width: '80px',
+            height: '80px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '42px',
+            fontSize: '36px',
             fontWeight: 'bold',
-            color: '#fff',
-            boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)'
+            color: '#FFFFFF',
+            boxShadow: 'var(--shadow-md)'
           }}>
             {profile.username[0].toUpperCase()}
           </div>
 
           <div>
-            <h1 style={{ fontSize: '32px' }}>@{profile.username}</h1>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
-              <span className="badge" style={{ background: 'var(--accent-purple)', color: '#fff', fontWeight: 'bold' }}>
+            <h1 style={{ fontSize: '28px', fontFamily: 'Space Grotesk, sans-serif' }}>@{profile.username}</h1>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginTop: 'var(--space-2)' }}>
+              <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.15)', color: 'var(--accent-purple)', fontWeight: 'bold' }}>
                 {profile.rank}
               </span>
               {profile.currentStreak >= 3 && (
                 <div className="flex-center" style={{ gap: '2px', color: 'var(--accent-red)' }} title="On a Win Streak!">
-                  <Flame size={14} fill="var(--accent-red)" />
+                  <Flame size={13} fill="var(--accent-red)" />
                   <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{profile.currentStreak}x Streak</span>
                 </div>
               )}
@@ -160,104 +166,145 @@ export default function PlayerProfile() {
         </div>
 
         {/* ELO Banner Stat */}
-        <div style={{ display: 'flex', gap: '30px' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-6)' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}>
-              {highestElo}
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}>
+              <AnimatedCounter value={highestElo} />
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>PEAK ELO</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>Peak ELO</div>
           </div>
           <div style={{ width: '1px', background: 'var(--border)' }}></div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>
-              {profile.tokens}
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>
+              <AnimatedCounter value={profile.tokens} />
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>TOKENS</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>Tokens</div>
           </div>
         </div>
       </div>
 
       {/* Main Grid: Stats (left) & History (right) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '30px' }}>
+      <div className="profile-grid">
         
         {/* STATS BREAKDOWN */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <h2 style={{ fontSize: '20px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          <h2 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Battle Stats
           </h2>
 
-          <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="card-base" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             
             {/* Win rate block */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>WIN RATE</span>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '2px' }}>{winRate}%</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '8px 16px', borderRadius: '8px' }}>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-green)' }}>{profile.totalWins} W</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Wins</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                <div style={{ position: 'relative', width: '72px', height: '72px' }}>
+                  <svg width="72" height="72" viewBox="0 0 72 72" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="30"
+                      stroke="rgba(255, 255, 255, 0.03)"
+                      strokeWidth="5"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="36"
+                      cy="36"
+                      r="30"
+                      stroke="var(--accent-green)"
+                      strokeWidth="5"
+                      fill="transparent"
+                      strokeDasharray={2 * Math.PI * 30}
+                      strokeDashoffset={2 * Math.PI * 30 * (1 - winRate / 100)}
+                      strokeLinecap="round"
+                      style={{
+                        transition: 'stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      }}
+                    />
+                  </svg>
+                  <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, width: '100%', height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', fontFamily: 'Space Grotesk' }}>
+                      <AnimatedCounter value={winRate} />%
+                    </span>
+                  </div>
                 </div>
-                <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-red)' }}>{profile.totalDuels - profile.totalWins} L</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Losses</div>
+                  <span style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Win Rate</span>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    Based on <strong style={{ color: '#fff' }}><AnimatedCounter value={profile.totalDuels} /></strong> duels
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', padding: '10px 16px', borderRadius: 'var(--radius-md)' }}>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-green)' }}>
+                    <AnimatedCounter value={profile.totalWins} /> W
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '1px', fontWeight: 600, letterSpacing: '0.05em' }}>WINS</div>
+                </div>
+                <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-red)' }}>
+                    <AnimatedCounter value={profile.totalDuels - profile.totalWins} /> L
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '1px', fontWeight: 600, letterSpacing: '0.05em' }}>LOSSES</div>
                 </div>
               </div>
             </div>
 
-            {/* Progress line */}
-            <div style={{ width: '100%', height: '8px', background: 'rgba(255, 68, 68, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: `${winRate}%`, height: '100%', background: 'var(--accent-green)', borderRadius: '4px' }}></div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>LANGUAGE RATINGS</span>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Language Ratings</span>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: '6px' }}>
-                <span>JavaScript ELO</span>
-                <strong style={{ color: 'var(--accent-amber)' }}>{profile.eloJS} ELO</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>JavaScript Rating</span>
+                <strong style={{ color: 'var(--accent-amber)' }}><AnimatedCounter value={profile.eloJS} /> ELO</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: '6px' }}>
-                <span>Python ELO</span>
-                <strong style={{ color: 'var(--accent-blue)' }}>{profile.eloPython} ELO</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Python Rating</span>
+                <strong style={{ color: 'var(--accent-blue)' }}><AnimatedCounter value={profile.eloPython} /> ELO</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: '6px' }}>
-                <span>Java ELO</span>
-                <strong style={{ color: 'var(--accent-red)' }}>{profile.eloJava} ELO</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Java Rating</span>
+                <strong style={{ color: 'var(--accent-red)' }}><AnimatedCounter value={profile.eloJava} /> ELO</strong>
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span>Best Win Streak</span>
-              <strong style={{ color: 'var(--accent-red)' }}>{profile.bestStreak} wins</strong>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: 'var(--space-2)' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Best Win Streak</span>
+              <strong style={{ color: 'var(--accent-red)' }}><AnimatedCounter value={profile.bestStreak} /> wins</strong>
             </div>
 
           </div>
 
           {!isOwnProfile && (
-            <Link href={`/duel/create`} className="btn btn-primary" style={{ gap: '8px', justifyContent: 'center' }}>
-              <Swords size={16} fill="black" /> Challenge Player
+            <Link href={`/duel/create`} className="btn btn-primary" style={{ gap: 'var(--space-2)', justifyContent: 'center' }}>
+              <Swords size={14} fill="currentColor" /> Challenge Player
             </Link>
           )}
         </div>
 
         {/* MATCH HISTORY */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <h2 style={{ fontSize: '20px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          <h2 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Battle History
           </h2>
 
           {profile.duels.length === 0 ? (
-            <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-              <History size={36} style={{ marginBottom: '12px', opacity: 0.5 }} />
-              <p>No duels recorded on this profile yet.</p>
+            <div className="card-base" style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-secondary)' }}>
+              <History size={36} style={{ marginBottom: 'var(--space-3)', opacity: 0.4 }} />
+              <p style={{ fontSize: '13px' }}>No duels recorded on this profile yet.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
               {profile.duels.map((item) => {
                 const battle = item.duel;
                 const isWinner = battle.winnerId === profile.id;
@@ -265,18 +312,16 @@ export default function PlayerProfile() {
                 const langBadge = battle.language === 'javascript' ? 'badge-js' : battle.language === 'python' ? 'badge-py' : 'badge-java';
 
                 return (
-                  <div key={battle.id} className="glass-panel" style={{
+                  <div key={battle.id} className={isWinner ? 'card-success' : 'card-danger'} style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '16px 20px',
-                    borderColor: isWinner ? 'rgba(0, 255, 148, 0.2)' : 'rgba(255, 68, 68, 0.2)',
-                    background: 'rgba(255,255,255,0.01)'
+                    padding: 'var(--space-4) var(--space-5)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
                       <span className={`badge ${langBadge}`} style={{ fontSize: '10px' }}>{battle.language}</span>
                       <div>
-                        <div style={{ fontWeight: '600' }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
                           vs <span style={{ color: 'var(--accent-blue)' }}>@{opponentName}</span>
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -287,8 +332,8 @@ export default function PlayerProfile() {
 
                     <div style={{ textAlign: 'right' }}>
                       <span style={{
-                        fontSize: '14px',
-                        fontWeight: 'bold',
+                        fontSize: '13px',
+                        fontWeight: 700,
                         color: isWinner ? 'var(--accent-green)' : 'var(--accent-red)'
                       }}>
                         {isWinner ? 'VICTORY' : 'DEFEAT'}

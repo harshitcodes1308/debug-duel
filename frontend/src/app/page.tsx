@@ -9,6 +9,7 @@ import {
   Swords, UserPlus, Copy, Check
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import AnimatedCounter from '@/components/AnimatedCounter';
 
 interface LeaderboardEntry {
   id: string;
@@ -284,7 +285,7 @@ export default function Dashboard() {
             {gameCategory === 'coders' && (
               <>
                 {/* DebugDuel Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
+                <div className="glass-panel card-shine glow-success" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <Zap size={24} color="var(--accent-green)" />
@@ -301,7 +302,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Code KBC Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px', border: '1px solid rgba(245, 166, 35, 0.2)' }}>
+                <div className="glass-panel card-shine glow-warning" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <Trophy size={24} color="var(--accent-amber)" />
@@ -339,7 +340,7 @@ export default function Dashboard() {
             {gameCategory === 'uiux' && (
               <>
                 {/* ColorMatch Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
+                <div className="glass-panel card-shine glow-primary" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <Zap size={24} color="var(--accent-blue)" />
@@ -433,9 +434,19 @@ export default function Dashboard() {
         <div>
           <h2 style={{ fontSize: '20px', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>Recent Battles</h2>
           {recentBattles.length === 0 ? (
-            <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-              <History size={36} style={{ marginBottom: '12px', opacity: 0.5 }} />
-              <p>No duels recorded yet. Challenge a friend to log your first match!</p>
+            <div className="glass-panel glow-primary" style={{ textAlign: 'center', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border)', padding: '16px', borderRadius: '50%' }}>
+                <History size={36} style={{ opacity: 0.5, color: 'var(--accent-blue)' }} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', color: '#fff', marginBottom: '6px' }}>No duels recorded yet</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '300px', margin: '0 auto', lineHeight: '18px' }}>
+                  Challenge an online friend from your list or generate a lobby to log your first match!
+                </p>
+              </div>
+              <Link href="/duel/create" className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '12px', gap: '6px', borderRadius: 'var(--radius-md)' }}>
+                Create Duel Room
+              </Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -489,13 +500,14 @@ export default function Dashboard() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
         
         {/* Player Profile Summary */}
-        <div className="glass-panel" style={{
-          background: 'linear-gradient(to bottom, #1A1A22, #141419)',
+        <div className="card-base card-shine glow-purple" style={{
+          background: 'linear-gradient(to bottom, #15151C, #0F0F15)',
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px'
+          gap: '16px',
+          transition: 'var(--transition)'
         }}>
           {/* Avatar frame */}
           <div style={{
@@ -508,7 +520,8 @@ export default function Dashboard() {
             justifyContent: 'center',
             fontSize: '36px',
             fontWeight: 'bold',
-            boxShadow: '0 0 20px rgba(139, 92, 246, 0.3)'
+            boxShadow: '0 0 24px rgba(139, 92, 246, 0.25)',
+            border: '2px solid rgba(255, 255, 255, 0.1)'
           }}>
             {user.username[0].toUpperCase()}
           </div>
@@ -531,7 +544,9 @@ export default function Dashboard() {
               {user.currentStreak >= 3 && (
                 <div className="flex-center" style={{ gap: '2px', color: 'var(--accent-red)' }} title="Hot Win Streak!">
                   <Flame size={14} fill="var(--accent-red)" />
-                  <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{user.currentStreak}x</span>
+                  <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                    <AnimatedCounter value={user.currentStreak} />x
+                  </span>
                 </div>
               )}
             </div>
@@ -548,33 +563,45 @@ export default function Dashboard() {
             gap: '12px'
           }}>
             <div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--accent-blue)' }}>{user.totalWins}</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--accent-blue)' }}>
+                <AnimatedCounter value={user.totalWins} />
+              </div>
               <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>TOTAL WINS</div>
             </div>
             <div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{user.totalDuels}</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                <AnimatedCounter value={user.totalDuels} />
+              </div>
               <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>TOTAL DUELS</div>
             </div>
           </div>
 
           {/* ELO List */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginTop: '8px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>ELO BREAKDOWN</span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>ELO BREAKDOWN</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
               <span>Javascript</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-amber)' }}>{user.eloJS}</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--accent-amber)' }}>
+                <AnimatedCounter value={user.eloJS} />
+              </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
               <span>Python</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>{user.eloPython}</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>
+                <AnimatedCounter value={user.eloPython} />
+              </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
               <span>Java</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-red)' }}>{user.eloJava}</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--accent-red)' }}>
+                <AnimatedCounter value={user.eloJava} />
+              </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
               <span>UI/UX (ColorMatch)</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-purple)' }}>{user.eloUIUX}</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--accent-purple)' }}>
+                <AnimatedCounter value={user.eloUIUX} />
+              </span>
             </div>
           </div>
 
@@ -653,8 +680,25 @@ export default function Dashboard() {
           {/* Friends List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
             {friends.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-secondary)', fontSize: '12px', border: '1px dashed var(--border)', borderRadius: '8px' }}>
-                No friends added yet.<br/>Share your key to start dueling!
+              <div className="flex-center" style={{ 
+                flexDirection: 'column',
+                gap: '12px',
+                textAlign: 'center', 
+                padding: '24px 16px', 
+                color: 'var(--text-secondary)', 
+                fontSize: '12px', 
+                border: '1px dashed rgba(255, 255, 255, 0.1)', 
+                borderRadius: 'var(--radius-lg)',
+                background: 'rgba(255, 255, 255, 0.005)',
+                width: '100%'
+              }}>
+                <Users size={24} style={{ opacity: 0.4, color: 'var(--accent-purple)' }} />
+                <div>
+                  <p style={{ fontWeight: '600', color: 'var(--text-primary)' }}>No friends added yet</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: '15px' }}>
+                    Share your friend key with a rival or paste theirs to start battling!
+                  </p>
+                </div>
               </div>
             ) : (
               friends.map((friend) => {

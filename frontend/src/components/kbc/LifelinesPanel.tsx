@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { HelpCircle, Users, CheckCircle, ArrowRight } from 'lucide-react';
-import { KbcAudio } from '@/utils/kbc/audio';
+import React, { useState } from 'react';
+import { HelpCircle, Users, CheckCircle, ArrowRight, ShieldAlert } from 'lucide-react';
 
 export interface LifelineState {
   fiftyFifty: boolean;
@@ -31,21 +30,17 @@ export default function LifelinesPanel({
   const [showPoll, setShowPoll] = useState(false);
   const [showExpert, setShowExpert] = useState(false);
   const [pollData, setPollData] = useState<number[]>([]);
-  const [animatedPollData, setAnimatedPollData] = useState<number[]>([0, 0, 0, 0]);
   const [expertMessage, setExpertMessage] = useState('');
-  const [typedExpertMessage, setTypedExpertMessage] = useState('');
 
   const optionLetters = ['A', 'B', 'C', 'D'];
 
   const handleUseLifeline = (type: keyof LifelineState) => {
     if (usedLifelines[type] || disabled) return;
 
-    // Play lifeline activation sound
-    KbcAudio.playLifeline();
-
     onUseLifeline(type);
 
     if (type === 'audiencePoll') {
+      // Simulate audience poll data
       const data = [0, 0, 0, 0];
       let remaining = 100;
 
@@ -54,6 +49,7 @@ export default function LifelinesPanel({
       data[correctAnswerIndex] = correctShare;
       remaining -= correctShare;
 
+      // Distribute the remaining among other options
       const incorrectIndices = [0, 1, 2, 3].filter(i => i !== correctAnswerIndex);
       
       const share1 = Math.floor(Math.random() * (remaining - 5));
@@ -64,50 +60,22 @@ export default function LifelinesPanel({
       data[incorrectIndices[1]] = share2;
       remaining -= share2;
 
-      data[incorrectIndices[2]] = remaining; 
+      data[incorrectIndices[2]] = remaining; // rest to last
 
       setPollData(data);
-      setAnimatedPollData([0, 0, 0, 0]);
       setShowPoll(true);
-
-      // Start counting animation
-      let step = 0;
-      const interval = setInterval(() => {
-        step += 1;
-        setAnimatedPollData(prev => prev.map((val, idx) => {
-          const diff = data[idx] - val;
-          if (diff <= 0) return data[idx];
-          return Math.min(data[idx], val + Math.ceil(diff * 0.15));
-        }));
-
-        if (step >= 25) {
-          setAnimatedPollData(data);
-          clearInterval(interval);
-        }
-      }, 40);
-
     } else if (type === 'expertAdvice') {
+      // Create expert recommendation text
       const letter = optionLetters[correctAnswerIndex];
-      const message = `I've analyzed the stack traces and standard specifications. The correct answer is definitely Option ${letter}. ${explanation}`;
+      const message = `I've analyzed the stack traces and standard specifications. The correct answer is definitely option ${letter}. ${explanation}`;
       setExpertMessage(message);
-      setTypedExpertMessage('');
       setShowExpert(true);
-
-      // Start typing animation
-      let charIndex = 0;
-      const interval = setInterval(() => {
-        setTypedExpertMessage(message.substring(0, charIndex + 1));
-        charIndex += 1;
-        if (charIndex >= message.length) {
-          clearInterval(interval);
-        }
-      }, 15);
     }
   };
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <h3 style={{ fontSize: '15px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+      <h3 style={{ fontSize: '15px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Lifelines Available
       </h3>
 
@@ -122,18 +90,12 @@ export default function LifelinesPanel({
             padding: '16px 8px',
             fontSize: '12px',
             position: 'relative',
-            opacity: usedLifelines.fiftyFifty ? 0.3 : 1,
+            opacity: usedLifelines.fiftyFifty ? 0.4 : 1,
             cursor: usedLifelines.fiftyFifty ? 'not-allowed' : 'pointer',
             borderColor: usedLifelines.fiftyFifty ? 'transparent' : 'rgba(74, 158, 255, 0.2)',
             background: 'rgba(26, 26, 34, 0.4)',
             height: '80px',
-            gap: '6px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: '1px',
-            borderStyle: 'solid'
+            gap: '6px'
           }}
           title="Eliminate two incorrect options"
         >
@@ -154,7 +116,7 @@ export default function LifelinesPanel({
               justifyContent: 'center',
               color: 'var(--accent-red)',
               fontWeight: 'bold',
-              fontSize: '13px'
+              fontSize: '14px'
             }}>
               USED
             </div>
@@ -171,18 +133,12 @@ export default function LifelinesPanel({
             padding: '16px 8px',
             fontSize: '12px',
             position: 'relative',
-            opacity: usedLifelines.audiencePoll ? 0.3 : 1,
+            opacity: usedLifelines.audiencePoll ? 0.4 : 1,
             cursor: usedLifelines.audiencePoll ? 'not-allowed' : 'pointer',
             borderColor: usedLifelines.audiencePoll ? 'transparent' : 'rgba(0, 255, 148, 0.2)',
             background: 'rgba(26, 26, 34, 0.4)',
             height: '80px',
-            gap: '6px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: '1px',
-            borderStyle: 'solid'
+            gap: '6px'
           }}
           title="Ask the audience for their opinion"
         >
@@ -203,7 +159,7 @@ export default function LifelinesPanel({
               justifyContent: 'center',
               color: 'var(--accent-red)',
               fontWeight: 'bold',
-              fontSize: '13px'
+              fontSize: '14px'
             }}>
               USED
             </div>
@@ -220,18 +176,12 @@ export default function LifelinesPanel({
             padding: '16px 8px',
             fontSize: '12px',
             position: 'relative',
-            opacity: usedLifelines.expertAdvice ? 0.3 : 1,
+            opacity: usedLifelines.expertAdvice ? 0.4 : 1,
             cursor: usedLifelines.expertAdvice ? 'not-allowed' : 'pointer',
             borderColor: usedLifelines.expertAdvice ? 'transparent' : 'rgba(139, 92, 246, 0.2)',
             background: 'rgba(26, 26, 34, 0.4)',
             height: '80px',
-            gap: '6px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: '1px',
-            borderStyle: 'solid'
+            gap: '6px'
           }}
           title="Consult with an expert software developer"
         >
@@ -252,7 +202,7 @@ export default function LifelinesPanel({
               justifyContent: 'center',
               color: 'var(--accent-red)',
               fontWeight: 'bold',
-              fontSize: '13px'
+              fontSize: '14px'
             }}>
               USED
             </div>
@@ -269,18 +219,12 @@ export default function LifelinesPanel({
             padding: '16px 8px',
             fontSize: '12px',
             position: 'relative',
-            opacity: usedLifelines.skip ? 0.3 : 1,
+            opacity: usedLifelines.skip ? 0.4 : 1,
             cursor: usedLifelines.skip ? 'not-allowed' : 'pointer',
             borderColor: usedLifelines.skip ? 'transparent' : 'rgba(245, 166, 35, 0.2)',
             background: 'rgba(26, 26, 34, 0.4)',
             height: '80px',
-            gap: '6px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: '1px',
-            borderStyle: 'solid'
+            gap: '6px'
           }}
           title="Skip to a different question of same difficulty"
         >
@@ -301,7 +245,7 @@ export default function LifelinesPanel({
               justifyContent: 'center',
               color: 'var(--accent-red)',
               fontWeight: 'bold',
-              fontSize: '13px'
+              fontSize: '14px'
             }}>
               USED
             </div>
@@ -317,8 +261,8 @@ export default function LifelinesPanel({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.85)',
-          backdropFilter: 'blur(5px)',
+          background: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -333,12 +277,11 @@ export default function LifelinesPanel({
             display: 'flex',
             flexDirection: 'column',
             gap: '24px',
-            padding: '32px',
-            boxShadow: '0 20px 50px rgba(0, 255, 148, 0.15)'
+            padding: '32px'
           }}>
             <div style={{ textAlign: 'center' }}>
               <Users size={32} color="var(--accent-green)" />
-              <h2 style={{ fontSize: '22px', marginTop: '12px', color: '#FFF', fontFamily: 'Space Grotesk, sans-serif' }}>Audience Poll Results</h2>
+              <h2 style={{ fontSize: '22px', marginTop: '12px', color: '#FFF' }}>Audience Poll Results</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '6px' }}>
                 The audience has cast their votes on this question.
               </p>
@@ -346,8 +289,8 @@ export default function LifelinesPanel({
 
             {/* Chart representation */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {animatedPollData.map((pct, idx) => (
-                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {pollData.map((pct, idx) => (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ fontWeight: 'bold' }}>
                       Option {optionLetters[idx]}: <span style={{ fontWeight: 'normal', color: 'var(--text-secondary)' }}>{options[idx].substring(0, 40)}{options[idx].length > 40 ? '...' : ''}</span>
@@ -361,8 +304,7 @@ export default function LifelinesPanel({
                       width: `${pct}%`, 
                       height: '100%', 
                       background: idx === correctAnswerIndex ? 'var(--accent-green)' : 'var(--accent-blue)',
-                      transition: 'width 0.1s linear',
-                      boxShadow: idx === correctAnswerIndex ? '0 0 8px rgba(0, 255, 148, 0.5)' : 'none'
+                      transition: 'width 1s ease-out'
                     }} />
                   </div>
                 </div>
@@ -371,7 +313,7 @@ export default function LifelinesPanel({
 
             <button 
               className="btn btn-primary" 
-              style={{ width: '100%', background: 'var(--accent-green)', color: '#000', padding: '12px', fontWeight: 'bold', borderRadius: '8px', cursor: 'pointer', border: 'none' }}
+              style={{ width: '100%', background: 'var(--accent-green)', color: '#000' }}
               onClick={() => setShowPoll(false)}
             >
               Back to Game
@@ -388,8 +330,8 @@ export default function LifelinesPanel({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.85)',
-          backdropFilter: 'blur(5px)',
+          background: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -404,8 +346,7 @@ export default function LifelinesPanel({
             display: 'flex',
             flexDirection: 'column',
             gap: '24px',
-            padding: '32px',
-            boxShadow: '0 20px 50px rgba(139, 92, 246, 0.15)'
+            padding: '32px'
           }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{
@@ -423,7 +364,7 @@ export default function LifelinesPanel({
               }}>
                 👨‍💻
               </div>
-              <h2 style={{ fontSize: '22px', color: '#FFF', fontFamily: 'Space Grotesk, sans-serif' }}>Expert Developer Advice</h2>
+              <h2 style={{ fontSize: '22px', color: '#FFF' }}>Expert Developer Advice</h2>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-purple)', letterSpacing: '0.1em', fontWeight: 'bold' }}>
                 Senior Dev Consultant
               </span>
@@ -438,18 +379,14 @@ export default function LifelinesPanel({
               color: 'var(--text-primary)',
               fontSize: '14px',
               lineHeight: '22px',
-              position: 'relative',
-              minHeight: '120px'
+              position: 'relative'
             }}>
-              {typedExpertMessage}
-              {typedExpertMessage.length < expertMessage.length && (
-                <span className="typing-cursor" style={{ marginLeft: '4px', color: 'var(--accent-purple)', fontWeight: 'bold' }}>|</span>
-              )}
+              {expertMessage}
             </div>
 
             <button 
               className="btn btn-primary" 
-              style={{ width: '100%', background: 'var(--accent-purple)', color: '#FFF', border: 'none', padding: '12px', fontWeight: 'bold', borderRadius: '8px', cursor: 'pointer' }}
+              style={{ width: '100%', background: 'var(--accent-purple)', color: '#FFF', border: 'none' }}
               onClick={() => setShowExpert(false)}
             >
               Thank You, Expert

@@ -126,16 +126,8 @@ export default function CreateColorMatch() {
                 max={user.tokens}
                 value={betAmount}
                 onChange={(e) => setBetAmount(Number(e.target.value))}
-                style={{
-                  flex: 1,
-                  background: '#141419',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  color: '#fff',
-                  fontFamily: 'inherit',
-                  outline: 'none'
-                }}
+                className="input-base"
+                style={{ flex: 1 }}
               />
               <span className="flex-center" style={{ color: 'var(--accent-amber)', fontWeight: 'bold', fontSize: '14px', paddingRight: '12px' }}>tokens</span>
             </div>

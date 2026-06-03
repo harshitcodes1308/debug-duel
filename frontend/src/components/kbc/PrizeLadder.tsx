@@ -46,30 +46,30 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
   }, [currentStepIndex]);
 
   return (
-    <div className="glass-panel" style={{
+    <div className="card-base" style={{
       width: '100%',
-      background: 'rgba(13, 9, 36, 0.5)',
-      borderColor: 'rgba(245, 166, 35, 0.15)',
+      background: 'var(--bg-secondary)',
+      borderColor: 'var(--border)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px',
-      padding: '20px',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+      gap: 'var(--space-3)',
+      padding: 'var(--space-5)',
+      boxShadow: 'var(--shadow-md)'
     }}>
       <style>{`
         @keyframes activePulse {
-          0% { box-shadow: 0 0 10px rgba(245, 166, 35, 0.4); border-color: rgba(245, 166, 35, 0.6); }
-          50% { box-shadow: 0 0 20px rgba(245, 166, 35, 0.8); border-color: rgba(245, 166, 35, 1); }
-          100% { box-shadow: 0 0 10px rgba(245, 166, 35, 0.4); border-color: rgba(245, 166, 35, 0.6); }
+          0% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.4); }
+          50% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); border-color: rgba(245, 158, 11, 0.8); }
+          100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.4); }
         }
       `}</style>
 
       {/* Header */}
-      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
-        <h3 style={{ fontSize: '15px', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 'bold' }}>
+      <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 'var(--space-3)' }}>
+        <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 700 }}>
           XP Prize Ladder
         </h3>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--space-2)', fontSize: '12px' }}>
           <span>Level {activeLevelNumber}/15</span>
           <span style={{ color: 'var(--accent-amber)', fontWeight: 'bold' }}>
             {PRIZE_LADDER.find(s => s.level === activeLevelNumber)?.xp.toLocaleString() || 0} XP
@@ -97,15 +97,15 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
           let borderStyle = '1px solid rgba(255, 255, 255, 0.03)';
 
           if (isActive) {
-            textColor = '#000';
+            textColor = '#FFFFFF';
             bgColor = 'var(--accent-amber)';
             borderStyle = '1px solid var(--accent-amber)';
           } else if (step.isMilestone) {
             textColor = 'var(--accent-amber)';
-            borderStyle = '1px solid rgba(245, 166, 35, 0.15)';
-            bgColor = 'rgba(245, 166, 35, 0.02)';
+            borderStyle = '1px solid rgba(245, 158, 11, 0.35)';
+            bgColor = 'rgba(245, 158, 11, 0.05)';
           } else if (isCleared) {
-            textColor = 'rgba(255, 255, 255, 0.35)';
+            textColor = 'rgba(255, 255, 255, 0.2)';
           } else {
             textColor = 'var(--text-primary)';
           }
@@ -118,16 +118,17 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 14px',
-                borderRadius: '6px',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-sm)',
                 background: bgColor,
                 border: borderStyle,
                 color: textColor,
-                fontSize: '13px',
-                fontWeight: step.isMilestone || isActive ? 'bold' : 'normal',
-                opacity: isCleared ? 0.5 : 1,
-                animation: isActive ? 'activePulse 1.8s infinite ease-in-out' : 'none',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                fontSize: '12px',
+                fontWeight: step.isMilestone || isActive ? 600 : 400,
+                opacity: isCleared ? 0.4 : 1,
+                boxShadow: step.isMilestone && !isCleared && !isActive ? '0 0 12px rgba(245, 158, 11, 0.08), inset 0 0 8px rgba(245, 158, 11, 0.03)' : 'none',
+                animation: isActive ? 'activePulse 2s infinite ease-in-out' : 'none',
+                transition: 'var(--transition)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -142,7 +143,7 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
               </div>
               <span style={{ 
                 fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '12px'
+                fontSize: '11px'
               }}>
                 {step.xp.toLocaleString()} XP
               </span>
@@ -153,11 +154,11 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
 
       {/* Footer Info */}
       <div style={{ 
-        marginTop: '8px', 
+        marginTop: 'var(--space-2)', 
         fontSize: '11px', 
         color: 'var(--text-secondary)', 
-        borderTop: '1px dashed rgba(255,255,255,0.06)',
-        paddingTop: '10px',
+        borderTop: '1px dashed var(--border)',
+        paddingTop: 'var(--space-3)',
         lineHeight: '16px'
       }}>
         Milestone levels (05 & 10) act as safety guarantees. Once crossed, your XP cannot fall below them.

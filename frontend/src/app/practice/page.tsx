@@ -139,15 +139,7 @@ export default function PracticeArena() {
           <select 
             value={lang} 
             onChange={handleLangChange}
-            style={{
-              background: '#1A1A22',
-              color: '#fff',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
+            className="select-base"
           >
             <option value="javascript">JavaScript</option>
             <option value="python">Python</option>
@@ -157,15 +149,7 @@ export default function PracticeArena() {
           <select 
             value={diff} 
             onChange={handleDiffChange}
-            style={{
-              background: '#1A1A22',
-              color: '#fff',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
+            className="select-base"
           >
             <option value="easy">Easy 🟢</option>
             <option value="medium">Medium 🟡</option>

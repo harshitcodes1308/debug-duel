@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import Link from 'next/link';
 import { ArrowLeft, Trophy, Medal, Award, Coins } from 'lucide-react';
+import AnimatedCounter from '@/components/AnimatedCounter';
 
 interface LeaderboardEntry {
   id: string;
@@ -142,21 +143,22 @@ export default function LeaderboardPage() {
                   <tr key={entry.id} style={{
                     borderBottom: '1px solid var(--border)',
                     background: isCurrentUser ? 'rgba(74, 158, 255, 0.04)' : 'transparent',
-                    transition: 'var(--transition)'
-                  }} className={isCurrentUser ? 'pulse-glow' : ''}>
+                    transition: 'var(--transition)',
+                    animationDelay: `${index * 40}ms`,
+                    opacity: 0
+                  }} className={`slide-up-anim ${isCurrentUser ? 'pulse-glow' : ''}`}>
                     {/* Rank Number */}
                     <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>
                       {isTopThree ? (
-                        <span className="flex-center" style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          background: index === 0 ? 'rgba(245, 166, 35, 0.15)' : index === 1 ? 'rgba(192, 192, 192, 0.15)' : 'rgba(205, 127, 50, 0.15)',
-                          color: index === 0 ? 'var(--accent-amber)' : index === 1 ? '#C0C0C0' : '#CD7F32',
-                          fontSize: '12px',
-                          border: `1px solid ${index === 0 ? 'var(--accent-amber)' : index === 1 ? '#C0C0C0' : '#CD7F32'}`
+                        <span style={{
+                          fontSize: '18px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '28px',
+                          height: '28px'
                         }}>
-                          {index + 1}
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
                         </span>
                       ) : (
                         <span style={{ paddingLeft: '8px', color: 'var(--text-secondary)' }}>{index + 1}</span>
@@ -165,16 +167,19 @@ export default function LeaderboardPage() {
 
                     {/* Username */}
                     <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>
-                      <Link href={`/profile/${entry.username}`} className="flex-center" style={{ color: '#fff', textDecoration: 'none', gap: '6px', justifyContent: 'flex-start' }}>
-                        @{entry.username} {isCurrentUser && <span style={{ fontSize: '10px', background: 'rgba(74, 158, 255, 0.1)', color: 'var(--accent-blue)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(74, 158, 255, 0.2)' }}>YOU</span>}
+                      <Link href={`/profile/${entry.username}`} className="flex-center" style={{ color: '#fff', textDecoration: 'none', gap: '6px', justifyContent: 'flex-start', transition: 'var(--transition)' }}>
+                        <span onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-blue)'} onMouseLeave={(e) => e.currentTarget.style.color = '#fff'}>
+                          @{entry.username}
+                        </span>
+                        {isCurrentUser && <span style={{ fontSize: '9px', background: 'rgba(74, 158, 255, 0.1)', color: 'var(--accent-blue)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(74, 158, 255, 0.2)', fontWeight: 'bold' }}>YOU</span>}
                       </Link>
                     </td>
 
                     {/* Tier badge */}
                     <td style={{ padding: '16px 24px' }}>
                       <span className="badge" style={{
-                        background: 'rgba(139, 92, 246, 0.1)',
-                        border: '1px solid rgba(139, 92, 246, 0.2)',
+                        background: 'rgba(139, 92, 246, 0.06)',
+                        border: '1px solid rgba(139, 92, 246, 0.15)',
                         color: 'var(--accent-purple)',
                         fontSize: '11px',
                         fontWeight: 'bold'
@@ -192,13 +197,15 @@ export default function LeaderboardPage() {
                     <td style={{ padding: '16px 24px' }}>
                       <div className="flex-center" style={{ gap: '6px', justifyContent: 'flex-start' }}>
                         <Coins size={14} color="var(--accent-amber)" />
-                        <span style={{ fontWeight: 'bold' }}>{entry.tokens}</span>
+                        <span style={{ fontWeight: 'bold' }}>
+                          <AnimatedCounter value={entry.tokens} />
+                        </span>
                       </div>
                     </td>
 
                     {/* ELO Rating */}
                     <td style={{ padding: '16px 24px', fontWeight: 'bold', color: 'var(--accent-blue)', textAlign: 'right', fontSize: '16px' }}>
-                      {elo}
+                      <AnimatedCounter value={elo} />
                     </td>
                   </tr>
                 );

@@ -404,61 +404,56 @@ function SoloChallengeGame() {
   return (
     <div style={{
       minHeight: 'calc(100vh - 64px)',
-      background: 'radial-gradient(circle at top, #140F32 0%, #0A0618 100%)',
-      padding: '40px 24px',
-      color: '#FFF',
+      background: 'var(--bg-primary)',
+      padding: 'var(--space-8) 0',
+      color: 'var(--text-primary)',
       fontFamily: 'Inter, sans-serif'
     }}>
       <style>{`
         @keyframes timerFlash {
-          0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255, 68, 68, 0.4)); }
-          50% { transform: scale(1.08); filter: drop-shadow(0 0 15px rgba(255, 68, 68, 0.8)); }
-          100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255, 68, 68, 0.4)); }
+          0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
+          50% { transform: scale(1.08); filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.8)); }
+          100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
         }
         .timer-warning {
           animation: timerFlash 0.5s infinite ease-in-out;
         }
       `}</style>
 
-      <div className="container" style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 300px',
-        gap: '32px',
-        alignItems: 'start'
-      }}>
+      <div className="container kbc-arena-grid">
         
         {/* LEFT COLUMN: Main Game Play Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
           
           {/* Header area */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Link href="/kbc/categories" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>
-              <ArrowLeft size={16} /> Exit Arena
+            <Link href="/kbc/categories" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+              <ArrowLeft size={14} /> Exit Arena
             </Link>
             
             {/* Round info */}
-            <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                <span>Level:</span>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: '12px' }}>
+              <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.01)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Level:</span>
                 <strong style={{ color: 'var(--accent-amber)' }}>{activeLevelNumber}/15</strong>
               </div>
-              <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                <span>Topic:</span>
-                <strong style={{ color: 'var(--accent-blue)' }}>{currentQuestion.category}</strong>
+              <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.01)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Topic:</span>
+                <strong style={{ color: 'var(--accent-blue)', textTransform: 'capitalize' }}>{currentQuestion.category.replace('_', ' ')}</strong>
               </div>
             </div>
           </div>
 
           {/* Virtual Host Box */}
           <div style={{
-            background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, rgba(74, 158, 255, 0.05) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.25)',
-            borderRadius: '10px',
-            padding: '16px 20px',
+            background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.06) 0%, rgba(59, 130, 246, 0.03) 100%)',
+            border: '1px solid rgba(139, 92, 246, 0.15)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-4) var(--space-5)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            gap: 'var(--space-4)',
+            boxShadow: 'var(--shadow-md)'
           }}>
             <div style={{
               width: '42px',
@@ -469,37 +464,37 @@ function SoloChallengeGame() {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '20px',
-              boxShadow: '0 0 10px rgba(139, 92, 246, 0.5)'
+              boxShadow: '0 0 10px rgba(139, 92, 246, 0.3)'
             }}>
               🎙️
             </div>
             <div style={{ flex: 1 }}>
-              <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 700, letterSpacing: '0.05em' }}>
                 KBC Host
               </span>
-              <p style={{ fontSize: '13.5px', color: '#E2E8F0', marginTop: '2px', lineHeight: '18px', fontWeight: '500' }}>
+              <p style={{ fontSize: '13px', color: '#E2E8F0', marginTop: '2px', lineHeight: '18px', fontWeight: 500 }}>
                 &ldquo;{hostMessage}&rdquo;
               </p>
             </div>
           </div>
 
           {/* Central Section: Timer & Question */}
-          <div className="glass-panel" style={{
+          <div className="card-base" style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '24px',
-            background: 'rgba(15, 11, 41, 0.4)',
-            borderColor: 'rgba(245, 166, 35, 0.1)',
-            padding: '36px'
+            gap: 'var(--space-6)',
+            background: 'var(--bg-secondary)',
+            borderColor: 'var(--border)',
+            padding: 'var(--space-8)'
           }}>
             {/* Circular Timer UI */}
             <div 
               className={timeLeft <= 10 && lockedOptionIndex === null ? 'timer-warning' : ''}
-              style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', transition: 'all 0.3s' }}
+              style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
             >
               <svg width="90" height="90" style={{ transform: 'rotate(-90deg)', position: 'absolute' }}>
-                <circle cx="45" cy="45" r="38" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+                <circle cx="45" cy="45" r="38" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="6" />
                 <circle 
                   cx="45" 
                   cy="45" 
@@ -510,7 +505,7 @@ function SoloChallengeGame() {
                   strokeDasharray={2 * Math.PI * 38}
                   strokeDashoffset={2 * Math.PI * 38 * (1 - timeLeft / 30)}
                   style={{
-                    transition: 'stroke-dashoffset 1s linear, stroke 0.3s ease',
+                    transition: 'stroke-dashoffset 1s linear, stroke 0.2s ease',
                   }}
                 />
               </svg>
@@ -522,9 +517,9 @@ function SoloChallengeGame() {
                 color: getTimerColor(),
                 fontWeight: 'bold',
                 fontFamily: 'Space Grotesk, sans-serif',
-                transition: 'color 0.3s'
+                transition: 'color 0.2s'
               }}>
-                <Clock size={16} />
+                <Clock size={14} />
                 <span style={{ fontSize: '18px' }}>{timeLeft}s</span>
               </div>
             </div>
@@ -545,21 +540,21 @@ function SoloChallengeGame() {
             {revealedAnswer && (
               <div style={{
                 width: '100%',
-                background: 'rgba(0, 255, 148, 0.04)',
-                border: '1px solid rgba(0, 255, 148, 0.15)',
-                borderRadius: '8px',
-                padding: '24px',
-                marginTop: '12px',
+                background: 'rgba(16, 185, 129, 0.04)',
+                border: '1px solid rgba(16, 185, 129, 0.15)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-5)',
+                marginTop: 'var(--space-3)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '16px',
+                gap: 'var(--space-4)',
                 textAlign: 'left'
               }}>
                 <div>
-                  <h4 style={{ fontSize: '14px', color: 'var(--accent-green)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <h4 style={{ fontSize: '12px', color: 'var(--accent-green)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Correct Answer Explanation
                   </h4>
-                  <p style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: '22px', marginTop: '6px' }}>
+                  <p style={{ color: 'var(--text-primary)', fontSize: '13px', lineHeight: '20px', marginTop: '6px' }}>
                     {currentQuestion.explanation}
                   </p>
                 </div>
@@ -568,20 +563,12 @@ function SoloChallengeGame() {
                   className="btn btn-success"
                   style={{
                     alignSelf: 'flex-end',
-                    background: 'var(--accent-green)',
-                    color: '#000',
-                    fontWeight: 'bold',
-                    padding: '12px 32px',
-                    gap: '6px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center'
+                    padding: '10px 24px',
+                    gap: 'var(--space-2)'
                   }}
                 >
                   {currentQuestionIndex === 14 ? 'Claim Jackpot!' : 'Proceed to Next Level'}
-                  <ChevronRight size={16} />
+                  <ChevronRight size={15} />
                 </button>
               </div>
             )}
@@ -589,7 +576,7 @@ function SoloChallengeGame() {
           </div>
 
           {/* Lifelines row */}
-          <div className="glass-panel" style={{ background: 'rgba(13, 9, 36, 0.4)', borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="card-base" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
             <LifelinesPanel 
               usedLifelines={usedLifelines}
               onUseLifeline={handleUseLifeline}
