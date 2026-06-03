@@ -16,6 +16,7 @@ interface LeaderboardEntry {
   eloJS: number;
   eloPython: number;
   eloJava: number;
+  eloUIUX: number;
   tokens: number;
   rank: string;
 }
@@ -38,7 +39,7 @@ interface RecentBattle {
 
 export default function Dashboard() {
   const { user, setUser } = useStore();
-  const [leaderboardLang, setLeaderboardLang] = useState<'javascript' | 'python' | 'java'>('javascript');
+  const [leaderboardLang, setLeaderboardLang] = useState<'javascript' | 'python' | 'java' | 'uiux'>('javascript');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [recentBattles, setRecentBattles] = useState<RecentBattle[]>([]);
   const [claiming, setClaiming] = useState(false);
@@ -332,26 +333,37 @@ export default function Dashboard() {
 
             {gameCategory === 'uiux' && (
               <>
-                {/* DesignDuel Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px', opacity: 0.7 }}>
+                {/* ColorMatch Card */}
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <Users size={24} color="var(--accent-purple)" />
-                      <span className="badge badge-py" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Coming Soon</span>
+                      <Zap size={24} color="var(--accent-blue)" />
+                      <span className="badge badge-js" style={{ borderColor: 'rgba(74, 158, 255, 0.3)', color: 'var(--accent-blue)', background: 'rgba(74, 158, 255, 0.05)' }}>Active</span>
                     </div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>DesignDuel</h3>
+                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>ColorMatch</h3>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
-                      UI/UX design challenge. Translate user requirements into a mock wireframe or design under 10 minutes. Peer voted.
+                      Vibrant memorization and color matching battle. Memorize the color card for 6 seconds, then adjust RGB sliders to guess it exactly. Closeness determines the score!
                     </p>
                   </div>
-                  <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', marginTop: '16px' }} disabled>
-                    Locked
-                  </button>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                    <Link href="/color-match/solo" className="btn btn-secondary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', fontSize: '13px' }}>
+                      Practice Solo
+                    </Link>
+                    <Link href="/color-match/create" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', fontSize: '13px' }}>
+                      <Play size={14} fill="black" style={{ marginRight: '4px' }} /> Battle Friends
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Info Box */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--border)', borderRadius: '12px', padding: '24px', textAlign: 'center', fontSize: '13px' }}>
-                  More UI/UX minigames in development...
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center', minHeight: '220px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>UI/UX Arena Status</h4>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Your current ColorMatch ELO: <strong style={{ color: 'var(--accent-purple)' }}>{user.eloUIUX || 1000}</strong>
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                    Train your visual memory and RGB composition speed. Match with others to climb the Zero-Day God ranks in styling!
+                  </p>
                 </div>
               </>
             )}
@@ -554,6 +566,10 @@ export default function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px' }}>
               <span>Java</span>
               <span style={{ fontWeight: 'bold', color: 'var(--accent-red)' }}>{user.eloJava}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px' }}>
+              <span>UI/UX (ColorMatch)</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--accent-purple)' }}>{user.eloUIUX}</span>
             </div>
           </div>
 
@@ -766,6 +782,22 @@ export default function Dashboard() {
             >
               JV
             </button>
+            <button 
+              onClick={() => setLeaderboardLang('uiux')} 
+              style={{
+                flex: 1,
+                background: leaderboardLang === 'uiux' ? 'var(--bg-card)' : 'transparent',
+                border: 'none',
+                color: '#fff',
+                padding: '6px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              UX
+            </button>
           </div>
 
           {/* Leaderboard entries */}
@@ -776,7 +808,10 @@ export default function Dashboard() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {leaderboard.slice(0, 5).map((entry, index) => {
-                const elo = leaderboardLang === 'javascript' ? entry.eloJS : leaderboardLang === 'python' ? entry.eloPython : entry.eloJava;
+                const elo = leaderboardLang === 'javascript' ? entry.eloJS : 
+                            leaderboardLang === 'python' ? entry.eloPython : 
+                            leaderboardLang === 'java' ? entry.eloJava : 
+                            entry.eloUIUX;
                 const isCurrentUser = entry.username === user.username;
                 return (
                   <div key={entry.id} style={{
