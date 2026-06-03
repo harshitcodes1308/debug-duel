@@ -7,7 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import { 
   Timer, Flame, Award, Swords, HelpCircle, 
   Send, AlertTriangle, Play, Sparkles, CheckCircle2,
-  Palette, RefreshCw, LogOut
+  Palette, RefreshCw, LogOut, Flag
 } from 'lucide-react';
 
 interface Color {
@@ -371,7 +371,7 @@ export default function ColorMatchArena() {
         fontSize: '14px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-          <Palette size={16} color="var(--accent-purple)" />
+          <Palette size={16} color="var(--accent-amber)" />
           <span>ColorMatch Battle Room</span>
         </div>
 
@@ -414,7 +414,7 @@ export default function ColorMatchArena() {
           {/* ================= STATE 1: MEMORIZE ================= */}
           {gameState === 'memorize' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%', maxWidth: '480px', animation: 'fadeIn 0.3s ease-out' }}>
-              <span style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 'bold', letterSpacing: '0.15em' }}>
+              <span style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--accent-amber)', fontWeight: 'bold', letterSpacing: '0.15em' }}>
                 MEMORIZE THIS COLOR CARD
               </span>
               
@@ -453,14 +453,14 @@ export default function ColorMatchArena() {
                       cy="50"
                       r="42"
                       fill="transparent"
-                      stroke="var(--accent-purple)"
+                      stroke="var(--accent-amber)"
                       strokeWidth="6"
                       strokeDasharray={2 * Math.PI * 42}
                       strokeDashoffset={(2 * Math.PI * 42) * (1 - phaseTimer / 6)}
                       strokeLinecap="round"
                       style={{
                         transition: 'stroke-dashoffset 1s linear, stroke 0.3s',
-                        stroke: phaseTimer <= 2 ? 'var(--accent-red)' : 'var(--accent-purple)',
+                        stroke: phaseTimer <= 2 ? 'var(--accent-red)' : 'var(--accent-amber)',
                       }}
                     />
                   </svg>
@@ -718,7 +718,7 @@ export default function ColorMatchArena() {
             <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 'bold', fontSize: '14px' }}>@{opponent?.username || 'Opponent'}</span>
-                {opponentSubmitted && <span className="badge badge-js" style={{ fontSize: '9px', background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-purple)', borderColor: 'rgba(139, 92, 246, 0.2)' }}>SUBMITTED</span>}
+                {opponentSubmitted && <span className="badge badge-js" style={{ fontSize: '9px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)', borderColor: 'rgba(245, 158, 11, 0.2)' }}>SUBMITTED</span>}
               </div>
 
               <div>
@@ -730,7 +730,7 @@ export default function ColorMatchArena() {
                   <div style={{
                     width: `${opponentProgress}%`,
                     height: '100%',
-                    background: opponentSubmitted ? 'var(--accent-purple)' : 'linear-gradient(to right, var(--accent-blue), var(--accent-purple))',
+                    background: opponentSubmitted ? 'var(--accent-amber)' : 'linear-gradient(to right, var(--accent-blue), var(--accent-amber))',
                     borderRadius: '3px',
                     transition: 'width 0.8s ease-in-out'
                   }}></div>
@@ -743,12 +743,12 @@ export default function ColorMatchArena() {
           <div>
             <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Lobby Signals</h3>
             <div className="pulse-glow" style={{
-              background: 'rgba(139, 92, 246, 0.05)',
-              border: '1px solid rgba(139, 92, 246, 0.15)',
+              background: 'rgba(245, 158, 11, 0.05)',
+              border: '1px solid rgba(245, 158, 11, 0.15)',
               borderRadius: '8px',
               padding: '16px',
               fontSize: '13px',
-              color: 'var(--accent-purple)',
+              color: 'var(--accent-amber)',
               fontWeight: '500',
               lineHeight: 1.5,
               minHeight: '70px',
@@ -776,18 +776,18 @@ export default function ColorMatchArena() {
         <button 
           onClick={handleForfeit} 
           className="btn btn-danger"
-          style={{ padding: '8px 16px', fontSize: '13px' }}
+          style={{ padding: '8px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
-          Forfeit Match 🏳️
+          <Flag size={14} /> Forfeit Match
         </button>
 
         <button 
           onClick={handleSubmitGuess} 
-          className="btn btn-success"
-          style={{ padding: '10px 28px', fontSize: '15px', gap: '8px', background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)', color: '#fff' }}
+          className="btn interactive-lift"
+          style={{ padding: '10px 28px', fontSize: '15px', gap: '8px', background: 'var(--accent-amber)', borderColor: 'var(--accent-amber)', color: 'black', fontWeight: 'bold' }}
           disabled={gameState !== 'guess'}
         >
-          <Play size={16} fill="white" /> 
+          <Play size={16} fill="black" color="black" /> 
           Lock In Guess
         </button>
       </div>

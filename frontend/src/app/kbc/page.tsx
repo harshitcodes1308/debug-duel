@@ -3,7 +3,7 @@
 import React from 'react';
 import { useStore } from '@/store/useStore';
 import Link from 'next/link';
-import { Play, Users, Trophy, Calendar, Sparkles, Flame, Coins, ShieldAlert } from 'lucide-react';
+import { Play, Users, Trophy, Calendar, Sparkles, Flame, Coins, ShieldAlert, ArrowLeft } from 'lucide-react';
 
 export default function KbcLandingPage() {
   const { user } = useStore();
@@ -62,8 +62,8 @@ export default function KbcLandingPage() {
               Welcome to the hot seat! Answer debugging, language, and system design questions. Climb the points ladder, activate lifelines, and show your friends who is the ultimate developer.
             </p>
           </div>
-          <div className="float-anim" style={{ fontSize: '72px', marginRight: '20px', userSelect: 'none' }}>
-            👑
+          <div className="float-anim" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.1)', padding: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '20px' }}>
+            <Trophy size={48} color="var(--accent-amber)" />
           </div>
         </div>
 
@@ -115,29 +115,27 @@ export default function KbcLandingPage() {
             
             {/* Solo Challenge Card */}
             <div 
-              className="glass-panel" 
+              className="glass-panel card-shine glow-purple theme-kbc" 
               style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
                 justifyContent: 'space-between', 
-                minHeight: '260px',
-                border: '1px solid rgba(0, 255, 148, 0.2)',
-                background: 'rgba(26, 26, 34, 0.3)'
+                minHeight: '260px'
               }}
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ background: 'rgba(0, 255, 148, 0.1)', padding: '10px', borderRadius: '8px' }}>
-                    <Play size={24} color="var(--accent-green)" />
+                  <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                    <Play size={24} color="var(--accent-purple)" />
                   </div>
-                  <span className="badge" style={{ borderColor: 'rgba(0, 255, 148, 0.3)', color: 'var(--accent-green)', background: 'rgba(0, 255, 148, 0.05)' }}>Active</span>
+                  <span className="badge" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Active</span>
                 </div>
                 <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#FFF' }}>Solo Challenge</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '20px' }}>
                   Answer 15 consecutive trivia questions. Each correct answer pushes you higher up the points ladder. Lifelines included.
                 </p>
               </div>
-              <Link href="/kbc/categories" className="btn btn-success" style={{ width: '100%', marginTop: '20px' }}>
+              <Link href="/kbc/categories" className="btn interactive-lift" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', color: '#FFF', borderColor: 'rgba(139, 92, 246, 0.5)' }}>
                 Play Solo
               </Link>
             </div>
@@ -163,14 +161,12 @@ export default function KbcLandingPage() {
 
             {/* Play With Friend Card */}
             <div 
-              className="glass-panel" 
+              className="glass-panel card-shine glow-purple theme-kbc" 
               style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
                 justifyContent: 'space-between', 
-                minHeight: '260px',
-                border: '1px solid rgba(139, 92, 246, 0.2)',
-                background: 'rgba(26, 26, 34, 0.3)'
+                minHeight: '260px'
               }}
             >
               <div>
@@ -185,7 +181,7 @@ export default function KbcLandingPage() {
                   Create a custom lobby code, invite your friends, and host private coding showdowns in real-time.
                 </p>
               </div>
-              <Link href="/kbc/multiplayer" className="btn btn-primary" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', border: 'none', color: '#fff' }}>
+              <Link href="/kbc/multiplayer" className="btn interactive-lift" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', borderColor: 'rgba(139, 92, 246, 0.5)', color: '#fff' }}>
                 Play with Friend
               </Link>
             </div>
@@ -214,8 +210,8 @@ export default function KbcLandingPage() {
 
         {/* Back to main dashboard link */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-          <Link href="/" className="btn btn-secondary" style={{ padding: '12px 32px' }}>
-            ← Back to DebugDuel Dashboard
+          <Link href="/" className="btn btn-secondary interactive-lift" style={{ padding: '12px 32px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ArrowLeft size={14} /> Back to DebugDuel Dashboard
           </Link>
         </div>
 

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   Play, Users, Award, Trophy, Zap, 
   Calendar, History, ShieldAlert, Sparkles, Flame,
-  Swords, UserPlus, Copy, Check
+  Swords, UserPlus, Copy, Check, Code, Palette, TrendingUp
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import AnimatedCounter from '@/components/AnimatedCounter';
@@ -25,6 +25,10 @@ interface LeaderboardEntry {
 interface RecentBattle {
   id: string;
   startedAt: string;
+  endedAt?: string;
+  createdAt?: string;
+  gameType?: string;
+  status?: string;
   language: string;
   difficulty: string;
   winnerId: string;
@@ -205,7 +209,7 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         setUser({ ...user, tokens: data.tokens });
-        setClaimMessage(`Daily Bonus claimed! +${data.added || 50} Tokens (Streak: ${data.streak || 1} day${(data.streak || 1) > 1 ? 's' : ''}) 🪙`);
+        setClaimMessage(`Daily Bonus claimed! +${data.added || 50} Tokens (Streak: ${data.streak || 1} day${(data.streak || 1) > 1 ? 's' : ''})`);
       } else {
         try {
           const data = await res.json();
@@ -248,7 +252,9 @@ export default function Dashboard() {
               Choose Javascript, Python, or Java. Pick your bet size, invite a rival, and race to debug in real-time.
             </p>
           </div>
-          <div className="float-anim" style={{ fontSize: '64px' }}>⚔️</div>
+          <div className="float-anim" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', padding: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Swords size={48} color="var(--accent-blue)" />
+          </div>
         </div>
 
         {/* Game Arenas categories */}
@@ -259,24 +265,24 @@ export default function Dashboard() {
           <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', marginBottom: '20px', maxWidth: '400px', border: '1px solid var(--border)' }}>
             <button 
               onClick={() => setGameCategory('coders')}
-              className={`btn ${gameCategory === 'coders' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+              className={`btn ${gameCategory === 'coders' ? 'btn-primary' : 'btn-secondary'} interactive-lift`}
+              style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px', gap: '6px' }}
             >
-              👩‍💻 Coders
+              <Code size={14} /> Coders
             </button>
             <button 
               onClick={() => setGameCategory('uiux')}
-              className={`btn ${gameCategory === 'uiux' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+              className={`btn ${gameCategory === 'uiux' ? 'btn-primary' : 'btn-secondary'} interactive-lift`}
+              style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px', gap: '6px' }}
             >
-              🎨 UI/UX
+              <Palette size={14} /> UI/UX
             </button>
             <button 
               onClick={() => setGameCategory('growth')}
-              className={`btn ${gameCategory === 'growth' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+              className={`btn ${gameCategory === 'growth' ? 'btn-primary' : 'btn-secondary'} interactive-lift`}
+              style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px', gap: '6px' }}
             >
-              📈 Growth
+              <TrendingUp size={14} /> Growth
             </button>
           </div>
 
@@ -285,52 +291,52 @@ export default function Dashboard() {
             {gameCategory === 'coders' && (
               <>
                 {/* DebugDuel Card */}
-                <div className="glass-panel card-shine glow-success" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
+                <div className="glass-panel card-shine glow-primary theme-debug-duel interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <Zap size={24} color="var(--accent-green)" />
-                      <span className="badge badge-js" style={{ borderColor: 'rgba(0, 255, 148, 0.3)', color: 'var(--accent-green)', background: 'rgba(0, 255, 148, 0.05)' }}>Active</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Zap size={24} color="var(--accent-blue)" />
+                      <span className="badge" style={{ borderColor: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent-blue)', background: 'rgba(59, 130, 246, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
                     </div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>DebugDuel</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>DebugDuel</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
                       1v1 real-time debugging battle. Two developers enter a shared broken codebase — first to find, fix, and explain the bug wins the wager.
                     </p>
                   </div>
-                  <Link href="/duel/create" className="btn btn-primary" style={{ alignSelf: 'flex-start', marginTop: '16px' }}>
-                    <Play size={16} fill="black" /> Enter Arena
+                  <Link href="/duel/create" className="btn btn-primary" style={{ alignSelf: 'flex-start', marginTop: '20px', gap: '8px' }}>
+                    <Play size={14} fill="currentColor" /> Enter Arena
                   </Link>
                 </div>
 
                 {/* Code KBC Card */}
-                <div className="glass-panel card-shine glow-warning" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
+                <div className="glass-panel card-shine glow-purple theme-kbc interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <Trophy size={24} color="var(--accent-amber)" />
-                      <span className="badge badge-js" style={{ borderColor: 'rgba(245, 166, 35, 0.3)', color: 'var(--accent-amber)', background: 'rgba(245, 166, 35, 0.05)' }}>Active</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Trophy size={24} color="var(--accent-purple)" />
+                      <span className="badge" style={{ borderColor: 'rgba(139, 92, 246, 0.2)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
                     </div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>Code KBC</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>Code KBC</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
                       Test your coding knowledge. Climb the ladder. Beat your friends.
                     </p>
                   </div>
-                  <Link href="/kbc" className="btn btn-success" style={{ alignSelf: 'flex-start', marginTop: '16px' }}>
-                    <Play size={16} fill="black" /> Play Now
+                  <Link href="/kbc" className="btn" style={{ alignSelf: 'flex-start', marginTop: '20px', gap: '8px', background: 'var(--accent-purple)', color: '#FFF', borderColor: 'rgba(139, 92, 246, 0.4)' }}>
+                    <Play size={14} fill="currentColor" /> Play Now
                   </Link>
                 </div>
 
                 {/* QueryWar Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px', opacity: 0.7 }}>
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px', opacity: 0.65 }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <Users size={24} color="var(--accent-purple)" />
-                      <span className="badge badge-py" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Coming Soon</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Users size={24} color="var(--text-secondary)" />
+                      <span className="badge" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '10px', fontWeight: 'bold' }}>Coming Soon</span>
                     </div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>QueryWar</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>QueryWar</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
                       SQL query optimization battle. Optimize queries on massive datasets. Lowest execution time and cleanest cost metrics wins.
                     </p>
                   </div>
-                  <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', marginTop: '16px' }} disabled>
+                  <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', marginTop: '20px' }} disabled>
                     Locked
                   </button>
                 </div>
@@ -340,36 +346,38 @@ export default function Dashboard() {
             {gameCategory === 'uiux' && (
               <>
                 {/* ColorMatch Card */}
-                <div className="glass-panel card-shine glow-primary" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px' }}>
+                <div className="glass-panel card-shine glow-warning theme-color-match interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <Zap size={24} color="var(--accent-blue)" />
-                      <span className="badge badge-js" style={{ borderColor: 'rgba(74, 158, 255, 0.3)', color: 'var(--accent-blue)', background: 'rgba(74, 158, 255, 0.05)' }}>Active</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Zap size={24} color="var(--accent-amber)" />
+                      <span className="badge" style={{ borderColor: 'rgba(245, 158, 11, 0.2)', color: 'var(--accent-amber)', background: 'rgba(245, 158, 11, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
                     </div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>ColorMatch</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>ColorMatch</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
                       Vibrant memorization and color matching battle. Memorize the color card for 6 seconds, then adjust RGB sliders to guess it exactly. Closeness determines the score!
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                     <Link href="/color-match/solo" className="btn btn-secondary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', fontSize: '13px' }}>
                       Practice Solo
                     </Link>
-                    <Link href="/color-match/create" className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', fontSize: '13px' }}>
-                      <Play size={14} fill="black" style={{ marginRight: '4px' }} /> Battle Friends
+                    <Link href="/color-match/create" className="btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', fontSize: '13px', background: 'var(--accent-amber)', color: '#000', borderColor: 'rgba(245, 158, 11, 0.4)', gap: '6px' }}>
+                      <Play size={14} fill="currentColor" /> Battle Friends
                     </Link>
                   </div>
                 </div>
 
                 {/* Info Box */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center', minHeight: '220px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>UI/UX Arena Status</h4>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    Your current ColorMatch ELO: <strong style={{ color: 'var(--accent-purple)' }}>{user.eloUIUX || 1000}</strong>
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                    Train your visual memory and RGB composition speed. Match with others to climb the Zero-Day God ranks in styling!
-                  </p>
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', minHeight: '230px', padding: '24px' }}>
+                  <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>UI/UX Arena Status</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                      Your current ColorMatch ELO: <strong style={{ color: 'var(--accent-purple)', fontSize: '16px', fontFamily: 'Space Grotesk, sans-serif' }}>{user.eloUIUX || 1000}</strong>
+                    </p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                      Train your visual memory and RGB composition speed. Match with others to climb the Zero-Day God ranks in styling!
+                    </p>
+                  </div>
                 </div>
               </>
             )}
@@ -377,35 +385,35 @@ export default function Dashboard() {
             {gameCategory === 'growth' && (
               <>
                 {/* MarketingBattle Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px', opacity: 0.7 }}>
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px', opacity: 0.65 }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <Users size={24} color="var(--accent-purple)" />
-                      <span className="badge badge-py" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Coming Soon</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Users size={24} color="var(--text-secondary)" />
+                      <span className="badge" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '10px', fontWeight: 'bold' }}>Coming Soon</span>
                     </div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>MarketingBattle</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>MarketingBattle</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
                       Copywriting battle. Write highly converting headlines or email hooks based on product specs. AI judged.
                     </p>
                   </div>
-                  <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', marginTop: '16px' }} disabled>
+                  <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', marginTop: '20px' }} disabled>
                     Locked
                   </button>
                 </div>
 
                 {/* PitchArena Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '220px', opacity: 0.7 }}>
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px', opacity: 0.65 }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <Users size={24} color="var(--accent-purple)" />
-                      <span className="badge badge-py" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Coming Soon</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Users size={24} color="var(--text-secondary)" />
+                      <span className="badge" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '10px', fontWeight: 'bold' }}>Coming Soon</span>
                     </div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>PitchArena</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '18px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>PitchArena</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
                       60-second pitch elevator battle. Submit your hook and description for a startup idea. AI judges structure + impact.
                     </p>
                   </div>
-                  <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', marginTop: '16px' }} disabled>
+                  <button className="btn btn-secondary" style={{ alignSelf: 'flex-start', marginTop: '20px' }} disabled>
                     Locked
                   </button>
                 </div>
@@ -451,40 +459,145 @@ export default function Dashboard() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {recentBattles.map((battle) => {
-                const isWinner = battle.winnerId === user.id;
-                const opponent = battle.participants.find(p => p.userId !== user.id)?.user.username || "Unknown Opponent";
+                const myParticipant = battle.participants.find(p => p.userId === user.id);
+                const isWinner = myParticipant?.isWinner;
+                const opponentParticipant = battle.participants.find(p => p.userId !== user.id);
+                const isDraw = !isWinner && (!opponentParticipant || !opponentParticipant.isWinner) && battle.status === 'completed';
+                const isLoss = !isWinner && !isDraw && battle.status === 'completed';
+                const isOngoing = battle.status !== 'completed';
+
+                const opponent = opponentParticipant?.user?.username || "Opponent";
+                const dateToUse = battle.endedAt || battle.startedAt || battle.createdAt;
+                const formattedDate = dateToUse ? new Date(dateToUse).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) : 'Unknown Date';
+
+                // Game Type styling
+                let gameLabel = 'DebugDuel';
+                let gameColor = 'var(--accent-blue)';
+                if (battle.gameType === 'color_match') {
+                  gameLabel = 'ColorMatch';
+                  gameColor = 'var(--accent-amber)';
+                } else if (battle.gameType === 'kbc') {
+                  gameLabel = 'Code KBC';
+                  gameColor = 'var(--accent-purple)';
+                }
+
+                // Category or language details
+                const detailLabel = battle.gameType === 'color_match' ? 'RGB' : (battle.language ? battle.language.toUpperCase() : 'UIUX');
                 const langBadgeClass = battle.language === 'javascript' ? 'badge-js' : battle.language === 'python' ? 'badge-py' : 'badge-java';
 
                 return (
-                  <div key={battle.id} className="glass-panel" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '16px 20px',
-                    borderColor: isWinner ? 'rgba(0, 255, 148, 0.2)' : 'rgba(255, 68, 68, 0.2)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <span className={`badge ${langBadgeClass}`} style={{ fontSize: '10px' }}>{battle.language}</span>
-                      <div>
-                        <div style={{ fontWeight: '600' }}>
-                          vs <span style={{ color: 'var(--accent-blue)' }}>@{opponent}</span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          Difficulty: {battle.difficulty} • Bet: {battle.betAmount} tokens
+                  <div key={battle.id} 
+                    className="interactive-lift"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'rgba(255, 255, 255, 0.01)',
+                      border: '1px solid var(--border)',
+                      transition: 'var(--transition)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.01)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                          color: gameColor,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          {gameLabel}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className={`badge ${langBadgeClass}`} style={{ fontSize: '9px', padding: '2px 6px' }}>{detailLabel}</span>
+                          <span style={{ fontWeight: '600', fontSize: '13px', color: '#FFF' }}>
+                            vs <span style={{ color: 'var(--accent-blue)' }}>@{opponent}</span>
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        color: isWinner ? 'var(--accent-green)' : 'var(--accent-red)'
-                      }}>
-                        {isWinner ? 'WINNER +50' : 'DEFEAT'}
-                      </span>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        {new Date(battle.startedAt).toLocaleDateString()}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                          {battle.difficulty ? battle.difficulty.toUpperCase() : 'MEDIUM'} • {battle.betAmount} Tokens
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          {formattedDate}
+                        </span>
+                      </div>
+
+                      {/* Outcome Badge */}
+                      <div style={{ minWidth: '85px', textAlign: 'center' }}>
+                        {isOngoing ? (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            padding: '4px 10px',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            color: 'var(--text-secondary)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            textTransform: 'uppercase'
+                          }}>
+                            Active
+                          </span>
+                        ) : isWinner ? (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            padding: '4px 10px',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(16, 185, 129, 0.08)',
+                            color: 'var(--accent-green)',
+                            border: '1px solid rgba(16, 185, 129, 0.2)',
+                            textTransform: 'uppercase'
+                          }}>
+                            Win
+                          </span>
+                        ) : isLoss ? (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            padding: '4px 10px',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            color: 'var(--accent-red)',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            textTransform: 'uppercase'
+                          }}>
+                            Loss
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            padding: '4px 10px',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(245, 158, 11, 0.08)',
+                            color: 'var(--accent-amber)',
+                            border: '1px solid rgba(245, 158, 11, 0.2)',
+                            textTransform: 'uppercase'
+                          }}>
+                            Draw
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -492,6 +605,115 @@ export default function Dashboard() {
               })}
             </div>
           )}
+        </div>
+
+        {/* Performance Overview & Visualization */}
+        <div style={{ marginTop: '16px' }}>
+          <h2 style={{ fontSize: '20px', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>Performance & Analytics</h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '20px', alignItems: 'stretch' }}>
+            {/* Stats Cards Grid */}
+            <div className="glass-panel" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', padding: '24px' }}>
+              {/* Stat 1: Win Rate */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>Win Rate</span>
+                <span style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-green)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <AnimatedCounter value={user.totalDuels > 0 ? Math.round((user.totalWins / user.totalDuels) * 1000) / 10 : 0} />%
+                </span>
+              </div>
+
+              {/* Stat 2: Total Matches */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Matches</span>
+                <span style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <AnimatedCounter value={user.totalDuels} />
+                </span>
+              </div>
+
+              {/* Stat 3: Current Streak */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>Current Streak</span>
+                <span style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-red)', fontFamily: 'Space Grotesk, sans-serif', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AnimatedCounter value={user.currentStreak} />
+                  {user.currentStreak >= 3 && <Flame size={20} fill="var(--accent-red)" style={{ display: 'inline' }} />}
+                </span>
+              </div>
+
+              {/* Stat 4: Best Streak */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>Best Streak</span>
+                <span style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <AnimatedCounter value={user.bestStreak || 0} />
+                </span>
+              </div>
+
+              {/* Stat 5: Tokens Earned/Balance */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 'bold' }}>Token Balance</span>
+                <span style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-blue)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <AnimatedCounter value={user.tokens} />
+                </span>
+              </div>
+            </div>
+
+            {/* Doughnut Chart */}
+            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', gap: '8px' }}>
+              <div style={{ position: 'relative', width: '110px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {(() => {
+                  const winRate = user.totalDuels > 0 ? (user.totalWins / user.totalDuels) * 100 : 0;
+                  const radius = 38;
+                  const circumference = 2 * Math.PI * radius; // 238.76
+                  const strokeDashoffset = circumference - (circumference * winRate) / 100;
+                  return (
+                    <>
+                      <svg width="110" height="110" style={{ transform: 'rotate(-90deg)', position: 'absolute' }}>
+                        {/* Background track circle */}
+                        <circle
+                          cx="55"
+                          cy="55"
+                          r={radius}
+                          fill="transparent"
+                          stroke="rgba(239, 68, 68, 0.15)"
+                          strokeWidth="10"
+                        />
+                        {/* Wins circle */}
+                        <circle
+                          cx="55"
+                          cy="55"
+                          r={radius}
+                          fill="transparent"
+                          stroke="var(--accent-green)"
+                          strokeWidth="10"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
+                          strokeLinecap="round"
+                          style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
+                        />
+                      </svg>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, fontFamily: 'Space Grotesk, sans-serif' }}>
+                        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#FFF' }}>
+                          {user.totalDuels > 0 ? Math.round((user.totalWins / user.totalDuels) * 100) : 0}%
+                        </span>
+                        <span style={{ fontSize: '8px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Win rate
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Chart Legend */}
+              <div style={{ display: 'flex', gap: '12px', fontSize: '10px', marginTop: '4px' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-green)' }} /> Wins ({user.totalWins})
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.7)' }} /> Losses ({user.totalDuels - user.totalWins})
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

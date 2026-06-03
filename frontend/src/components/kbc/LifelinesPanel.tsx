@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { HelpCircle, Users, CheckCircle, ArrowRight, ShieldAlert } from 'lucide-react';
+import { HelpCircle, Users, CheckCircle, ArrowRight, ShieldAlert, Terminal } from 'lucide-react';
 
 export interface LifelineState {
   fiftyFifty: boolean;
@@ -358,11 +358,9 @@ export default function LifelinesPanel({
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 12px',
-                fontSize: '28px',
-                fontWeight: 'bold',
                 boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)'
               }}>
-                👨‍💻
+                <Terminal size={28} color="#FFF" />
               </div>
               <h2 style={{ fontSize: '22px', color: '#FFF' }}>Expert Developer Advice</h2>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-purple)', letterSpacing: '0.1em', fontWeight: 'bold' }}>

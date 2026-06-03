@@ -421,8 +421,8 @@ export default function KbcMultiplayerGame() {
 
           {/* Speed tiebreaker details if applicable */}
           {me?.score === opponent?.score && opponent && (
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', background: 'rgba(255, 255, 255, 0.02)', padding: '8px 16px', borderRadius: '6px', width: '100%', border: '1px solid rgba(255, 255, 255, 0.03)' }}>
-              ⏱️ Speed tiebreaker: You took <strong>{Math.round(me.totalTimeTaken)}s</strong> total vs opponent&apos;s <strong>{Math.round(opponent.totalTimeTaken)}s</strong>.
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', background: 'rgba(255, 255, 255, 0.02)', padding: '8px 16px', borderRadius: '6px', width: '100%', border: '1px solid rgba(255, 255, 255, 0.03)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Clock size={13} /> Speed tiebreaker: You took <strong>{Math.round(me.totalTimeTaken)}s</strong> total vs opponent&apos;s <strong>{Math.round(opponent.totalTimeTaken)}s</strong>.
             </div>
           )}
 
@@ -443,7 +443,7 @@ export default function KbcMultiplayerGame() {
               </div>
               <div className="flex-center" style={{ gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <Star size={18} color="var(--accent-blue)" />
-                <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{isWinner ? "+1 Win 👑" : "+0 Win"}</span>
+                <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{isWinner ? "+1 Win" : "+0 Win"}</span>
               </div>
             </div>
           )}
@@ -559,7 +559,7 @@ export default function KbcMultiplayerGame() {
                       cy="45" 
                       r="38" 
                       fill="transparent" 
-                      stroke={timeLeft <= 10 ? 'var(--accent-red)' : 'var(--accent-amber)'} 
+                      stroke={timeLeft <= 10 ? 'var(--accent-red)' : 'var(--accent-purple)'} 
                       strokeWidth="6" 
                       strokeDasharray={2 * Math.PI * 38}
                       strokeDashoffset={2 * Math.PI * 38 * (1 - timeLeft / 30)}
@@ -574,7 +574,7 @@ export default function KbcMultiplayerGame() {
                     flexDirection: 'column', 
                     gap: '2px', 
                     zIndex: 10,
-                    color: timeLeft <= 10 ? 'var(--accent-red)' : 'var(--accent-amber)',
+                    color: timeLeft <= 10 ? 'var(--accent-red)' : 'var(--accent-purple)',
                     fontWeight: 'bold',
                     fontFamily: 'Space Grotesk, sans-serif'
                   }}>
@@ -683,8 +683,8 @@ export default function KbcMultiplayerGame() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   <span>Answer Lock:</span>
-                  <strong style={{ color: me?.isLocked ? 'var(--accent-amber)' : 'var(--text-secondary)' }}>
-                    {me?.isLocked ? "LOCKED 🔒" : "PENDING ⏰"}
+                  <strong style={{ color: me?.isLocked ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
+                    {me?.isLocked ? "LOCKED" : "PENDING"}
                   </strong>
                 </div>
               </div>
@@ -706,8 +706,8 @@ export default function KbcMultiplayerGame() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)' }}>
                     <span>Answer Lock:</span>
-                    <strong style={{ color: opponent.isLocked ? 'var(--accent-amber)' : 'var(--text-secondary)' }}>
-                      {opponent.isLocked ? "LOCKED 🔒" : "PENDING ⏰"}
+                    <strong style={{ color: opponent.isLocked ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
+                      {opponent.isLocked ? "LOCKED" : "PENDING"}
                     </strong>
                   </div>
 

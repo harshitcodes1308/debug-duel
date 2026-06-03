@@ -122,11 +122,11 @@ export default function ColorMatchLobby() {
           zIndex: 1000,
           fontFamily: 'Space Grotesk, sans-serif'
         }}>
-          <span style={{ fontSize: '14px', color: 'var(--accent-purple)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '16px' }}>CHROMATIC DUEL READY. INITIATING...</span>
+          <span style={{ fontSize: '14px', color: 'var(--accent-amber)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '16px' }}>CHROMATIC DUEL READY. INITIATING...</span>
           <h1 style={{
             fontSize: '120px',
-            color: countdown === 0 ? 'var(--accent-purple)' : 'var(--text-primary)',
-            textShadow: countdown === 0 ? '0 0 40px rgba(139, 92, 246, 0.4)' : '0 0 20px rgba(255,255,255,0.1)',
+            color: countdown === 0 ? 'var(--accent-amber)' : 'var(--text-primary)',
+            textShadow: countdown === 0 ? '0 0 40px rgba(245, 158, 11, 0.4)' : '0 0 20px rgba(255,255,255,0.1)',
             transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
           }}>
             {countdown === 0 ? "FIGHT!" : countdown}
@@ -138,13 +138,13 @@ export default function ColorMatchLobby() {
         
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
-          <div className="logo pulse-glow" style={{ fontSize: '24px', justifyContent: 'center', marginBottom: '8px', color: 'var(--accent-purple)' }}>ColorMatch Lobby</div>
+          <div className="logo pulse-glow" style={{ fontSize: '24px', justifyContent: 'center', marginBottom: '8px', color: 'var(--accent-amber)' }}>ColorMatch Lobby</div>
           {duelDetails && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
               <span className="badge badge-js" style={{
-                color: 'var(--accent-purple)',
-                borderColor: 'rgba(139, 92, 246, 0.2)',
-                background: 'rgba(139, 92, 246, 0.02)'
+                color: 'var(--accent-amber)',
+                borderColor: 'rgba(245, 158, 11, 0.2)',
+                background: 'rgba(245, 158, 11, 0.02)'
               }}>
                 UI/UX Game
               </span>
@@ -300,9 +300,9 @@ export default function ColorMatchLobby() {
                 onClick={handleCopyLink}
               />
               <button
-                className="btn btn-primary"
+                className="btn interactive-lift"
                 onClick={handleCopyLink}
-                style={{ gap: '6px', padding: '12px 16px', background: copied ? 'var(--accent-green)' : 'var(--accent-purple)', color: 'white' }}
+                style={{ gap: '6px', padding: '12px 16px', background: copied ? 'var(--accent-green)' : 'var(--accent-amber)', color: copied ? 'white' : 'black' }}
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? "Copied" : "Copy"}

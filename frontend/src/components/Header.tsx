@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
-import { LogOut, Coins, Flame, Award, ShieldAlert, Terminal } from 'lucide-react';
+import { LogOut, Coins, Flame, Award, Terminal, Swords, Search } from 'lucide-react';
 import CommandCenter from './CommandCenter';
 
 export default function Header() {
@@ -32,41 +32,19 @@ export default function Header() {
     <>
       <header className="nav-header">
       <Link href="/" style={{ textDecoration: 'none' }}>
-        <div className="logo">
-          <span>⚔️ DebugDuel</span>
+        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Swords size={20} color="var(--accent-blue)" />
+          <span>DebugDuel</span>
         </div>
       </Link>
 
       {/* Global Command Center search trigger */}
       <button 
         onClick={() => setIsCommandOpen(true)}
-        style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '6px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          cursor: 'pointer',
-          color: 'var(--text-secondary)',
-          fontSize: '12px',
-          transition: 'var(--transition)',
-          minWidth: '180px',
-          justifyContent: 'space-between',
-          outline: 'none'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'var(--border)';
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-        }}
+        className="header-search-btn"
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>🔍</span> Search actions...
+          <Search size={14} /> Search actions...
         </span>
         <span style={{
           fontSize: '10px',
@@ -84,20 +62,6 @@ export default function Header() {
       </button>
 
       <div className="nav-user">
-        {isDevMode && (
-          <div className="flex-center" style={{
-            gap: 'var(--space-1)',
-            fontSize: '11px',
-            background: 'rgba(139, 92, 246, 0.08)',
-            color: 'var(--accent-purple)',
-            border: '1px solid rgba(139, 92, 246, 0.15)',
-            padding: '4px 8px',
-            borderRadius: 'var(--radius-sm)',
-            fontWeight: 'bold'
-          }}>
-            <ShieldAlert size={12} /> DEV MODE
-          </div>
-        )}
 
         <div className="flex-center" style={{ gap: 'var(--space-4)' }}>
           {/* Tokens */}

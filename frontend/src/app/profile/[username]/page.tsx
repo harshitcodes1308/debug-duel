@@ -259,28 +259,28 @@ export default function PlayerProfile() {
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
-              <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Language Ratings</span>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'var(--space-2)' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Language Ratings</span>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>JavaScript Rating</span>
-                <strong style={{ color: 'var(--accent-amber)' }}><AnimatedCounter value={profile.eloJS} /> ELO</strong>
+                <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloJS} /> ELO</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Python Rating</span>
-                <strong style={{ color: 'var(--accent-blue)' }}><AnimatedCounter value={profile.eloPython} /> ELO</strong>
+                <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloPython} /> ELO</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Java Rating</span>
-                <strong style={{ color: 'var(--accent-red)' }}><AnimatedCounter value={profile.eloJava} /> ELO</strong>
+                <strong style={{ color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloJava} /> ELO</strong>
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: 'var(--space-2)' }}>
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: 'var(--space-2)', alignItems: 'center', padding: '4px 0' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Best Win Streak</span>
-              <strong style={{ color: 'var(--accent-red)' }}><AnimatedCounter value={profile.bestStreak} /> wins</strong>
+              <strong style={{ color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.bestStreak} /> wins</strong>
             </div>
 
           </div>

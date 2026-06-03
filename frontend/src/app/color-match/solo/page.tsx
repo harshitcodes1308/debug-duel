@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
-import { ArrowLeft, RotateCcw, Trophy, Zap, Award, Sparkles, AlertCircle } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Trophy, Zap, Award, Sparkles, AlertCircle, Palette } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface Color {
@@ -305,7 +305,7 @@ export default function ColorMatchSolo() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontFamily: 'Space Grotesk, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={24} color="var(--accent-blue)" /> ColorMatch Solo
+              <Sparkles size={24} color="var(--accent-amber)" /> ColorMatch Solo
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
               Train your eye to guess color codes in RGB
@@ -320,12 +320,26 @@ export default function ColorMatchSolo() {
         {/* ================= STATE 1: IDLE / START ================= */}
         {gameState === 'idle' && (
           <div style={{ textAlign: 'center', padding: '40px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-            <div className="float-anim" style={{ fontSize: '64px' }}>🎨</div>
+            <div className="float-anim" style={{ display: 'flex', justifyContent: 'center', color: 'var(--accent-amber)', marginBottom: '8px' }}>
+              <Palette size={64} />
+            </div>
             <h3 style={{ fontSize: '18px' }}>Ready to test your visual memory?</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '380px', lineHeight: '20px' }}>
               You will be shown a target color for 6 seconds. Once it disappears, match it as closely as possible using the Red, Green, and Blue sliders.
             </p>
-            <button className="btn btn-primary" style={{ width: '100%', maxWidth: '240px', height: '48px', fontWeight: 'bold' }} onClick={startNewGame}>
+            <button
+              className="btn interactive-lift"
+              style={{
+                width: '100%',
+                maxWidth: '240px',
+                height: '48px',
+                fontWeight: 'bold',
+                background: 'var(--accent-amber)',
+                borderColor: 'var(--accent-amber)',
+                color: 'black'
+              }}
+              onClick={startNewGame}
+            >
               Start Match
             </button>
           </div>
@@ -334,7 +348,7 @@ export default function ColorMatchSolo() {
         {/* ================= STATE 2: MEMORIZE ================= */}
         {gameState === 'memorize' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', animation: 'fadeIn 0.3s ease-out' }}>
-            <div style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--accent-blue)', fontWeight: 'bold', letterSpacing: '0.1em' }}>
+            <div style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--accent-amber)', fontWeight: 'bold', letterSpacing: '0.1em' }}>
               Memorize this color!
             </div>
             
@@ -374,14 +388,14 @@ export default function ColorMatchSolo() {
                     cy="50"
                     r="42"
                     fill="transparent"
-                    stroke="var(--accent-blue)"
+                    stroke="var(--accent-amber)"
                     strokeWidth="6"
                     strokeDasharray={2 * Math.PI * 42}
                     strokeDashoffset={(2 * Math.PI * 42) * (1 - countdown / 6)}
                     strokeLinecap="round"
                     style={{
                       transition: 'stroke-dashoffset 1s linear, stroke 0.3s',
-                      stroke: countdown <= 2 ? 'var(--accent-red)' : 'var(--accent-blue)',
+                      stroke: countdown <= 2 ? 'var(--accent-red)' : 'var(--accent-amber)',
                     }}
                   />
                 </svg>
@@ -599,7 +613,19 @@ export default function ColorMatchSolo() {
 
             </div>
 
-            <button className="btn btn-primary" style={{ width: '100%', height: '48px', fontWeight: 'bold', marginTop: '10px' }} onClick={handleSubmitGuess}>
+            <button
+              className="btn interactive-lift"
+              style={{
+                width: '100%',
+                height: '48px',
+                fontWeight: 'bold',
+                marginTop: '10px',
+                background: 'var(--accent-amber)',
+                borderColor: 'var(--accent-amber)',
+                color: 'black'
+              }}
+              onClick={handleSubmitGuess}
+            >
               Submit Guess
             </button>
           </div>
@@ -615,16 +641,16 @@ export default function ColorMatchSolo() {
                 width: '64px',
                 height: '64px',
                 borderRadius: '50%',
-                background: 'rgba(139, 92, 246, 0.1)',
-                border: '1px solid var(--accent-purple)',
+                background: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid var(--accent-amber)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--accent-purple)'
+                color: 'var(--accent-amber)'
               }}>
                 <Award size={32} />
               </div>
-              <h2 style={{ fontSize: '32px', color: score >= 900 ? 'var(--accent-green)' : score >= 750 ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
+              <h2 style={{ fontSize: '32px', color: score >= 900 ? 'var(--accent-green)' : score >= 750 ? 'var(--accent-amber)' : 'var(--text-primary)' }}>
                 Score: {animatedScore}/1000
               </h2>
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
@@ -699,7 +725,18 @@ export default function ColorMatchSolo() {
 
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn btn-primary" style={{ flex: 1, height: '48px', gap: '8px' }} onClick={startNewGame}>
+              <button
+                className="btn interactive-lift"
+                style={{
+                  flex: 1,
+                  height: '48px',
+                  gap: '8px',
+                  background: 'var(--accent-amber)',
+                  borderColor: 'var(--accent-amber)',
+                  color: 'black'
+                }}
+                onClick={startNewGame}
+              >
                 <RotateCcw size={16} /> Play Again
               </button>
               <Link href="/" className="btn btn-secondary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '48px' }}>

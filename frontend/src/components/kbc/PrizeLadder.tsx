@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { Shield, HelpCircle } from 'lucide-react';
 
 export interface LadderStep {
   level: number;
@@ -131,7 +132,7 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
                 transition: 'var(--transition)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ 
                   fontSize: '11px', 
                   opacity: isActive ? 0.8 : 0.4,
@@ -139,7 +140,19 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
                 }}>
                   {step.level.toString().padStart(2, '0')}
                 </span>
-                <span>{step.isMilestone ? '💎 Safety Milestone' : 'Question'}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  {step.isMilestone ? (
+                    <>
+                      <Shield size={12} color="var(--accent-purple)" fill="rgba(139, 92, 246, 0.2)" />
+                      <span style={{ color: 'var(--accent-purple)' }}>Safety Milestone</span>
+                    </>
+                  ) : (
+                    <>
+                      <HelpCircle size={12} style={{ opacity: 0.4 }} />
+                      <span>Question</span>
+                    </>
+                  )}
+                </span>
               </div>
               <span style={{ 
                 fontFamily: 'JetBrains Mono, monospace',

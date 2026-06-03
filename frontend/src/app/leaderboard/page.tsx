@@ -151,17 +151,19 @@ export default function LeaderboardPage() {
                     <td style={{ padding: '16px 24px', fontWeight: 'bold' }}>
                       {isTopThree ? (
                         <span style={{
-                          fontSize: '18px',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '28px',
-                          height: '28px'
+                          height: '28px',
+                          background: index === 0 ? 'rgba(245, 158, 11, 0.1)' : index === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(205, 127, 50, 0.1)',
+                          border: `1px solid ${index === 0 ? 'var(--accent-amber)' : index === 1 ? 'rgba(255, 255, 255, 0.2)' : 'rgba(205, 127, 50, 0.3)'}`,
+                          borderRadius: '50%'
                         }}>
-                          {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                          <Medal size={16} color={index === 0 ? 'var(--accent-amber)' : index === 1 ? '#E5E7EB' : '#CD7F32'} />
                         </span>
                       ) : (
-                        <span style={{ paddingLeft: '8px', color: 'var(--text-secondary)' }}>{index + 1}</span>
+                        <span style={{ paddingLeft: '10px', color: 'var(--text-secondary)', fontFamily: 'Space Grotesk' }}>{index + 1}</span>
                       )}
                     </td>
 

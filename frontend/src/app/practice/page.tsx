@@ -132,7 +132,10 @@ export default function PracticeArena() {
             <ArrowLeft size={16} /> Dashboard
           </Link>
           <span style={{ color: 'var(--border)' }}>|</span>
-          <span style={{ fontWeight: 'bold' }}>Solo Practice Warmup 🥋</span>
+          <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <BookOpen size={16} color="var(--accent-blue)" />
+            Solo Practice Warmup
+          </span>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -151,9 +154,9 @@ export default function PracticeArena() {
             onChange={handleDiffChange}
             className="select-base"
           >
-            <option value="easy">Easy 🟢</option>
-            <option value="medium">Medium 🟡</option>
-            <option value="hard">Hard 🔴</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
           </select>
         </div>
       </div>

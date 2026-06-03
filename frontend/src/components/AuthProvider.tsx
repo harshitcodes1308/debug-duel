@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useStore, UserProfile } from '@/store/useStore';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { io } from 'socket.io-client';
+import { Swords } from 'lucide-react';
 
 interface AuthContextType {
   isDevMode: boolean;
@@ -325,28 +326,42 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#0D0D12',
+        backgroundColor: '#09090D',
         fontFamily: 'Inter, sans-serif',
         padding: '24px'
       }}>
-        <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center' }}>
-          <div>
-            <h1 className="logo" style={{ fontSize: '28px', justifyContent: 'center', marginBottom: '8px' }}>⚔️ DEBUGDUEL</h1>
-            <div style={{ fontSize: '11px', color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
-              Developer Fallback Mode Active
+        <div className="card-base glow-purple" style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center', padding: '32px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              background: 'rgba(139, 92, 246, 0.08)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              padding: '12px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '4px'
+            }}>
+              <Swords size={28} color="var(--accent-purple)" />
+            </div>
+            <h1 className="logo" style={{ fontSize: '24px', justifyContent: 'center', margin: 0, fontFamily: 'Space Grotesk, sans-serif' }}>
+              DEBUGDUEL
+            </h1>
+            <div style={{ fontSize: '10px', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 'bold' }}>
+              Launcher fall-back mode
             </div>
           </div>
 
-          <p style={{ color: '#8888A0', fontSize: '14px', lineHeight: '20px' }}>
-            Choose a mock developer profile or enter a custom username to start dueling locally.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '20px' }}>
+            Choose a mock profile or enter a custom handle to initialize local session.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
             {presets.map((p) => (
               <button
                 key={p}
-                className="btn btn-secondary"
-                style={{ padding: '8px 12px', fontSize: '13px' }}
+                className="btn btn-secondary interactive-lift"
+                style={{ padding: '8px 14px', fontSize: '12px', borderRadius: 'var(--radius-md)' }}
                 onClick={() => loginAsDev(p)}
               >
                 {p}
@@ -354,32 +369,27 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
             ))}
           </div>
 
+          <div style={{ width: '100%', height: '1px', background: 'var(--border)' }}></div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
-            <label style={{ fontSize: '12px', color: '#8888A0', fontWeight: 'bold' }}>CUSTOM USERNAME</label>
+            <label style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>CUSTOM HANDLE</label>
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 placeholder="e.g. code_pilot"
-                style={{
-                  flex: 1,
-                  background: '#141419',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  color: '#fff',
-                  fontFamily: 'inherit',
-                  outline: 'none'
-                }}
+                className="input-base"
+                style={{ flex: 1, height: '40px' }}
                 onKeyDown={(e) => e.key === 'Enter' && loginAsDev(usernameInput)}
               />
               <button
                 className="btn btn-primary"
+                style={{ height: '40px', padding: '0 16px', background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
                 onClick={() => loginAsDev(usernameInput)}
                 disabled={!usernameInput.trim()}
               >
-                Join
+                Launch
               </button>
             </div>
           </div>

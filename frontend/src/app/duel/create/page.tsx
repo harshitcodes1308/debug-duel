@@ -138,31 +138,35 @@ export default function CreateDuel() {
               <button 
                 type="button" 
                 onClick={() => setDifficulty('easy')}
-                className={`btn ${difficulty === 'easy' ? 'btn-success' : 'btn-secondary'}`}
-                style={{ height: '48px', color: difficulty === 'easy' ? 'black' : 'var(--text-primary)' }}
+                className={`btn ${difficulty === 'easy' ? 'btn-success' : 'btn-secondary'} interactive-lift`}
+                style={{ height: '48px', color: difficulty === 'easy' ? 'black' : 'var(--text-primary)', gap: '8px' }}
               >
-                Easy 🟢
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-green)', display: 'inline-block' }} />
+                Easy
               </button>
               <button 
                 type="button" 
                 onClick={() => setDifficulty('medium')}
-                className={`btn ${difficulty === 'medium' ? 'btn-primary' : 'btn-secondary'}`}
+                className={`btn ${difficulty === 'medium' ? 'btn-primary' : 'btn-secondary'} interactive-lift`}
                 style={{
                   height: '48px',
                   background: difficulty === 'medium' ? 'var(--accent-amber)' : 'transparent',
                   color: difficulty === 'medium' ? 'black' : 'var(--text-primary)',
-                  borderColor: difficulty === 'medium' ? 'var(--accent-amber)' : 'var(--border)'
+                  borderColor: difficulty === 'medium' ? 'var(--accent-amber)' : 'var(--border)',
+                  gap: '8px'
                 }}
               >
-                Medium 🟡
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-amber)', display: 'inline-block' }} />
+                Medium
               </button>
               <button 
                 type="button" 
                 onClick={() => setDifficulty('hard')}
-                className={`btn ${difficulty === 'hard' ? 'btn-danger' : 'btn-secondary'}`}
-                style={{ height: '48px', color: difficulty === 'hard' ? 'white' : 'var(--text-primary)' }}
+                className={`btn ${difficulty === 'hard' ? 'btn-danger' : 'btn-secondary'} interactive-lift`}
+                style={{ height: '48px', color: difficulty === 'hard' ? 'white' : 'var(--text-primary)', gap: '8px' }}
               >
-                Hard 🔴
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-red)', display: 'inline-block' }} />
+                Hard
               </button>
             </div>
           </div>

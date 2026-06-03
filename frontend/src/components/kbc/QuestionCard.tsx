@@ -65,13 +65,13 @@ export default function QuestionCard({
         cursor = 'default';
       }
     } else if (isLocked) {
-      border = '1px solid var(--accent-amber)';
-      background = 'rgba(245, 158, 11, 0.08)';
-      color = 'var(--accent-amber)';
+      border = '1px solid var(--accent-purple)';
+      background = 'rgba(139, 92, 246, 0.15)';
+      color = 'var(--accent-purple)';
       cursor = 'default';
     } else if (isSelected) {
-      border = '1px solid var(--accent-blue)';
-      background = 'rgba(59, 130, 246, 0.08)';
+      border = '1px solid var(--accent-purple)';
+      background = 'rgba(139, 92, 246, 0.08)';
       color = '#FFF';
     }
 
@@ -121,16 +121,16 @@ export default function QuestionCard({
         }
         @keyframes pulseGlow {
           0% {
-            box-shadow: 0 0 5px rgba(245, 166, 35, 0.3), inset 0 0 5px rgba(245, 166, 35, 0.1);
-            border-color: rgba(245, 166, 35, 0.4);
+            box-shadow: 0 0 5px rgba(139, 92, 246, 0.3), inset 0 0 5px rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.4);
           }
           50% {
-            box-shadow: 0 0 25px rgba(245, 166, 35, 0.7), inset 0 0 12px rgba(245, 166, 35, 0.3);
-            border-color: rgba(245, 166, 35, 1);
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.7), inset 0 0 12px rgba(139, 92, 246, 0.3);
+            border-color: rgba(139, 92, 246, 1);
           }
           100% {
-            box-shadow: 0 0 5px rgba(245, 166, 35, 0.3), inset 0 0 5px rgba(245, 166, 35, 0.1);
-            border-color: rgba(245, 166, 35, 0.4);
+            box-shadow: 0 0 5px rgba(139, 92, 246, 0.3), inset 0 0 5px rgba(139, 92, 246, 0.1);
+            border-color: rgba(139, 92, 246, 0.4);
           }
         }
         @keyframes revealCorrect {
@@ -162,7 +162,7 @@ export default function QuestionCard({
           top: '12px',
           left: '20px',
           fontSize: '10px',
-          color: 'var(--accent-blue)',
+          color: 'var(--accent-purple)',
           textTransform: 'uppercase',
           letterSpacing: '0.05em',
           fontWeight: 700
@@ -207,7 +207,7 @@ export default function QuestionCard({
           >
             <span style={{ 
               fontWeight: 700, 
-              color: selectedOptionIndex === idx || lockedOptionIndex === idx ? 'inherit' : 'var(--accent-amber)',
+              color: selectedOptionIndex === idx || lockedOptionIndex === idx ? 'inherit' : 'var(--accent-purple)',
               fontFamily: 'Space Grotesk, sans-serif',
               fontSize: '15px'
             }}>
@@ -222,13 +222,13 @@ export default function QuestionCard({
       {selectedOptionIndex !== null && lockedOptionIndex === null && !revealedAnswer && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-2)' }}>
           <button 
-            className="btn btn-success" 
+            className="btn interactive-lift" 
             style={{
               padding: '12px 36px',
               fontSize: '14px',
-              background: 'var(--accent-amber)',
-              borderColor: 'rgba(245, 158, 11, 0.4)',
-              color: '#000000',
+              background: 'var(--accent-purple)',
+              borderColor: 'rgba(139, 92, 246, 0.4)',
+              color: '#FFFFFF',
               fontWeight: 700,
               gap: 'var(--space-2)',
               boxShadow: 'var(--shadow-md)',
@@ -253,11 +253,11 @@ export default function QuestionCard({
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: '12px',
-            background: 'rgba(245, 158, 11, 0.05)',
-            border: '1px dashed rgba(245, 158, 11, 0.3)',
+            background: 'rgba(139, 92, 246, 0.05)',
+            border: '1px dashed rgba(139, 92, 246, 0.3)',
             borderRadius: 'var(--radius-md)',
             padding: '12px var(--space-4)',
-            color: 'var(--accent-amber)',
+            color: 'var(--accent-purple)',
             fontSize: '13px',
             fontWeight: '600',
             marginTop: '8px'
@@ -267,7 +267,7 @@ export default function QuestionCard({
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            background: 'var(--accent-amber)',
+            background: 'var(--accent-purple)',
             display: 'inline-block'
           }} className="pulse-glow" />
           <span>Lock Confirmed. Processing answer...</span>

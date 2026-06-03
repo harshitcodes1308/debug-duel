@@ -379,7 +379,7 @@ export default function ColorMatchResult() {
               {pUser?.submittedColor || 'rgb(N/A)'}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '6px', fontSize: '12px' }}>
-              <span style={{ color: 'var(--accent-purple)' }}>Score: <strong>{animatedUserScore}/1000</strong></span>
+              <span style={{ color: 'var(--accent-amber)' }}>Score: <strong>{animatedUserScore}/1000</strong></span>
               <span style={{ color: 'var(--text-secondary)' }}>|</span>
               <span style={{ color: 'var(--accent-blue)' }}>Time: <strong>{pUser?.submitTime ?? 0}s</strong></span>
             </div>
@@ -417,7 +417,7 @@ export default function ColorMatchResult() {
               {pOpponent?.submittedColor || 'rgb(N/A)'}
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '6px', fontSize: '12px' }}>
-              <span style={{ color: 'var(--accent-purple)' }}>Score: <strong>{animatedOpponentScore}/1000</strong></span>
+              <span style={{ color: 'var(--accent-amber)' }}>Score: <strong>{animatedOpponentScore}/1000</strong></span>
               <span style={{ color: 'var(--text-secondary)' }}>|</span>
               <span style={{ color: 'var(--accent-blue)' }}>Time: <strong>{pOpponent?.submitTime ?? 0}s</strong></span>
             </div>
@@ -428,7 +428,7 @@ export default function ColorMatchResult() {
       {/* 3. CHROMATIC BREAKDOWN TABLE */}
       <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <h3 style={{ fontSize: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sliders size={18} color="var(--accent-purple)" /> RGB Channel Deviation
+          <Sliders size={18} color="var(--accent-amber)" /> RGB Channel Deviation
         </h3>
 
         <div style={{ overflowX: 'auto' }}>
@@ -528,8 +528,8 @@ export default function ColorMatchResult() {
 
         <div style={{ display: 'flex', gap: '16px' }}>
           <button 
-            className="btn btn-success" 
-            style={{ color: 'black', minWidth: '180px' }}
+            className="btn interactive-lift" 
+            style={{ minWidth: '180px', background: 'var(--accent-amber)', borderColor: 'var(--accent-amber)', color: 'black', fontWeight: 'bold' }}
             onClick={handleRematch}
             disabled={rematching}
           >

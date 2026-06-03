@@ -396,7 +396,7 @@ function SoloChallengeGame() {
 
   // Circular timer color mapping
   const getTimerColor = () => {
-    if (timeLeft > 15) return 'var(--accent-green)';
+    if (timeLeft > 15) return 'var(--accent-purple)';
     if (timeLeft > 10) return 'var(--accent-amber)';
     return 'var(--accent-red)';
   };
@@ -459,14 +459,14 @@ function SoloChallengeGame() {
               width: '42px',
               height: '42px',
               borderRadius: '50%',
-              background: 'var(--accent-purple)',
+              background: 'rgba(139, 92, 246, 0.1)',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '20px',
-              boxShadow: '0 0 10px rgba(139, 92, 246, 0.3)'
+              boxShadow: '0 0 10px rgba(139, 92, 246, 0.05)'
             }}>
-              🎙️
+              <MessageSquare size={18} color="var(--accent-purple)" />
             </div>
             <div style={{ flex: 1 }}>
               <span style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 700, letterSpacing: '0.05em' }}>

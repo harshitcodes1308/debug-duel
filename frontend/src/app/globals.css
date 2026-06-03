@@ -10,6 +10,7 @@
   --accent-amber: #F59E0B;    /* Warning / Alerts */
   --accent-blue: #3B82F6;     /* Primary / ELO */
   --accent-purple: #8B5CF6;   /* Badges / Special */
+  --accent-cyan: #06B6D4;     /* Multiplayer / Friends */
   --text-primary: #F3F4F6;
   --text-secondary: #9CA3AF;
   --border: rgba(255, 255, 255, 0.06);
@@ -656,3 +657,110 @@ code, pre {
   left: 150%;
   transition: all 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.12), inset 0 0 10px rgba(6, 182, 212, 0.04);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.12), inset 0 0 10px rgba(16, 185, 129, 0.04);
+}
+
+.interactive-lift {
+  transition: var(--transition);
+}
+
+.interactive-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.interactive-lift:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Specific Game Theme Utilities */
+.theme-debug-duel {
+  border-color: rgba(59, 130, 246, 0.15) !important;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.02) 0%, rgba(21, 21, 28, 0.6) 100%) !important;
+}
+.theme-debug-duel:hover {
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.08) !important;
+}
+
+.theme-kbc {
+  border-color: rgba(139, 92, 246, 0.15) !important;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, rgba(21, 21, 28, 0.6) 100%) !important;
+}
+.theme-kbc:hover {
+  border-color: rgba(139, 92, 246, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.08) !important;
+}
+
+.theme-color-match {
+  border-color: rgba(245, 158, 11, 0.15) !important;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.02) 0%, rgba(21, 21, 28, 0.6) 100%) !important;
+}
+.theme-color-match:hover {
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.08) !important;
+}
+
+.theme-ranked {
+  border-color: rgba(16, 185, 129, 0.15) !important;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.02) 0%, rgba(21, 21, 28, 0.6) 100%) !important;
+}
+.theme-ranked:hover {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.08) !important;
+}
+
+.theme-multiplayer {
+  border-color: rgba(6, 182, 212, 0.15) !important;
+  background: linear-gradient(180deg, rgba(6, 182, 212, 0.02) 0%, rgba(21, 21, 28, 0.6) 100%) !important;
+}
+.theme-multiplayer:hover {
+  border-color: rgba(6, 182, 212, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.08) !important;
+}
+
+/* Responsive Search Button in Header */
+.header-search-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 12px;
+  transition: var(--transition);
+  flex-grow: 1;
+  max-width: 700px;
+  margin: 0 var(--space-6);
+  justify-content: space-between;
+  outline: none;
+}
+
+.header-search-btn:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+@media (min-width: 768px) {
+  .header-search-btn {
+    min-width: 420px;
+  }
+}
+
+@media (max-width: 767px) {
+  .header-search-btn {
+    min-width: 140px;
+    margin: 0 var(--space-2);
+  }
+}
+
+

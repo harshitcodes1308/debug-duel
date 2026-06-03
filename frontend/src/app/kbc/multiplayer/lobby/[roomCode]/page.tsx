@@ -373,7 +373,7 @@ export default function KbcLobbyRoom() {
               <button
                 className="btn btn-primary"
                 onClick={handleCopyLink}
-                style={{ gap: '6px', padding: '12px 16px', background: copied ? 'var(--accent-green)' : 'var(--accent-blue)', color: 'black' }}
+                style={{ gap: '6px', padding: '12px 16px', background: copied ? 'var(--accent-green)' : 'var(--accent-purple)', color: copied ? 'black' : 'white' }}
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? "Copied" : "Copy"}

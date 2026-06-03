@@ -247,16 +247,8 @@ export default function KbcMultiplayerHub() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    style={{
-                      background: '#141419',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '8px',
-                      padding: '12px',
-                      color: '#FFF',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
+                    className="select-base"
+                    style={{ width: '100%' }}
                   >
                     {CATEGORIES.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -295,7 +287,7 @@ export default function KbcMultiplayerHub() {
               <button
                 onClick={() => handleCreateRoom()}
                 disabled={creating}
-                className="btn btn-primary"
+                className="btn btn-primary interactive-lift"
                 style={{
                   height: '48px',
                   background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)',
@@ -341,24 +333,19 @@ export default function KbcMultiplayerHub() {
                   value={roomCodeInput}
                   onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
                   placeholder="e.g. H7X9K2"
+                  className="input-base"
                   style={{
                     flex: 1,
-                    background: '#141419',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '8px',
-                    padding: '12px 16px',
-                    color: '#FFF',
                     fontFamily: 'monospace',
                     fontSize: '18px',
                     letterSpacing: '0.1em',
-                    outline: 'none',
                     textAlign: 'center'
                   }}
                 />
                 <button
                   type="submit"
                   disabled={joining || !roomCodeInput.trim()}
-                  className="btn btn-primary"
+                  className="btn btn-primary interactive-lift"
                   style={{
                     padding: '0 32px',
                     background: 'var(--accent-blue)',
@@ -370,7 +357,7 @@ export default function KbcMultiplayerHub() {
                     gap: '8px'
                   }}
                 >
-                  <Play size={16} />
+                  <Play size={16} fill="black" />
                   {joining ? "Joining..." : "Join Match"}
                 </button>
               </form>
@@ -390,8 +377,8 @@ export default function KbcMultiplayerHub() {
                 Loading friends list...
               </div>
             ) : friends.length === 0 ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', textAlign: 'center', color: 'var(--text-secondary)', padding: '20px' }}>
-                <span style={{ fontSize: '24px' }}>👥</span>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', textAlign: 'center', color: 'var(--text-secondary)', padding: '20px' }}>
+                <Users size={24} style={{ opacity: 0.4, color: 'var(--accent-purple)' }} />
                 <span style={{ fontSize: '13px' }}>No friends added yet.</span>
                 <Link href="/" style={{ color: 'var(--accent-blue)', fontSize: '12px', textDecoration: 'none', fontWeight: 'bold' }}>Add Friends on Dashboard</Link>
               </div>

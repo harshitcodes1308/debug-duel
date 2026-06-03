@@ -73,7 +73,7 @@ export default function CreateColorMatch() {
         {/* Heading */}
         <div>
           <h1 style={{ fontSize: '28px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Palette size={28} color="var(--accent-purple)" /> Configure ColorMatch
+            <Palette size={28} color="var(--accent-amber)" /> Configure ColorMatch
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '6px' }}>
             Wager your tokens in a 1v1 visual color matching speed battle with a friend.
@@ -111,8 +111,15 @@ export default function CreateColorMatch() {
                   key={val}
                   type="button"
                   onClick={() => setBetAmount(val)}
-                  className={`btn ${betAmount === val ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ height: '40px', fontSize: '13px', borderStyle: 'dashed' }}
+                  className={`btn interactive-lift`}
+                  style={{
+                    height: '40px',
+                    fontSize: '13px',
+                    borderStyle: betAmount === val ? 'solid' : 'dashed',
+                    background: betAmount === val ? 'var(--accent-amber)' : 'rgba(255, 255, 255, 0.02)',
+                    borderColor: betAmount === val ? 'var(--accent-amber)' : 'var(--border)',
+                    color: betAmount === val ? 'black' : 'var(--text-primary)'
+                  }}
                   disabled={val > user.tokens}
                 >
                   {val}
@@ -138,15 +145,15 @@ export default function CreateColorMatch() {
 
           {/* Quick rules */}
           <div style={{
-            background: 'rgba(139, 92, 246, 0.05)',
-            border: '1px dashed rgba(139, 92, 246, 0.2)',
+            background: 'rgba(245, 158, 11, 0.05)',
+            border: '1px dashed rgba(245, 158, 11, 0.2)',
             borderRadius: '12px',
             padding: '16px',
             fontSize: '12px',
             lineHeight: '1.6',
             color: 'var(--text-secondary)'
           }}>
-            <strong style={{ color: 'var(--accent-purple)', display: 'block', marginBottom: '6px' }}>CHROMATIC ARENA RULES</strong>
+            <strong style={{ color: 'var(--accent-amber)', display: 'block', marginBottom: '6px' }}>CHROMATIC ARENA RULES</strong>
             1. Memorize the card color shown for 6 seconds.<br />
             2. Once hidden, you have 30 seconds to set the Red, Green, and Blue sliders.<br />
             3. Accuracy determines score. Ties are broken by submission speed.
@@ -156,8 +163,8 @@ export default function CreateColorMatch() {
 
         {/* Submit */}
         <button 
-          className="btn btn-primary" 
-          style={{ width: '100%', height: '52px', fontWeight: 'bold', fontSize: '16px', background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)', color: '#fff' }}
+          className="btn interactive-lift" 
+          style={{ width: '100%', height: '52px', fontWeight: 'bold', fontSize: '16px', background: 'var(--accent-amber)', borderColor: 'var(--accent-amber)', color: 'black' }}
           onClick={handleCreate}
           disabled={loading}
         >
