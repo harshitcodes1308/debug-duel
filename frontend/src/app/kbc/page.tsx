@@ -162,21 +162,31 @@ export default function KbcLandingPage() {
             </div>
 
             {/* Play With Friend Card */}
-            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '260px', opacity: 0.8 }}>
+            <div 
+              className="glass-panel" 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'space-between', 
+                minHeight: '260px',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                background: 'rgba(26, 26, 34, 0.3)'
+              }}
+            >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '8px' }}>
                     <Users size={24} color="var(--accent-purple)" />
                   </div>
-                  <span className="badge" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Coming Soon</span>
+                  <span className="badge" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Active</span>
                 </div>
                 <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#FFF' }}>Play With Friend</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '20px' }}>
-                  Create a custom lobby code, invite your friends, and host private coding showdowns to settle arguments.
+                  Create a custom lobby code, invite your friends, and host private coding showdowns in real-time.
                 </p>
               </div>
-              <Link href="/kbc/multiplayer" className="btn btn-secondary" style={{ width: '100%', marginTop: '20px' }}>
-                Locked
+              <Link href="/kbc/multiplayer" className="btn btn-primary" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', border: 'none', color: '#fff' }}>
+                Play with Friend
               </Link>
             </div>
 

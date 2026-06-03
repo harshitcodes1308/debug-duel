@@ -343,18 +343,96 @@ app.post('/api/friends/add', async (req, res) => {
 // Daily Login Claim
 app.post('/api/user/dailylogin', async (req, res) => {
   const { userId } = req.body;
-  try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: "User not found" });
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
 
-    // In a real app, track date of last login. For MVP, we will allow claiming once per session or simulate.
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { tokens: { increment: 10 } }
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Row-level lock to prevent concurrent double-claiming race conditions
+      const users = await tx.$queryRaw`SELECT * FROM "User" WHERE id = ${userId} FOR UPDATE`;
+      if (!users || users.length === 0) {
+        throw new Error("USER_NOT_FOUND");
+      }
+      
+      const user = users[0];
+      const now = new Date();
+      
+      let newStreak = 1;
+      let rewardAmount = 50;
+
+      if (user.lastDailyClaim) {
+        const lastClaim = new Date(user.lastDailyClaim);
+        
+        // Get midnights in local server time to define calendar days
+        const getMidnight = (d) => {
+          const temp = new Date(d);
+          temp.setHours(0, 0, 0, 0);
+          return temp.getTime();
+        };
+
+        const nowMidnight = getMidnight(now);
+        const lastMidnight = getMidnight(lastClaim);
+
+        const diffMs = nowMidnight - lastMidnight;
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+          throw new Error("ALREADY_CLAIMED");
+        } else if (diffDays === 1) {
+          // Claiming on consecutive day
+          newStreak = (user.dailyStreak || 0) + 1;
+        } else {
+          // Missed at least one day, reset streak to 1
+          newStreak = 1;
+        }
+      } else {
+        // Fresh claim
+        newStreak = 1;
+      }
+
+      // Scaling rewards based on streak
+      if (newStreak === 1) rewardAmount = 50;
+      else if (newStreak === 2) rewardAmount = 75;
+      else if (newStreak === 3) rewardAmount = 100;
+      else if (newStreak === 4) rewardAmount = 125;
+      else if (newStreak === 5) rewardAmount = 150;
+      else if (newStreak === 6) rewardAmount = 200;
+      else if (newStreak >= 7) rewardAmount = 250;
+
+      // Bonus milestone payouts
+      let bonus = 0;
+      if (newStreak === 7) bonus = 500;
+      else if (newStreak === 30) bonus = 2500;
+
+      const totalReward = rewardAmount + bonus;
+
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          tokens: { increment: totalReward },
+          dailyStreak: newStreak,
+          lastDailyClaim: now
+        }
+      });
+
+      return {
+        tokens: updatedUser.tokens,
+        streak: newStreak,
+        added: totalReward
+      };
     });
-    res.json({ success: true, tokens: updated.tokens });
+
+    res.json({ success: true, tokens: result.tokens, streak: result.streak, added: result.added });
   } catch (error) {
-    res.status(500).json({ error: "Action failed" });
+    if (error.message === "USER_NOT_FOUND") {
+      res.status(404).json({ error: "User not found" });
+    } else if (error.message === "ALREADY_CLAIMED") {
+      res.status(400).json({ error: "Already claimed today!" });
+    } else {
+      console.error("Daily login error:", error);
+      res.status(500).json({ error: "Daily login action failed" });
+    }
   }
 });
 
@@ -853,13 +931,155 @@ io.on('connection', (socket) => {
       const submittedColor = `rgb(${r}, ${g}, ${b})`;
       const submitTime = Math.round((Date.now() - new Date(duel.startedAt).getTime()) / 1000);
 
-      // Save user submission
-      await prisma.duelParticipant.updateMany({
-        where: { duelId, userId },
-        data: {
-          submittedColor,
-          colorScore: score,
-          submitTime
+      let eloChanges = {};
+      let tokenChanges = {};
+      let winnerId = null;
+      let loserId = null;
+      let isDraw = false;
+      let triggerResultBroadcast = false;
+
+      await prisma.$transaction(async (tx) => {
+        // Row-level lock to prevent concurrency race conditions
+        const duels = await tx.$queryRaw`SELECT status, "startedAt", "betAmount", "targetColor" FROM "Duel" WHERE id = ${duelId} FOR UPDATE`;
+        const dbDuel = duels[0];
+        if (!dbDuel || dbDuel.status !== 'active') {
+          throw new Error("ALREADY_COMPLETED");
+        }
+
+        // Lock participants
+        await tx.$queryRaw`SELECT id FROM "DuelParticipant" WHERE "duelId" = ${duelId} FOR UPDATE`;
+
+        // Save user submission
+        await tx.duelParticipant.updateMany({
+          where: { duelId, userId },
+          data: {
+            submittedColor,
+            colorScore: score,
+            submitTime
+          }
+        });
+
+        // Refetch participants inside locked transaction scope
+        const dbParticipants = await tx.duelParticipant.findMany({
+          where: { duelId },
+          include: { user: true }
+        });
+
+        const allSubmitted = dbParticipants.every(p => p.submittedColor !== null);
+        if (allSubmitted) {
+          triggerResultBroadcast = true;
+
+          // Stop FOMO
+          stopFomoEngine(duelId);
+
+          const p1 = dbParticipants[0];
+          const p2 = dbParticipants[1];
+
+          if (p1.colorScore > p2.colorScore) {
+            winnerId = p1.userId;
+            loserId = p2.userId;
+          } else if (p2.colorScore > p1.colorScore) {
+            winnerId = p2.userId;
+            loserId = p1.userId;
+          } else {
+            // Tiebreaker: faster submitTime
+            if (p1.submitTime < p2.submitTime) {
+              winnerId = p1.userId;
+              loserId = p2.userId;
+            } else if (p2.submitTime < p1.submitTime) {
+              winnerId = p2.userId;
+              loserId = p1.userId;
+            } else {
+              isDraw = true;
+            }
+          }
+
+          if (!isDraw && winnerId && loserId) {
+            const winnerUser = await tx.user.findUnique({ where: { id: winnerId } });
+            const loserUser = await tx.user.findUnique({ where: { id: loserId } });
+
+            if (winnerUser && loserUser) {
+              const ratingW = winnerUser.eloUIUX || 1000;
+              const ratingL = loserUser.eloUIUX || 1000;
+
+              const changeW = calculateElo(ratingW, ratingL, 1);
+              const changeL = calculateElo(ratingL, ratingW, 0);
+
+              eloChanges[winnerId] = changeW;
+              eloChanges[loserId] = changeL;
+
+              const bet = dbDuel.betAmount;
+              const streakBonus = winnerUser.currentStreak >= 2 ? 15 : 0;
+              const closenessBonus = Math.round(p1.userId === winnerId ? p1.colorScore / 50 : p2.colorScore / 50);
+              const totalBonus = 50 + bet + streakBonus + closenessBonus;
+
+              tokenChanges[winnerId] = totalBonus;
+              tokenChanges[loserId] = -bet;
+
+              // DB Updates: Winner
+              const newStreak = winnerUser.currentStreak + 1;
+              const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
+              await tx.user.update({
+                where: { id: winnerId },
+                data: {
+                  eloUIUX: { increment: changeW },
+                  tokens: { increment: totalBonus },
+                  totalWins: { increment: 1 },
+                  totalDuels: { increment: 1 },
+                  currentStreak: newStreak,
+                  bestStreak,
+                  rank: getRankTier(winnerUser.eloUIUX + changeW)
+                }
+              });
+
+              // DB Updates: Loser
+              await tx.user.update({
+                where: { id: loserId },
+                data: {
+                  eloUIUX: { increment: changeL },
+                  tokens: { decrement: bet },
+                  totalDuels: { increment: 1 },
+                  currentStreak: 0,
+                  rank: getRankTier(loserUser.eloUIUX + changeL)
+                }
+              });
+            }
+
+            // Update participant isWinner
+            await tx.duelParticipant.updateMany({
+              where: { duelId, userId: winnerId },
+              data: { isWinner: true }
+            });
+
+            await tx.duelParticipant.updateMany({
+              where: { duelId, userId: loserId },
+              data: { isWinner: false }
+            });
+
+            // Update duel status
+            await tx.duel.update({
+              where: { id: duelId },
+              data: {
+                status: "completed",
+                winnerId,
+                endedAt: new Date()
+              }
+            });
+          } else {
+            // Draw
+            tokenChanges[p1.userId] = 0;
+            tokenChanges[p2.userId] = 0;
+            eloChanges[p1.userId] = 0;
+            eloChanges[p2.userId] = 0;
+
+            await tx.duel.update({
+              where: { id: duelId },
+              data: {
+                status: "completed",
+                endedAt: new Date()
+              }
+            });
+          }
         }
       });
 
@@ -869,140 +1089,8 @@ io.on('connection', (socket) => {
       // Notify opponent
       socket.to(`duel:${duelId}`).emit('opponent_submitted', { message: "Your opponent has locked in their color guess!" });
 
-      // Check if both participants have submitted
-      const updatedDuel = await prisma.duel.findUnique({
-        where: { id: duelId },
-        include: {
-          participants: true
-        }
-      });
-
-      const allSubmitted = updatedDuel.participants.every(p => p.submittedColor !== null);
-      if (allSubmitted) {
-        // Stop FOMO
-        stopFomoEngine(duelId);
-
-        // Determine winner
-        const p1 = updatedDuel.participants[0];
-        const p2 = updatedDuel.participants[1];
-
-        let winnerId = null;
-        let loserId = null;
-        let isDraw = false;
-
-        if (p1.colorScore > p2.colorScore) {
-          winnerId = p1.userId;
-          loserId = p2.userId;
-        } else if (p2.colorScore > p1.colorScore) {
-          winnerId = p2.userId;
-          loserId = p1.userId;
-        } else {
-          // Tiebreaker: faster submitTime
-          if (p1.submitTime < p2.submitTime) {
-            winnerId = p1.userId;
-            loserId = p2.userId;
-          } else if (p2.submitTime < p1.submitTime) {
-            winnerId = p2.userId;
-            loserId = p1.userId;
-          } else {
-            isDraw = true;
-          }
-        }
-
-        let eloChanges = {};
-        let tokenChanges = {};
-
-        if (!isDraw && winnerId && loserId) {
-          const winnerUser = await prisma.user.findUnique({ where: { id: winnerId } });
-          const loserUser = await prisma.user.findUnique({ where: { id: loserId } });
-
-          if (winnerUser && loserUser) {
-            // ELO UIUX calculation
-            const ratingW = winnerUser.eloUIUX || 1000;
-            const ratingL = loserUser.eloUIUX || 1000;
-
-            const changeW = calculateElo(ratingW, ratingL, 1);
-            const changeL = calculateElo(ratingL, ratingW, 0);
-
-            eloChanges[winnerId] = changeW;
-            eloChanges[loserId] = changeL;
-
-            const bet = duel.betAmount;
-            const streakBonus = winnerUser.currentStreak >= 2 ? 15 : 0;
-            // Closeness bonus: add up to 20 tokens based on how close they were (score/50)
-            const closenessBonus = Math.round(p1.userId === winnerId ? p1.colorScore / 50 : p2.colorScore / 50); // max 20 tokens
-            const totalBonus = 50 + bet + streakBonus + closenessBonus;
-
-            tokenChanges[winnerId] = totalBonus;
-            tokenChanges[loserId] = -bet;
-
-            // DB Updates: Winner
-            const newStreak = winnerUser.currentStreak + 1;
-            const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
-            await prisma.user.update({
-              where: { id: winnerId },
-              data: {
-                eloUIUX: { increment: changeW },
-                tokens: { increment: totalBonus },
-                totalWins: { increment: 1 },
-                totalDuels: { increment: 1 },
-                currentStreak: newStreak,
-                bestStreak,
-                rank: getRankTier(winnerUser.eloUIUX + changeW)
-              }
-            });
-
-            // DB Updates: Loser
-            await prisma.user.update({
-              where: { id: loserId },
-              data: {
-                eloUIUX: { increment: changeL },
-                tokens: { decrement: bet },
-                totalDuels: { increment: 1 },
-                currentStreak: 0,
-                rank: getRankTier(loserUser.eloUIUX + changeL)
-              }
-            });
-          }
-
-          // Update participants isWinner
-          await prisma.duelParticipant.updateMany({
-            where: { duelId, userId: winnerId },
-            data: { isWinner: true }
-          });
-
-          await prisma.duelParticipant.updateMany({
-            where: { duelId, userId: loserId },
-            data: { isWinner: false }
-          });
-
-          // Update duel
-          await prisma.duel.update({
-            where: { id: duelId },
-            data: {
-              status: "completed",
-              winnerId,
-              endedAt: new Date()
-            }
-          });
-
-        } else {
-          // Draw/No winners (or tie score + time)
-          tokenChanges[p1.userId] = 0;
-          tokenChanges[p2.userId] = 0;
-          eloChanges[p1.userId] = 0;
-          eloChanges[p2.userId] = 0;
-
-          await prisma.duel.update({
-            where: { id: duelId },
-            data: {
-              status: "completed",
-              endedAt: new Date()
-            }
-          });
-        }
-
-        // Broadcast results
+      // Broadcast results if completed
+      if (triggerResultBroadcast) {
         io.to(`duel:${duelId}`).emit('duel_result', {
           winnerId,
           isDraw,
@@ -1012,8 +1100,12 @@ io.on('connection', (socket) => {
       }
 
     } catch (e) {
-      console.error(e);
-      socket.emit('color_guess_submitted', { success: false, reason: "Server processing error." });
+      if (e.message === "ALREADY_COMPLETED") {
+        console.log(`Color guess duel ${duelId} was already resolved.`);
+      } else {
+        console.error(e);
+        socket.emit('color_guess_submitted', { success: false, reason: "Server processing error." });
+      }
     }
   });
 
@@ -1054,87 +1146,96 @@ io.on('connection', (socket) => {
       let eloChanges = {};
       let tokenChanges = {};
 
-      const winnerUser = await prisma.user.findUnique({ where: { id: winnerId } });
-      const loserUser = loserId ? await prisma.user.findUnique({ where: { id: loserId } }) : null;
-
-      const languageKey = duel.language === 'javascript' ? 'eloJS' : duel.language === 'python' ? 'eloPython' : 'eloJava';
-
-      if (winnerUser && loserUser) {
-        const ratingW = winnerUser[languageKey];
-        const ratingL = loserUser[languageKey];
-
-        const changeW = calculateElo(ratingW, ratingL, 1);
-        const changeL = calculateElo(ratingL, ratingW, 0);
-
-        eloChanges[winnerId] = changeW;
-        eloChanges[loserId] = changeL;
-
-        // Base + Bet + Explanation bonus
-        const bet = duel.betAmount;
-        const streakBonus = winnerUser.currentStreak >= 2 ? 15 : 0;
-        const totalBonus = 50 + bet + scoreResult.score + streakBonus;
-
-        tokenChanges[winnerId] = totalBonus;
-        tokenChanges[loserId] = -bet;
-
-        // Update database: Winner
-        const newStreak = winnerUser.currentStreak + 1;
-        const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
-        await prisma.user.update({
-          where: { id: winnerId },
-          data: {
-            [languageKey]: { increment: changeW },
-            tokens: { increment: totalBonus },
-            totalWins: { increment: 1 },
-            totalDuels: { increment: 1 },
-            currentStreak: newStreak,
-            bestStreak: bestStreak,
-            rank: getRankTier(winnerUser[languageKey] + changeW)
-          }
-        });
-
-        // Update database: Loser
-        await prisma.user.update({
-          where: { id: loserId },
-          data: {
-            [languageKey]: { increment: changeL },
-            tokens: { decrement: bet },
-            totalDuels: { increment: 1 },
-            currentStreak: 0,
-            rank: getRankTier(loserUser[languageKey] + changeL)
-          }
-        });
-      }
-
-      // Update participant records
-      await prisma.duelParticipant.updateMany({
-        where: { duelId, userId: winnerId },
-        data: {
-          explanation,
-          explanationScore: scoreResult.score,
-          isWinner: true,
-          submitTime: Math.round((Date.now() - new Date(duel.startedAt).getTime()) / 1000)
+      await prisma.$transaction(async (tx) => {
+        // Row-level lock to prevent concurrency race conditions
+        const duels = await tx.$queryRaw`SELECT status, "startedAt", "betAmount", language FROM "Duel" WHERE id = ${duelId} FOR UPDATE`;
+        const dbDuel = duels[0];
+        if (!dbDuel || dbDuel.status !== 'active') {
+          throw new Error("ALREADY_COMPLETED");
         }
-      });
 
-      if (loserId) {
-        await prisma.duelParticipant.updateMany({
-          where: { duelId, userId: loserId },
+        const winnerUser = await tx.user.findUnique({ where: { id: winnerId } });
+        const loserUser = loserId ? await tx.user.findUnique({ where: { id: loserId } }) : null;
+
+        const languageKey = dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava';
+
+        if (winnerUser && loserUser) {
+          const ratingW = winnerUser[languageKey];
+          const ratingL = loserUser[languageKey];
+
+          const changeW = calculateElo(ratingW, ratingL, 1);
+          const changeL = calculateElo(ratingL, ratingW, 0);
+
+          eloChanges[winnerId] = changeW;
+          eloChanges[loserId] = changeL;
+
+          // Base + Bet + Explanation bonus
+          const bet = dbDuel.betAmount;
+          const streakBonus = winnerUser.currentStreak >= 2 ? 15 : 0;
+          const totalBonus = 50 + bet + scoreResult.score + streakBonus;
+
+          tokenChanges[winnerId] = totalBonus;
+          tokenChanges[loserId] = -bet;
+
+          // Update database: Winner
+          const newStreak = winnerUser.currentStreak + 1;
+          const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
+          await tx.user.update({
+            where: { id: winnerId },
+            data: {
+              [languageKey]: { increment: changeW },
+              tokens: { increment: totalBonus },
+              totalWins: { increment: 1 },
+              totalDuels: { increment: 1 },
+              currentStreak: newStreak,
+              bestStreak: bestStreak,
+              rank: getRankTier(winnerUser[languageKey] + changeW)
+            }
+          });
+
+          // Update database: Loser
+          await tx.user.update({
+            where: { id: loserId },
+            data: {
+              [languageKey]: { increment: changeL },
+              tokens: { decrement: bet },
+              totalDuels: { increment: 1 },
+              currentStreak: 0,
+              rank: getRankTier(loserUser[languageKey] + changeL)
+            }
+          });
+        }
+
+        // Update participant records
+        await tx.duelParticipant.updateMany({
+          where: { duelId, userId: winnerId },
           data: {
-            isWinner: false,
-            submitTime: Math.round((Date.now() - new Date(duel.startedAt).getTime()) / 1000)
+            explanation,
+            explanationScore: scoreResult.score,
+            isWinner: true,
+            submitTime: Math.round((Date.now() - new Date(dbDuel.startedAt).getTime()) / 1000)
           }
         });
-      }
 
-      // Update duel status
-      await prisma.duel.update({
-        where: { id: duelId },
-        data: {
-          status: "completed",
-          winnerId: winnerId,
-          endedAt: new Date()
+        if (loserId) {
+          await tx.duelParticipant.updateMany({
+            where: { duelId, userId: loserId },
+            data: {
+              isWinner: false,
+              submitTime: Math.round((Date.now() - new Date(dbDuel.startedAt).getTime()) / 1000)
+            }
+          });
         }
+
+        // Update duel status
+        await tx.duel.update({
+          where: { id: duelId },
+          data: {
+            status: "completed",
+            winnerId: winnerId,
+            endedAt: new Date()
+          }
+        });
       });
 
       // Broadcast results
@@ -1149,100 +1250,113 @@ io.on('connection', (socket) => {
       });
 
     } catch (error) {
-      console.error(error);
-      socket.emit('error_message', { message: "Failed submitting explanation." });
+      if (error.message === "ALREADY_COMPLETED") {
+        console.log(`Duel ${duelId} was already resolved.`);
+      } else {
+        console.error(error);
+        socket.emit('error_message', { message: "Failed submitting explanation." });
+      }
     }
   });
 
   // Forfeit Room
   socket.on('forfeit', async ({ duelId, userId }) => {
     try {
-      const duel = await prisma.duel.findUnique({
-        where: { id: duelId },
-        include: {
-          participants: { include: { user: true } }
-        }
-      });
-
-      if (!duel || duel.status !== 'active') return;
-
-      stopFomoEngine(duelId);
-
-      const loserId = userId;
-      const winnerParticipant = duel.participants.find(p => p.userId !== userId);
-      const winnerId = winnerParticipant ? winnerParticipant.userId : null;
-
       let eloChanges = {};
       let tokenChanges = {};
+      let winnerId = null;
 
-      const loserUser = await prisma.user.findUnique({ where: { id: loserId } });
-      const winnerUser = winnerId ? await prisma.user.findUnique({ where: { id: winnerId } }) : null;
-
-      const languageKey = duel.gameType === 'color_match' ? 'eloUIUX' : (duel.language === 'javascript' ? 'eloJS' : duel.language === 'python' ? 'eloPython' : 'eloJava');
-
-      if (loserUser && winnerUser) {
-        const ratingW = winnerUser[languageKey];
-        const ratingL = loserUser[languageKey];
-
-        const changeW = calculateElo(ratingW, ratingL, 1);
-        const changeL = calculateElo(ratingL, ratingW, 0);
-
-        eloChanges[winnerId] = changeW;
-        eloChanges[loserId] = changeL;
-
-        const bet = duel.betAmount;
-        const totalBonus = 50 + bet;
-
-        tokenChanges[winnerId] = totalBonus;
-        tokenChanges[loserId] = -bet;
-
-        // DB updates
-        await prisma.user.update({
-          where: { id: winnerId },
-          data: {
-            eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
-            eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
-            eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
-            eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
-            tokens: { increment: totalBonus },
-            totalWins: { increment: 1 },
-            totalDuels: { increment: 1 },
-            currentStreak: { increment: 1 },
-            rank: getRankTier((winnerUser[languageKey] || 1000) + changeW)
-          }
-        });
-
-        await prisma.user.update({
-          where: { id: loserId },
-          data: {
-            eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
-            eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
-            eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
-            eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
-            tokens: { decrement: bet },
-            totalDuels: { increment: 1 },
-            currentStreak: 0,
-            rank: getRankTier((loserUser[languageKey] || 1000) + changeL)
-          }
-        });
-      }
-
-      await prisma.duelParticipant.updateMany({
-        where: { duelId, userId: winnerId },
-        data: { isWinner: true }
-      });
-      await prisma.duelParticipant.updateMany({
-        where: { duelId, userId: loserId },
-        data: { isWinner: false }
-      });
-
-      await prisma.duel.update({
-        where: { id: duelId },
-        data: {
-          status: "completed",
-          winnerId: winnerId,
-          endedAt: new Date()
+      await prisma.$transaction(async (tx) => {
+        // Row-level lock to prevent concurrent forfeit or double-resolution race conditions
+        const duels = await tx.$queryRaw`SELECT status, "startedAt", "betAmount", "gameType", "language" FROM "Duel" WHERE id = ${duelId} FOR UPDATE`;
+        const dbDuel = duels[0];
+        if (!dbDuel || dbDuel.status !== 'active') {
+          throw new Error("ALREADY_COMPLETED");
         }
+
+        // Stop FOMO
+        stopFomoEngine(duelId);
+
+        // Fetch participants inside locked transaction scope
+        const dbParticipants = await tx.duelParticipant.findMany({
+          where: { duelId }
+        });
+
+        const loserId = userId;
+        const winnerParticipant = dbParticipants.find(p => p.userId !== userId);
+        winnerId = winnerParticipant ? winnerParticipant.userId : null;
+
+        const loserUser = await tx.user.findUnique({ where: { id: loserId } });
+        const winnerUser = winnerId ? await tx.user.findUnique({ where: { id: winnerId } }) : null;
+
+        const languageKey = dbDuel.gameType === 'color_match' ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
+
+        if (loserUser && winnerUser) {
+          const ratingW = winnerUser[languageKey] || 1000;
+          const ratingL = loserUser[languageKey] || 1000;
+
+          const changeW = calculateElo(ratingW, ratingL, 1);
+          const changeL = calculateElo(ratingL, ratingW, 0);
+
+          eloChanges[winnerId] = changeW;
+          eloChanges[loserId] = changeL;
+
+          const bet = dbDuel.betAmount;
+          const totalBonus = 50 + bet;
+
+          tokenChanges[winnerId] = totalBonus;
+          tokenChanges[loserId] = -bet;
+
+          // DB updates - using transaction delegate!
+          await tx.user.update({
+            where: { id: winnerId },
+            data: {
+              eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
+              eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
+              eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
+              eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
+              tokens: { increment: totalBonus },
+              totalWins: { increment: 1 },
+              totalDuels: { increment: 1 },
+              currentStreak: { increment: 1 },
+              rank: getRankTier(ratingW + changeW)
+            }
+          });
+
+          await tx.user.update({
+            where: { id: loserId },
+            data: {
+              eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
+              eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
+              eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
+              eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
+              tokens: { decrement: bet },
+              totalDuels: { increment: 1 },
+              currentStreak: 0,
+              rank: getRankTier(ratingL + changeL)
+            }
+          });
+        }
+
+        if (winnerId) {
+          await tx.duelParticipant.updateMany({
+            where: { duelId, userId: winnerId },
+            data: { isWinner: true }
+          });
+        }
+        await tx.duelParticipant.updateMany({
+          where: { duelId, userId: loserId },
+          data: { isWinner: false }
+        });
+
+        await tx.duel.update({
+          where: { id: duelId },
+          data: {
+            status: "completed",
+            winnerId: winnerId,
+            endedAt: new Date()
+          }
+        });
       });
 
       io.to(`duel:${duelId}`).emit('opponent_forfeited', {
@@ -1252,7 +1366,11 @@ io.on('connection', (socket) => {
       });
 
     } catch (e) {
-      console.error(e);
+      if (e.message === "ALREADY_COMPLETED") {
+        console.log(`Forfeit for duel ${duelId} was already resolved.`);
+      } else {
+        console.error(e);
+      }
     }
   });
 

@@ -204,9 +204,14 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         setUser({ ...user, tokens: data.tokens });
-        setClaimMessage('Daily Bonus claimed! +10 Tokens 🪙');
+        setClaimMessage(`Daily Bonus claimed! +${data.added || 50} Tokens (Streak: ${data.streak || 1} day${(data.streak || 1) > 1 ? 's' : ''}) 🪙`);
       } else {
-        setClaimMessage('Already claimed today!');
+        try {
+          const data = await res.json();
+          setClaimMessage(data.error || 'Already claimed today!');
+        } catch {
+          setClaimMessage('Already claimed today!');
+        }
       }
     } catch (e) {
       setClaimMessage('Error claiming daily bonus.');
