@@ -14,6 +14,8 @@ export interface UserProfile {
   currentStreak: number;
   bestStreak: number;
   rank: string;
+  xp?: number;
+  level?: number;
   friendKey?: string;
 }
 

@@ -10,6 +10,7 @@ const OpenAI = require('openai');
 dotenv.config();
 
 const prisma = new PrismaClient();
+const { awardXP } = require('./utils/xp');
 const app = express();
 const server = http.createServer(app);
 
@@ -407,6 +408,8 @@ app.post('/api/user/dailylogin', async (req, res) => {
 
       const totalReward = rewardAmount + bonus;
 
+      await awardXP(userId, 5, tx);
+
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
@@ -419,11 +422,13 @@ app.post('/api/user/dailylogin', async (req, res) => {
       return {
         tokens: updatedUser.tokens,
         streak: newStreak,
-        added: totalReward
+        added: totalReward,
+        xp: updatedUser.xp,
+        level: updatedUser.level
       };
     });
 
-    res.json({ success: true, tokens: result.tokens, streak: result.streak, added: result.added });
+    res.json({ success: true, tokens: result.tokens, streak: result.streak, added: result.added, xp: result.xp, level: result.level });
   } catch (error) {
     if (error.message === "USER_NOT_FOUND") {
       res.status(404).json({ error: "User not found" });
@@ -1016,6 +1021,9 @@ io.on('connection', (socket) => {
               tokenChanges[winnerId] = totalBonus;
               tokenChanges[loserId] = -bet;
 
+              await awardXP(winnerId, 50, tx);
+              await awardXP(loserId, 15, tx);
+
               // DB Updates: Winner
               const newStreak = winnerUser.currentStreak + 1;
               const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
@@ -1177,6 +1185,11 @@ io.on('connection', (socket) => {
           tokenChanges[winnerId] = totalBonus;
           tokenChanges[loserId] = -bet;
 
+          await awardXP(winnerId, 50, tx);
+          if (loserId) {
+            await awardXP(loserId, 15, tx);
+          }
+
           // Update database: Winner
           const newStreak = winnerUser.currentStreak + 1;
           const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
@@ -1194,16 +1207,18 @@ io.on('connection', (socket) => {
           });
 
           // Update database: Loser
-          await tx.user.update({
-            where: { id: loserId },
-            data: {
-              [languageKey]: { increment: changeL },
-              tokens: { decrement: bet },
-              totalDuels: { increment: 1 },
-              currentStreak: 0,
-              rank: getRankTier(loserUser[languageKey] + changeL)
-            }
-          });
+          if (loserId) {
+            await tx.user.update({
+              where: { id: loserId },
+              data: {
+                [languageKey]: { increment: changeL },
+                tokens: { decrement: bet },
+                totalDuels: { increment: 1 },
+                currentStreak: 0,
+                rank: getRankTier(loserUser[languageKey] + changeL)
+              }
+            });
+          }
         }
 
         // Update participant records
@@ -1306,6 +1321,9 @@ io.on('connection', (socket) => {
 
           tokenChanges[winnerId] = totalBonus;
           tokenChanges[loserId] = -bet;
+
+          await awardXP(winnerId, 50, tx);
+          await awardXP(loserId, 15, tx);
 
           // DB updates - using transaction delegate!
           await tx.user.update({

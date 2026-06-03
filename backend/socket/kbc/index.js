@@ -2,6 +2,7 @@ const kbcService = require('../../services/kbc');
 const kbcRooms = require('../../services/kbc/rooms');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { awardXP } = require('../../utils/xp');
 
 // Helper to serialize room state safely
 function serializeRoom(room) {
@@ -245,6 +246,8 @@ async function endGame(roomCode, io) {
           const nextStreak = winnerUser.currentStreak + 1;
           const newTokens = winnerUser.tokens + 50 + wager; // 50 base prize + guest's wager matches
           
+          await awardXP(winnerId, 50, tx);
+
           await tx.user.update({
             where: { id: winnerId },
             data: {
@@ -265,6 +268,8 @@ async function endGame(roomCode, io) {
 
         // Decrement Loser Stats
         if (loserId) {
+          await awardXP(loserId, 15, tx);
+
           await tx.user.update({
             where: { id: loserId },
             data: {

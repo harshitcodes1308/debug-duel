@@ -4,6 +4,7 @@ const kbcService = require('../../services/kbc');
 const kbcRooms = require('../../services/kbc/rooms');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { awardXP } = require('../../utils/xp');
 
 // Helper to generate a 6-character room code
 function generateRoomCode() {
@@ -213,7 +214,10 @@ router.post('/solo/end', async (req, res) => {
         }
       });
 
-      // 2. Increment user tokens
+      // 2. Increment user tokens and award XP
+      const xpAward = (status === 'win' || cleared === 15) ? 40 : 10;
+      await awardXP(userId, xpAward, tx);
+
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
@@ -223,7 +227,9 @@ router.post('/solo/end', async (req, res) => {
 
       return {
         runId: runLog.id,
-        newTokens: updatedUser.tokens
+        newTokens: updatedUser.tokens,
+        xp: updatedUser.xp,
+        level: updatedUser.level
       };
     });
 
@@ -233,7 +239,9 @@ router.post('/solo/end', async (req, res) => {
       newTokens: result.newTokens,
       runId: result.runId,
       accuracy,
-      fastestAnswerTime
+      fastestAnswerTime,
+      xp: result.xp,
+      level: result.level
     });
 
   } catch (error) {

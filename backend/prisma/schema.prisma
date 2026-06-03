@@ -22,6 +22,8 @@ model User {
   currentStreak Int      @default(0)
   bestStreak    Int      @default(0)
   rank          String   @default("Bug Hunter")
+  xp            Int      @default(0)
+  level         Int      @default(1)
   lastDailyClaim DateTime?
   dailyStreak     Int      @default(0)
   createdAt     DateTime @default(now())

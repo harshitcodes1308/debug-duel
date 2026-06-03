@@ -52,6 +52,22 @@ export default function Dashboard() {
   const [claiming, setClaiming] = useState(false);
   const [claimMessage, setClaimMessage] = useState('');
   const [gameCategory, setGameCategory] = useState<'coders' | 'uiux' | 'growth'>('coders');
+  const [showLevelUpEffect, setShowLevelUpEffect] = useState(false);
+  const prevLevelRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      const currentLevel = user.level || 1;
+      if (prevLevelRef.current !== null && currentLevel > prevLevelRef.current) {
+        setShowLevelUpEffect(true);
+        const timer = setTimeout(() => {
+          setShowLevelUpEffect(false);
+        }, 4000);
+        return () => clearTimeout(timer);
+      }
+      prevLevelRef.current = currentLevel;
+    }
+  }, [user?.level]);
 
   // Friends System states
   const [friends, setFriends] = useState<any[]>([]);
@@ -210,7 +226,7 @@ export default function Dashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        setUser({ ...user, tokens: data.tokens });
+        setUser({ ...user, tokens: data.tokens, xp: data.xp, level: data.level });
         setClaimMessage(`Daily Bonus claimed! +${data.added || 50} Tokens (Streak: ${data.streak || 1} day${(data.streak || 1) > 1 ? 's' : ''})`);
       } else {
         try {
@@ -966,6 +982,60 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+
+          {/* XP and Level progress */}
+          {(() => {
+            const level = user.level || 1;
+            const currentXp = user.xp || 0;
+            const minXpForCurrentLevel = Math.pow(level - 1, 2) * 100;
+            const minXpForNextLevel = Math.pow(level, 2) * 100;
+            const xpRangeForLevel = minXpForNextLevel - minXpForCurrentLevel;
+            const xpEarnedInLevel = Math.max(0, currentXp - minXpForCurrentLevel);
+            const progressPercent = Math.min(100, Math.max(0, (xpEarnedInLevel / xpRangeForLevel) * 100));
+
+            return (
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px', marginTop: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>LEVEL {level}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '11px', fontFamily: 'Space Grotesk, sans-serif' }}>
+                    {currentXp} / {minXpForNextLevel} XP
+                  </span>
+                </div>
+                {/* Progress Bar Container */}
+                <div style={{
+                  width: '100%',
+                  height: '6px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255, 255, 255, 0.05)'
+                }}>
+                  <div style={{
+                    width: `${progressPercent}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-purple) 100%)',
+                    borderRadius: '4px',
+                    transition: 'width 0.4s ease-out'
+                  }} />
+                </div>
+                {showLevelUpEffect && (
+                  <div className="pulse-glow" style={{
+                    color: 'var(--accent-amber)',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    marginTop: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    justifyContent: 'center',
+                    animation: 'slideUp 0.3s ease-out'
+                  }}>
+                    <Sparkles size={14} color="var(--accent-amber)" /> LEVEL UP! LEVEL {level} REACHED
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Stats block */}
           <div style={{
