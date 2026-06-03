@@ -48,3 +48,4 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+backend/prisma/dev.db
