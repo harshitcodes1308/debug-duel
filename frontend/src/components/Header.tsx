@@ -32,9 +32,8 @@ export default function Header() {
     <>
       <header className="nav-header">
       <Link href="/" style={{ textDecoration: 'none' }}>
-        <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Swords size={20} color="var(--accent-blue)" />
-          <span className="header-logo-text">DebugDuel</span>
+        <div className="logo" style={{ fontSize: '19px' }}>
+          ⚔️ DebugDuel
         </div>
       </Link>
 
@@ -67,13 +66,13 @@ export default function Header() {
           {/* Tokens */}
           <div className="flex-center" style={{
             gap: 'var(--space-2)',
-            background: 'rgba(255, 255, 255, 0.02)',
+            background: 'var(--bg-tertiary)',
             padding: '6px 12px',
-            borderRadius: 'var(--radius-md)',
+            borderRadius: '8px',
             border: '1px solid var(--border)'
           }}>
-            <Coins size={15} color="var(--accent-amber)" />
-            <span style={{ fontWeight: 700, fontSize: '13px', color: '#FFF' }}>
+            <Coins size={15} color="var(--warning)" />
+            <span style={{ fontWeight: 700, fontSize: '13px', color: '#FFF', fontFamily: 'JetBrains Mono, monospace' }}>
               {user.tokens}
             </span>
             <span className="header-tokens-label" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>tokens</span>
@@ -81,15 +80,15 @@ export default function Header() {
 
           {/* Streak */}
           {user.currentStreak > 0 && (
-            <div className="flex-center pulse-glow" style={{
+            <div className="flex-center" style={{
               gap: 'var(--space-1)',
               background: 'rgba(239, 68, 68, 0.08)',
               padding: '6px 12px',
-              borderRadius: 'var(--radius-md)',
+              borderRadius: '8px',
               border: '1px solid rgba(239, 68, 68, 0.15)'
             }}>
-              <Flame size={15} color="var(--accent-red)" />
-              <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--accent-red)' }}>
+              <Flame size={15} color="var(--danger)" />
+              <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--danger)', fontFamily: 'JetBrains Mono, monospace' }}>
                 {user.currentStreak}
               </span>
             </div>
@@ -99,33 +98,35 @@ export default function Header() {
           <Link href={`/profile/${user.username}`} className="flex-center" style={{
             gap: 'var(--space-2)',
             textDecoration: 'none',
-            background: 'rgba(255, 255, 255, 0.02)',
+            background: 'var(--bg-tertiary)',
             padding: '6px 12px',
-            borderRadius: 'var(--radius-md)',
+            borderRadius: '8px',
             border: '1px solid var(--border)',
             color: '#FFF',
-            transition: 'var(--transition)'
+            transition: 'var(--transition-fast)'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.02)';
+            e.currentTarget.style.borderColor = 'var(--border-focus)';
+            e.currentTarget.style.background = 'var(--card-hover)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = 'var(--border)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+            e.currentTarget.style.background = 'var(--bg-tertiary)';
           }}
           >
-            <Award size={15} color="var(--accent-blue)" />
-            <span className="header-username" style={{ fontWeight: 600, fontSize: '13px' }}>
+            <Award size={15} color="var(--rating)" />
+            <span className="header-username" style={{ fontWeight: 600, fontSize: '13px', fontFamily: 'Space Grotesk, sans-serif' }}>
               @{user.username}
             </span>
-            <span className="header-elo-badge" style={{
+            <span className="badge-tactical" style={{
               fontSize: '10px',
-              background: 'var(--accent-purple)',
-              color: '#FFF',
+              background: 'rgba(59, 130, 246, 0.1)',
+              borderColor: 'rgba(59, 130, 246, 0.2)',
+              color: 'var(--rating)',
               padding: '2px 6px',
-              borderRadius: 'var(--radius-sm)',
-              fontWeight: 'bold'
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              fontFamily: 'JetBrains Mono, monospace'
             }}>
               {highestElo} ELO
             </span>
@@ -135,7 +136,7 @@ export default function Header() {
           <button 
             onClick={logout} 
             className="btn btn-secondary" 
-            style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)' }}
+            style={{ padding: '8px 12px', borderRadius: '8px' }}
             title="Log out"
           >
             <LogOut size={15} />

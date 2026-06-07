@@ -8,6 +8,7 @@ import {
   Swords, Zap, Trophy, Award, Flame, 
   Shield, Play, Calendar, Users, Lock, X
 } from 'lucide-react';
+import { KbcAudio } from '../utils/kbc/audio';
 
 interface AuthContextType {
   isDevMode: boolean;
@@ -477,36 +478,259 @@ function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
 function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
   const { user: storeUser, setUser } = useStore();
   const [loading, setLoading] = useState(true);
-  const [usernameInput, setUsernameInput] = useState('');
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const sync = useCallback(async (username: string) => {
-    setLoading(true);
-    const data = await syncUserWithBackend(username, `mock-clerk-${username}`, setUser);
-    if (data) {
-      localStorage.setItem('dd_dev_user', username);
-    }
-    setLoading(false);
-  }, [setUser]);
+  // Form states
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
 
+  // Availability / checking states
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  // Requirement counting for sound cues
+  const [prevRequirementsCount, setPrevRequirementsCount] = useState(0);
+
+  // Persistence
   useEffect(() => {
-    const cached = localStorage.getItem('dd_dev_user');
-    if (cached) {
-      sync(cached);
-    } else {
+    async function loadSession() {
+      const cachedId = localStorage.getItem('dd_user_id');
+      if (cachedId) {
+        try {
+          const res = await fetch(`http://localhost:5001/api/auth/me/${cachedId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setUser(data);
+          } else {
+            localStorage.removeItem('dd_user_id');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
       setLoading(false);
     }
-  }, [sync]);
+    loadSession();
+  }, [setUser]);
 
-  const loginAsDev = async (username: string) => {
-    const formatted = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (!formatted) return;
-    await sync(formatted);
+  // Audio cue on screen mount (runs when not logged in)
+  useEffect(() => {
+    if (!storeUser && !loading) {
+      // Play a short intro fanfare on startup
+      KbcAudio.playIntro();
+    }
+  }, [storeUser, loading]);
+
+  // Username check effect
+  useEffect(() => {
+    if (mode !== 'signup' || !username.trim()) {
+      setUsernameAvailable(null);
+      return;
+    }
+    if (username.trim().length < 3) {
+      setUsernameAvailable(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setCheckingUsername(true);
+      try {
+        const res = await fetch('http://localhost:5001/api/auth/check-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username.trim() })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUsernameAvailable(data.available);
+          if (data.available) {
+            KbcAudio.playSelect(); // Tick sound indicating username is valid
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [username, mode]);
+
+  // Password constraint helpers
+  const passLength = password.length >= 8;
+  const passCapital = /[A-Z]/.test(password);
+  const passNumber = /[0-9]/.test(password);
+  const passSpecial = /[^A-Za-z0-9]/.test(password);
+
+  const passwordValid = passLength && passCapital && passNumber && passSpecial;
+
+  // Sound cue whenever a password requirement is checked off
+  const currentRequirementsCount = [passLength, passCapital, passNumber, passSpecial].filter(Boolean).length;
+  useEffect(() => {
+    if (password && mode === 'signup') {
+      if (currentRequirementsCount > prevRequirementsCount) {
+        KbcAudio.playLadder(); // Rising pitch fanfare when meeting a condition
+      } else if (currentRequirementsCount < prevRequirementsCount) {
+        KbcAudio.playSelect(); // Pluck tick when losing a condition
+      }
+    }
+    setPrevRequirementsCount(currentRequirementsCount);
+  }, [currentRequirementsCount, prevRequirementsCount, password, mode]);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    KbcAudio.playLock(); // Dramatic lock sound on submit
+
+    if (!fullName.trim() || !username.trim() || !email.trim() || !password) {
+      setErrorMsg("All fields are mandatory");
+      KbcAudio.playWrong();
+      return;
+    }
+
+    if (usernameAvailable === false) {
+      setErrorMsg("Username is taken");
+      KbcAudio.playWrong();
+      return;
+    }
+
+    if (!passwordValid) {
+      setErrorMsg("Password does not meet requirements");
+      KbcAudio.playWrong();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5001/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          username: username.trim(),
+          email: email.trim(),
+          password
+        })
+      });
+
+      if (res.ok) {
+        const userProfile = await res.json();
+        localStorage.setItem('dd_user_id', userProfile.id);
+        KbcAudio.playCorrect(); // Triumphant sound on success
+        setUser(userProfile);
+      } else {
+        const errData = await res.json();
+        setErrorMsg(errData.error || "Signup failed");
+        KbcAudio.playWrong();
+      }
+    } catch (err) {
+      setErrorMsg("Server connection error during registration");
+      KbcAudio.playWrong();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    KbcAudio.playLock(); // Dynamic lock sound on submit
+
+    if (!usernameOrEmail.trim() || !password) {
+      setErrorMsg("Please enter both credentials");
+      KbcAudio.playWrong();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          usernameOrEmail: usernameOrEmail.trim(),
+          password
+        })
+      });
+
+      if (res.ok) {
+        const userProfile = await res.json();
+        localStorage.setItem('dd_user_id', userProfile.id);
+        KbcAudio.playCorrect(); // Success chime
+        setUser(userProfile);
+      } else {
+        const errData = await res.json();
+        setErrorMsg(errData.error || "Invalid username/email or password");
+        KbcAudio.playWrong();
+      }
+    } catch (err) {
+      setErrorMsg("Server connection error during login");
+      KbcAudio.playWrong();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
+    KbcAudio.playSelect();
     setUser(null);
-    localStorage.removeItem('dd_dev_user');
-    setUsernameInput('');
+    localStorage.removeItem('dd_user_id');
+    setFullName('');
+    setUsername('');
+    setEmail('');
+    setPassword('');
+    setUsernameOrEmail('');
+    setErrorMsg('');
+  };
+
+  // Mock dev login action for backward compatibility
+  const loginAsDev = async (usr: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernameOrEmail: usr, password: 'DevUserPassword123!' })
+      });
+      if (res.ok) {
+        const userProfile = await res.json();
+        localStorage.setItem('dd_user_id', userProfile.id);
+        setUser(userProfile);
+      } else {
+        const regRes = await fetch('http://localhost:5001/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName: usr.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+            username: usr,
+            email: `${usr}@debugduel.dev`,
+            password: 'DevUserPassword123!'
+          })
+        });
+        if (regRes.ok) {
+          const userProfile = await regRes.json();
+          localStorage.setItem('dd_user_id', userProfile.id);
+          setUser(userProfile);
+        }
+      }
+    } catch (e) {
+      console.error("Mock login fallback failed", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = (newMode: 'login' | 'signup') => {
+    if (newMode !== mode) {
+      KbcAudio.playSelect(); // Play click sound
+      setMode(newMode);
+      setErrorMsg('');
+    }
   };
 
   if (loading) {
@@ -514,7 +738,6 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   if (!storeUser) {
-    const presets = ['cyber_ninja', 'bug_slayer', 'code_guru', 'syntax_master'];
     return (
       <div style={{
         height: '100vh',
@@ -522,73 +745,210 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#09090D',
+        background: 'transparent', // Let standard grid background from body show through
         fontFamily: 'Inter, sans-serif',
-        padding: '24px'
+        padding: '24px',
+        overflowY: 'auto'
       }}>
-        <div className="card-base glow-purple" style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center', padding: '32px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        
+        <div className="card-tactical" style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column', gap: '24px', padding: '32px' }}>
+          
+          {/* Logo & Header (No inheritance from .logo class to prevent SVG transparency) */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+            <div className="logo" style={{ fontSize: '32px' }}>
+              ⚔️ DebugDuel
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'JetBrains Mono, monospace', marginTop: '4px' }}>
+              Arena Client v1.0.0
+            </div>
+          </div>
+
+          {/* Tab Selector */}
+          <div style={{
+            display: 'flex',
+            background: 'var(--bg-secondary)',
+            padding: '4px',
+            borderRadius: '8px',
+            border: '1px solid var(--border)'
+          }}>
+            <button 
+              onClick={() => toggleMode('login')}
+              className={`btn ${mode === 'login' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ flex: 1, border: 'none', height: '36px', fontSize: '13px' }}
+            >
+              Sign In
+            </button>
+            <button 
+              onClick={() => toggleMode('signup')}
+              className={`btn ${mode === 'signup' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ flex: 1, border: 'none', height: '36px', fontSize: '13px' }}
+            >
+              Create Account
+            </button>
+          </div>
+
+          {errorMsg && (
             <div style={{
-              background: 'rgba(139, 92, 246, 0.08)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
-              padding: '12px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '4px'
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              color: 'var(--danger)',
+              fontSize: '13px',
+              fontWeight: 500,
+              textAlign: 'center'
             }}>
-              <Swords size={28} color="var(--accent-purple)" />
+              ⚠️ {errorMsg}
             </div>
-            <h1 className="logo" style={{ fontSize: '24px', justifyContent: 'center', margin: 0, fontFamily: 'Space Grotesk, sans-serif' }}>
-              DEBUGDUEL
-            </h1>
-            <div style={{ fontSize: '10px', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 'bold' }}>
-              Launcher fall-back mode
-            </div>
-          </div>
+          )}
 
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '20px' }}>
-            Choose a mock profile or enter a custom handle to initialize local session.
-          </p>
+          {/* Tab Forms */}
+          {mode === 'login' ? (
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>USERNAME OR EMAIL</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. cyber_ninja"
+                  value={usernameOrEmail}
+                  onChange={(e) => setUsernameOrEmail(e.target.value)}
+                  className="input-tactical"
+                  style={{ height: '42px' }}
+                />
+              </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-            {presets.map((p) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>PASSWORD</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-tactical"
+                  style={{ height: '42px' }}
+                />
+              </div>
+
               <button
-                key={p}
-                className="btn btn-secondary interactive-lift"
-                style={{ padding: '8px 14px', fontSize: '12px', borderRadius: 'var(--radius-md)' }}
-                onClick={() => loginAsDev(p)}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ width: '100%', height: '1px', background: 'var(--border)' }}></div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
-            <label style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>CUSTOM HANDLE</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="e.g. code_pilot"
-                className="input-base"
-                style={{ flex: 1, height: '40px' }}
-                onKeyDown={(e) => e.key === 'Enter' && loginAsDev(usernameInput)}
-              />
-              <button
+                type="submit"
                 className="btn btn-primary"
-                style={{ height: '40px', padding: '0 16px', background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
-                onClick={() => loginAsDev(usernameInput)}
-                disabled={!usernameInput.trim()}
+                style={{ height: '42px', marginTop: '8px', fontSize: '14px' }}
               >
-                Launch
+                Authenticate & Connect
               </button>
-            </div>
-          </div>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>FULL NAME</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="input-tactical"
+                  style={{ height: '42px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>USERNAME</label>
+                  {username.trim().length >= 3 && (
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'JetBrains Mono, monospace' }}>
+                      {checkingUsername ? (
+                        <span style={{ color: 'var(--text-muted)' }}>Checking...</span>
+                      ) : usernameAvailable ? (
+                        <span style={{ color: 'var(--success)' }}>✓ Available</span>
+                      ) : (
+                        <span style={{ color: 'var(--danger)' }}>✗ Taken</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. cyber_ninja"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  className="input-tactical"
+                  style={{ height: '42px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>EMAIL ADDRESS</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@domain.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-tactical"
+                  style={{ height: '42px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>PASSWORD</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input-tactical"
+                  style={{ height: '42px' }}
+                />
+
+                {/* Password validation feedback checklist */}
+                {password && (
+                  <div style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    marginTop: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    fontSize: '11px',
+                    fontFamily: 'JetBrains Mono, monospace'
+                  }}>
+                    <div style={{ fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '2px', fontFamily: 'Space Grotesk, sans-serif' }}>
+                      REQUIREMENTS:
+                    </div>
+                    <div style={{ color: passLength ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <span>{passLength ? '🟢' : '⚪'}</span> 8+ Characters
+                    </div>
+                    <div style={{ color: passCapital ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <span>{passCapital ? '🟢' : '⚪'}</span> Capital Letter (A-Z)
+                    </div>
+                    <div style={{ color: passNumber ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <span>{passNumber ? '🟢' : '⚪'}</span> Number (0-9)
+                    </div>
+                    <div style={{ color: passSpecial ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <span>{passSpecial ? '🟢' : '⚪'}</span> Special Sign (@, $, !, etc.)
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={!passwordValid || usernameAvailable === false || checkingUsername}
+                className="btn btn-success"
+                style={{ height: '42px', marginTop: '8px', fontSize: '14px' }}
+              >
+                Register Account
+              </button>
+            </form>
+          )}
+
         </div>
       </div>
     );
@@ -625,7 +985,9 @@ function LoadingScreen() {
       color: '#F0F0F0',
       fontFamily: 'Space Grotesk, sans-serif'
     }}>
-      <div className="logo pulse-glow" style={{ fontSize: '32px', marginBottom: '16px' }}>⚔️ DEBUGDUEL</div>
+      <div className="logo pulse-glow" style={{ fontSize: '32px', marginBottom: '16px' }}>
+        ⚔️ DEBUGDUEL
+      </div>
       <div style={{ color: '#8888A0', fontSize: '14px' }}>Loading session...</div>
     </div>
   );

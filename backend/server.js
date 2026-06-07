@@ -1,3 +1,4 @@
+// Triggering nodemon restart
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -6,8 +7,38 @@ const dotenv = require('dotenv');
 const { PrismaClient } = require('@prisma/client');
 const { GoogleGenAI } = require('@google/generative-ai');
 const OpenAI = require('openai');
+const path = require('path');
 
-dotenv.config();
+// Clean up empty environment variables so dotenv can load them from another file or they can be overridden
+for (const key of ['OPENAI_API_KEY', 'GEMINI_API_KEY', 'CLERK_SECRET_KEY', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY']) {
+  if (process.env[key] !== undefined && process.env[key].trim() === '') {
+    delete process.env[key];
+  }
+}
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Clean up again after loading backend/.env if they are empty, so they can be loaded from frontend/.env.local
+for (const key of ['OPENAI_API_KEY', 'GEMINI_API_KEY', 'CLERK_SECRET_KEY', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY']) {
+  if (process.env[key] !== undefined && process.env[key].trim() === '') {
+    delete process.env[key];
+  }
+}
+
+// Load frontend/.env.local
+dotenv.config({ path: path.join(__dirname, '../frontend/.env.local') });
+
+// Clean up again to make sure everything is trimmed and clean
+for (const key of ['OPENAI_API_KEY', 'GEMINI_API_KEY', 'CLERK_SECRET_KEY', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY']) {
+  if (process.env[key]) {
+    process.env[key] = process.env[key].trim();
+  }
+}
+
+console.log("================== ENVIRONMENT STATUS ==================");
+console.log("OPENAI_API_KEY length:", process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0);
+console.log("GEMINI_API_KEY length:", process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0);
+console.log("========================================================");
 
 const prisma = new PrismaClient();
 const { awardXP } = require('./utils/xp');
@@ -20,6 +51,200 @@ app.use(cors({
   methods: ['GET', 'POST']
 }));
 app.use(express.json());
+
+// ==================== SECURITY SANITIZATION MIDDLEWARE ====================
+function sanitizeObject(obj) {
+  if (!obj) return obj;
+  if (obj instanceof Date) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeObject(item));
+  }
+  if (typeof obj === 'object') {
+    if (obj.constructor && obj.constructor.name !== 'Object' && obj.constructor.name !== 'Array') {
+      return obj;
+    }
+    const clean = { ...obj };
+    if ('passwordHash' in clean) {
+      delete clean.passwordHash;
+    }
+    for (const key in clean) {
+      if (clean[key] && typeof clean[key] === 'object') {
+        clean[key] = sanitizeObject(clean[key]);
+      }
+    }
+    return clean;
+  }
+  return obj;
+}
+
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(data) {
+    return originalJson.call(this, sanitizeObject(data));
+  };
+  next();
+});
+
+// ==================== CRYPTO HELPERS ====================
+const crypto = require('crypto');
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedPasswordHash) {
+  if (!storedPasswordHash) return false;
+  try {
+    const [salt, originalHash] = storedPasswordHash.split(':');
+    if (!salt || !originalHash) return false;
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    return hash === originalHash;
+  } catch (err) {
+    return false;
+  }
+}
+
+// ==================== CUSTOM AUTH ENDPOINTS ====================
+
+// Check Username Availability
+app.post('/api/auth/check-username', async (req, res) => {
+  const { username } = req.body;
+  if (!username) {
+    return res.status(400).json({ error: "Username is required" });
+  }
+  const cleanUsername = username.toLowerCase().trim();
+  if (cleanUsername.length < 3) {
+    return res.json({ available: false, reason: "Username must be at least 3 characters" });
+  }
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { username: cleanUsername }
+    });
+    return res.json({ available: !existing });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Database error checking username" });
+  }
+});
+
+// Custom Registration
+app.post('/api/auth/register', async (req, res) => {
+  const { fullName, username, email, password } = req.body;
+  
+  if (!fullName || !username || !email || !password) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  const cleanUsername = username.toLowerCase().trim();
+  const cleanEmail = email.toLowerCase().trim();
+
+  // Password validation: 8+ chars, 1 uppercase, 1 special char, 1 number
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters long" });
+  }
+  if (!/[A-Z]/.test(password)) {
+    return res.status(400).json({ error: "Password must contain at least one uppercase letter" });
+  }
+  if (!/[0-9]/.test(password)) {
+    return res.status(400).json({ error: "Password must contain at least one number" });
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return res.status(400).json({ error: "Password must contain at least one special character" });
+  }
+
+  try {
+    // Check username
+    const existingUser = await prisma.user.findUnique({
+      where: { username: cleanUsername }
+    });
+    if (existingUser) {
+      return res.status(400).json({ error: "Username is already taken" });
+    }
+
+    // Check email
+    const existingEmail = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+    if (existingEmail) {
+      return res.status(400).json({ error: "Email is already registered" });
+    }
+
+    const passwordHash = hashPassword(password);
+
+    const user = await prisma.user.create({
+      data: {
+        username: cleanUsername,
+        fullName: fullName.trim(),
+        email: cleanEmail,
+        passwordHash,
+        clerkId: `local-${cleanUsername}`,
+        tokens: 500,
+        eloJS: 1000,
+        eloPython: 1000,
+        eloJava: 1000,
+        eloUIUX: 1000,
+        rank: "Bug Hunter",
+        friendKey: generateFriendKey()
+      }
+    });
+
+    return res.json(user);
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({ error: "Failed to register user" });
+  }
+});
+
+// Custom Login
+app.post('/api/auth/login', async (req, res) => {
+  const { usernameOrEmail, password } = req.body;
+
+  if (!usernameOrEmail || !password) {
+    return res.status(400).json({ error: "Missing credentials" });
+  }
+
+  const identity = usernameOrEmail.toLowerCase().trim();
+
+  try {
+    // Find user by username or email
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: identity },
+          { email: identity }
+        ]
+      }
+    });
+
+    if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ error: "Invalid username/email or password" });
+    }
+
+    return res.json(user);
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// Session user details
+app.get('/api/auth/me/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+    if (!user) {
+      return res.status(404).json({ error: "Session expired" });
+    }
+    return res.json(user);
+  } catch (error) {
+    console.error("Session load error:", error);
+    return res.status(500).json({ error: "Failed to fetch session" });
+  }
+});
 
 const io = new Server(server, {
   cors: {
@@ -49,6 +274,30 @@ function getRankTier(elo) {
   return "Bug Hunter";
 }
 
+// Clean JSON response from LLM
+function safeParseJson(text) {
+  if (!text) return null;
+  let cleanText = text.trim();
+  if (cleanText.startsWith('```')) {
+    cleanText = cleanText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
+  }
+  cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+  
+  try {
+    return JSON.parse(cleanText);
+  } catch (e) {
+    const match = cleanText.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch (innerErr) {
+        console.error("Failed to parse extracted JSON:", match[0], innerErr);
+      }
+    }
+    throw e;
+  }
+}
+
 // Normalized Code Comp (Fallback Mode)
 function cleanCode(code) {
   if (!code) return '';
@@ -58,20 +307,29 @@ function cleanCode(code) {
     .trim();
 }
 
+function superCleanCode(code) {
+  if (!code) return '';
+  return code
+    .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '') // strip comments
+    .replace(/[`'"]/g, '"')                              // normalize quotes
+    .replace(/;/g, '')                                   // remove semicolons
+    .replace(/\s+/g, '')                                 // remove all whitespace/newlines
+    .trim();
+}
+
 function verifyCodeFallback(broken, fixed, submitted) {
   const cleanSubmitted = cleanCode(submitted);
   const cleanFixed = cleanCode(fixed);
-  const cleanBroken = cleanCode(broken);
 
   if (cleanSubmitted === cleanFixed) {
-    return { passed: true, reason: "Submitted code exactly matches the solution (normalized)." };
+    return { passed: true, reason: "Submitted code matches the solution (normalized spacing)." };
   }
 
-  // Check if they fixed the critical part without changing the rest
-  // If the submitted code is no longer matching the broken state and is close to fixed, pass
-  if (cleanSubmitted !== cleanBroken && (cleanSubmitted.includes(cleanFixed.substring(0, 15)) || cleanFixed.includes(cleanSubmitted.substring(0, 15)))) {
-    // Quick heuristic
-    return { passed: true, reason: "Heuristic match: The bug has been resolved." };
+  const superCleanSubmitted = superCleanCode(submitted);
+  const superCleanFixed = superCleanCode(fixed);
+
+  if (superCleanSubmitted === superCleanFixed) {
+    return { passed: true, reason: "Submitted code matches the solution (flexible spacing/semicolons)." };
   }
 
   return { passed: false, reason: "Your fix does not produce the expected behavior." };
@@ -82,10 +340,19 @@ async function judgeCode(language, brokenCode, fixedCode, submittedCode) {
   const openAiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
-  const systemPrompt = `You are a code judge. Compare the submitted fix to the expected fix.
-Analyze if the bug in the broken code has been correctly resolved in the submitted fix.
-You must return a valid JSON object only. Format:
-{ "passed": true/false, "reason": "brief explanation of why it passed or failed" }`;
+  const hasGemini = geminiKey && geminiKey.trim().length > 10;
+  const hasOpenAi = openAiKey && openAiKey.trim().length > 10;
+
+  const systemPrompt = `You are an intelligent, lenient programming code judge.
+Your single goal is to determine if the bug in the broken code has been successfully resolved/patched in the submitted fix.
+You will be given the broken code, the expected fixed code (as a reference), and the user's submitted fix.
+Accept ANY logical implementation, styling, or coding approach that correctly fixes the bug and produces the expected correct output, even if the approach, logic structure, variable names, or syntax is completely different from the expected fixed code.
+Do NOT enforce matching the expected fix approach or structure. If the code successfully solves the bug and works correctly, you MUST mark it as passed = true.
+Return a valid JSON object matching this schema:
+{
+  "passed": true/false,
+  "reason": "Brief explanation of why it passed or failed"
+}`;
 
   const userPrompt = `Language: ${language}
 Broken code:
@@ -98,7 +365,7 @@ Submitted fix:
 ${submittedCode}`;
 
   // 1. Try Gemini
-  if (geminiKey) {
+  if (hasGemini) {
     try {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -107,14 +374,14 @@ ${submittedCode}`;
         generationConfig: { responseMimeType: "application/json" }
       });
       const text = response.response.text();
-      return JSON.parse(text);
+      return safeParseJson(text);
     } catch (err) {
       console.error("Gemini AI Judge failed, falling back...", err);
     }
   }
 
   // 2. Try OpenAI
-  if (openAiKey) {
+  if (hasOpenAi) {
     try {
       const openai = new OpenAI({ apiKey: openAiKey });
       const response = await openai.chat.completions.create({
@@ -123,9 +390,11 @@ ${submittedCode}`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
+        temperature: 0.1,
+        max_tokens: 150,
         response_format: { type: "json_object" }
       });
-      return JSON.parse(response.choices[0].message.content);
+      return safeParseJson(response.choices[0].message.content);
     } catch (err) {
       console.error("OpenAI AI Judge failed, falling back...", err);
     }
@@ -140,15 +409,22 @@ async function judgeExplanation(bugDescription, playerExplanation) {
   const openAiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
-  const systemPrompt = `Score this debugging explanation from 0 to 20.
-20 = perfectly explains root cause + why it breaks + how the fix works.
-0 = wrong or missing.
-Return JSON: { "score": number, "feedback": "1 sentence feedback" }`;
+  const hasGemini = geminiKey && geminiKey.trim().length > 10;
+  const hasOpenAi = openAiKey && openAiKey.trim().length > 10;
+
+  const systemPrompt = `You are an expert tech lead scoring a developer's explanation of a bug fix.
+Score the explanation from 0 to 20 based on clarity and accuracy:
+- 20 = perfectly explains root cause + why it breaks + how the fix works.
+- 15-19 = good description but missing minor details.
+- 5-14 = vague or incomplete description.
+- 0 = completely wrong, irrelevant, or missing.
+You must return a valid JSON object only. Do not wrap in markdown code blocks. Format:
+{ "score": number, "feedback": "one-sentence technical feedback" }`;
 
   const userPrompt = `Bug details: ${bugDescription}
 Player explanation: ${playerExplanation}`;
 
-  if (geminiKey) {
+  if (hasGemini) {
     try {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -157,13 +433,13 @@ Player explanation: ${playerExplanation}`;
         generationConfig: { responseMimeType: "application/json" }
       });
       const text = response.response.text();
-      return JSON.parse(text);
+      return safeParseJson(text);
     } catch (err) {
       console.error("Gemini Explanation Judge failed...", err);
     }
   }
 
-  if (openAiKey) {
+  if (hasOpenAi) {
     try {
       const openai = new OpenAI({ apiKey: openAiKey });
       const response = await openai.chat.completions.create({
@@ -172,9 +448,11 @@ Player explanation: ${playerExplanation}`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
+        temperature: 0.2,
+        max_tokens: 150,
         response_format: { type: "json_object" }
       });
-      return JSON.parse(response.choices[0].message.content);
+      return safeParseJson(response.choices[0].message.content);
     } catch (err) {
       console.error("OpenAI Explanation Judge failed...", err);
     }
@@ -187,6 +465,118 @@ Player explanation: ${playerExplanation}`;
   }
   const score = Math.floor(Math.random() * 6) + 14; // 14-19
   return { score, feedback: "Clear description of the fix. (Fallback)" };
+}
+
+const CHALLENGE_SCENARIOS = [
+  "shopping cart checkout calculation",
+  "user session authentication token validation",
+  "filtering and sorting an array of objects",
+  "parsing query parameters from a URL",
+  "validating an email or phone number format",
+  "formatting dates and timestamps",
+  "retrying a failed API request with backoff",
+  "calculating discount pricing based on tiers",
+  "reversing words in a sentence",
+  "finding the maximum or minimum value in a nested list",
+  "checking if a string is a palindrome",
+  "merging two sorted lists or arrays",
+  "throttling or debouncing user input",
+  "finding duplicates in an array",
+  "calculating Fibonacci sequence or factorial",
+  "handling pagination offset and limits",
+  "parsing a JSON string safely with error handling",
+  "checking for balanced parentheses in an expression",
+  "converting temperatures between Celsius and Fahrenheit",
+  "counting word frequencies in a text block",
+  "finding the longest word in a list",
+  "generating a random alphanumeric password",
+  "calculating distance between two points",
+  "verifying if a number is prime",
+  "removing null or undefined properties from an object",
+  "formatting currency values",
+  "performing binary search on a sorted list",
+  "flattening a multi-dimensional array",
+  "capitalizing the first letter of each word",
+  "implementing a simple queue or stack",
+  "checking for anagrams of two strings",
+  "validating password strength requirements",
+  "calculating standard deviation of numbers",
+  "finding the intersection of two arrays",
+  "converting RGB values to Hex",
+  "masking credit card numbers for display",
+  "checking if a year is a leap year",
+  "calculating age based on birthdate",
+  "matching tags in a simple HTML string",
+  "verifying a checksum or CRC value",
+  "calculating compound interest",
+  "generating initials from a full name",
+  "grouping elements of an array by a key",
+  "finding the difference between two dates in days"
+];
+
+async function generateUniqueBug(language, difficulty) {
+  const openAiKey = process.env.OPENAI_API_KEY;
+  const hasOpenAi = openAiKey && openAiKey.trim().length > 10;
+
+  if (!hasOpenAi) {
+    throw new Error("No OpenAI key available for bug generation");
+  }
+
+  const systemPrompt = `You are an expert programming challenge generator.
+Create a unique, realistic programming bug challenge.
+The language is ${language} and difficulty is ${difficulty}.
+
+You must return a valid JSON object matching this schema:
+{
+  "title": "Short title of the bug",
+  "brokenCode": "function add(a, b) {\\n  // broken\\n  return a - b;\\n}",
+  "fixedCode": "function add(a, b) {\\n  // fixed\\n  return a + b;\\n}",
+  "explanation": "Brief explanation of the bug and the fix",
+  "category": "one of: logic, syntax, runtime, off-by-one, null-ref, async"
+}
+
+CRITICAL FORMATTING RULES:
+1. The "brokenCode" and "fixedCode" MUST be properly indented multi-line code strings formatted with escaped newlines (\\n). Do NOT return code as a single flat line. It must look readable and well-structured, exactly like the example.
+2. Ensure the code is clean, valid ${language}, and contains a single logical, syntax, or runtime error suited for ${difficulty} level.
+3. Keep the code extremely short (under 15 lines) to minimize tokens. Do not wrap in markdown code blocks.`;
+
+  const scenario = CHALLENGE_SCENARIOS[Math.floor(Math.random() * CHALLENGE_SCENARIOS.length)];
+  const userPrompt = `Generate a unique, creative, and realistic ${difficulty} difficulty programming bug challenge in ${language}. 
+The scenario/context for the code should be: "${scenario}".
+Make sure the bug is interesting, and the broken code is syntactically or logically incorrect but looks plausible. 
+Add a random seed: ${Math.random().toString(36).substring(7)} to guarantee uniqueness.`;
+
+  const openai = new OpenAI({ apiKey: openAiKey });
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: 0.85,
+    max_tokens: 600,
+    response_format: { type: "json_object" }
+  });
+
+  const generated = safeParseJson(response.choices[0].message.content);
+  if (!generated || !generated.brokenCode || !generated.fixedCode) {
+    throw new Error("Invalid bug structure returned from LLM");
+  }
+  
+  // Save to database
+  const newBug = await prisma.bug.create({
+    data: {
+      language,
+      difficulty,
+      title: generated.title || "Unique Challenge",
+      brokenCode: generated.brokenCode,
+      fixedCode: generated.fixedCode,
+      explanation: generated.explanation || "No explanation provided.",
+      category: generated.category || "logic"
+    }
+  });
+
+  return newBug;
 }
 
 // ==================== REST ENDPOINTS ====================
@@ -425,10 +815,6 @@ app.post('/api/user/dailylogin', async (req, res) => {
         }
       });
 
-      // Audit achievements
-      const io = req.app.get('io');
-      await checkAchievements(userId, tx, io);
-
       // Fetch final user record to ensure accurate return values
       const finalUser = await tx.user.findUnique({
         where: { id: userId }
@@ -442,6 +828,9 @@ app.post('/api/user/dailylogin', async (req, res) => {
         level: finalUser.level
       };
     });
+
+    const io = req.app.get('io');
+    checkAchievements(userId, null, io).catch(console.error);
 
     res.json({ success: true, tokens: result.tokens, streak: result.streak, added: result.added, xp: result.xp, level: result.level });
   } catch (error) {
@@ -537,19 +926,27 @@ app.post('/api/duel/create', async (req, res) => {
       newDuelData.targetColor = targetColor;
       newDuelData.difficulty = "medium";
     } else {
-      // Select random bug matching parameters
-      const bugsMatching = await prisma.bug.findMany({
-        where: { language, difficulty }
-      });
+      // Dynamically generate a unique bug using OpenAI gpt-4o-mini!
+      try {
+        const uniqueBug = await generateUniqueBug(language, difficulty);
+        newDuelData.bugId = uniqueBug.id;
+        newDuelData.language = language;
+        newDuelData.difficulty = difficulty;
+      } catch (err) {
+        console.error("Failed to generate unique bug with LLM, falling back to random seed bug.", err);
+        const bugsMatching = await prisma.bug.findMany({
+          where: { language, difficulty }
+        });
 
-      if (bugsMatching.length === 0) {
-        return res.status(404).json({ error: `No bugs found in database for language ${language} and difficulty ${difficulty}. Seed your database.` });
+        if (bugsMatching.length === 0) {
+          return res.status(404).json({ error: `No bugs found in database for language ${language} and difficulty ${difficulty}. Seed your database.` });
+        }
+
+        const randomBug = bugsMatching[Math.floor(Math.random() * bugsMatching.length)];
+        newDuelData.bugId = randomBug.id;
+        newDuelData.language = language;
+        newDuelData.difficulty = difficulty;
       }
-
-      const randomBug = bugsMatching[Math.floor(Math.random() * bugsMatching.length)];
-      newDuelData.bugId = randomBug.id;
-      newDuelData.language = language;
-      newDuelData.difficulty = difficulty;
     }
 
     const newDuel = await prisma.duel.create({
@@ -1020,8 +1417,10 @@ io.on('connection', (socket) => {
           }
 
           if (!isDraw && winnerId && loserId) {
-            const winnerUser = await tx.user.findUnique({ where: { id: winnerId } });
-            const loserUser = await tx.user.findUnique({ where: { id: loserId } });
+            const [winnerUser, loserUser] = await Promise.all([
+              tx.user.findUnique({ where: { id: winnerId } }),
+              tx.user.findUnique({ where: { id: loserId } })
+            ]);
 
             if (winnerUser && loserUser) {
               const ratingW = winnerUser.eloUIUX || 1000;
@@ -1041,40 +1440,43 @@ io.on('connection', (socket) => {
               tokenChanges[winnerId] = totalBonus;
               tokenChanges[loserId] = -bet;
 
-              await awardXP(winnerId, 50, tx);
-              await awardXP(loserId, 15, tx);
+              const wXp = (winnerUser.xp || 0) + 50;
+              const wLevel = Math.floor(Math.sqrt(wXp / 100)) + 1;
 
-              // DB Updates: Winner
+              const lXp = (loserUser.xp || 0) + 15;
+              const lLevel = Math.floor(Math.sqrt(lXp / 100)) + 1;
+
               const newStreak = winnerUser.currentStreak + 1;
               const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
-              await tx.user.update({
-                where: { id: winnerId },
-                data: {
-                  eloUIUX: { increment: changeW },
-                  tokens: { increment: totalBonus },
-                  totalWins: { increment: 1 },
-                  totalDuels: { increment: 1 },
-                  currentStreak: newStreak,
-                  bestStreak,
-                  rank: getRankTier(winnerUser.eloUIUX + changeW)
-                }
-              });
 
-              // DB Updates: Loser
-              await tx.user.update({
-                where: { id: loserId },
-                data: {
-                  eloUIUX: { increment: changeL },
-                  tokens: { decrement: bet },
-                  totalDuels: { increment: 1 },
-                  currentStreak: 0,
-                  rank: getRankTier(loserUser.eloUIUX + changeL)
-                }
-              });
-
-              // Audit achievements
-              await checkAchievements(winnerId, tx, io);
-              await checkAchievements(loserId, tx, io);
+              await Promise.all([
+                tx.user.update({
+                  where: { id: winnerId },
+                  data: {
+                    eloUIUX: { increment: changeW },
+                    tokens: { increment: totalBonus },
+                    totalWins: { increment: 1 },
+                    totalDuels: { increment: 1 },
+                    currentStreak: newStreak,
+                    bestStreak,
+                    xp: wXp,
+                    level: wLevel,
+                    rank: getRankTier(winnerUser.eloUIUX + changeW)
+                  }
+                }),
+                tx.user.update({
+                  where: { id: loserId },
+                  data: {
+                    eloUIUX: { increment: changeL },
+                    tokens: { decrement: bet },
+                    totalDuels: { increment: 1 },
+                    currentStreak: 0,
+                    xp: lXp,
+                    level: lLevel,
+                    rank: getRankTier(loserUser.eloUIUX + changeL)
+                  }
+                })
+              ]);
             }
 
             // Update participant isWinner
@@ -1129,6 +1531,14 @@ io.on('connection', (socket) => {
           eloChanges,
           tokenChanges
         });
+
+        // Audit achievements outside transaction scope
+        if (winnerId) {
+          checkAchievements(winnerId, null, io).catch(console.error);
+        }
+        if (loserId) {
+          checkAchievements(loserId, null, io).catch(console.error);
+        }
       }
 
     } catch (e) {
@@ -1186,20 +1596,22 @@ io.on('connection', (socket) => {
           throw new Error("ALREADY_COMPLETED");
         }
 
-        const winnerUser = await tx.user.findUnique({ where: { id: winnerId } });
-        const loserUser = loserId ? await tx.user.findUnique({ where: { id: loserId } }) : null;
+        const [winnerUser, loserUser] = await Promise.all([
+          tx.user.findUnique({ where: { id: winnerId } }),
+          loserId ? tx.user.findUnique({ where: { id: loserId } }) : null
+        ]);
 
         const languageKey = dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava';
 
-        if (winnerUser && loserUser) {
-          const ratingW = winnerUser[languageKey];
-          const ratingL = loserUser[languageKey];
+        if (winnerUser) {
+          const ratingW = winnerUser[languageKey] || 1000;
+          const ratingL = loserUser ? (loserUser[languageKey] || 1000) : 1000;
 
           const changeW = calculateElo(ratingW, ratingL, 1);
-          const changeL = calculateElo(ratingL, ratingW, 0);
+          const changeL = loserUser ? calculateElo(ratingL, ratingW, 0) : 0;
 
           eloChanges[winnerId] = changeW;
-          eloChanges[loserId] = changeL;
+          if (loserId) eloChanges[loserId] = changeL;
 
           // Base + Bet + Explanation bonus
           const bet = dbDuel.betAmount;
@@ -1207,80 +1619,80 @@ io.on('connection', (socket) => {
           const totalBonus = 50 + bet + scoreResult.score + streakBonus;
 
           tokenChanges[winnerId] = totalBonus;
-          tokenChanges[loserId] = -bet;
+          if (loserId) tokenChanges[loserId] = -bet;
 
-          await awardXP(winnerId, 50, tx);
-          if (loserId) {
-            await awardXP(loserId, 15, tx);
+          const wXp = (winnerUser.xp || 0) + 50;
+          const wLevel = Math.floor(Math.sqrt(wXp / 100)) + 1;
+
+          let lXp = 0;
+          let lLevel = 1;
+          if (loserUser) {
+            lXp = (loserUser.xp || 0) + 15;
+            lLevel = Math.floor(Math.sqrt(lXp / 100)) + 1;
           }
 
-          // Update database: Winner
           const newStreak = winnerUser.currentStreak + 1;
           const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
-          await tx.user.update({
-            where: { id: winnerId },
-            data: {
-              [languageKey]: { increment: changeW },
-              tokens: { increment: totalBonus },
-              totalWins: { increment: 1 },
-              totalDuels: { increment: 1 },
-              currentStreak: newStreak,
-              bestStreak: bestStreak,
-              rank: getRankTier(winnerUser[languageKey] + changeW)
-            }
-          });
 
-          // Update database: Loser
-          if (loserId) {
-            await tx.user.update({
+          await Promise.all([
+            tx.user.update({
+              where: { id: winnerId },
+              data: {
+                [languageKey]: { increment: changeW },
+                tokens: { increment: totalBonus },
+                totalWins: { increment: 1 },
+                totalDuels: { increment: 1 },
+                currentStreak: newStreak,
+                bestStreak: bestStreak,
+                xp: wXp,
+                level: wLevel,
+                rank: getRankTier(ratingW + changeW)
+              }
+            }),
+            loserUser ? tx.user.update({
               where: { id: loserId },
               data: {
                 [languageKey]: { increment: changeL },
                 tokens: { decrement: bet },
                 totalDuels: { increment: 1 },
                 currentStreak: 0,
-                rank: getRankTier(loserUser[languageKey] + changeL)
+                xp: lXp,
+                level: lLevel,
+                rank: getRankTier(ratingL + changeL)
               }
-            });
-          }
-
-          // Audit achievements
-          await checkAchievements(winnerId, tx, io);
-          if (loserId) {
-            await checkAchievements(loserId, tx, io);
-          }
+            }) : Promise.resolve()
+          ]);
         }
 
-        // Update participant records
-        await tx.duelParticipant.updateMany({
-          where: { duelId, userId: winnerId },
-          data: {
-            explanation,
-            explanationScore: scoreResult.score,
-            isWinner: true,
-            submitTime: Math.round((Date.now() - new Date(dbDuel.startedAt).getTime()) / 1000)
-          }
-        });
-
-        if (loserId) {
-          await tx.duelParticipant.updateMany({
+        // Update participant records and duel status in parallel
+        await Promise.all([
+          tx.duelParticipant.updateMany({
+            where: { duelId, userId: winnerId },
+            data: {
+              explanation,
+              explanationScore: scoreResult.score,
+              isWinner: true,
+              submitTime: Math.round((Date.now() - new Date(dbDuel.startedAt).getTime()) / 1000)
+            }
+          }),
+          loserId ? tx.duelParticipant.updateMany({
             where: { duelId, userId: loserId },
             data: {
               isWinner: false,
               submitTime: Math.round((Date.now() - new Date(dbDuel.startedAt).getTime()) / 1000)
             }
-          });
-        }
-
-        // Update duel status
-        await tx.duel.update({
-          where: { id: duelId },
-          data: {
-            status: "completed",
-            winnerId: winnerId,
-            endedAt: new Date()
-          }
-        });
+          }) : Promise.resolve(),
+          tx.duel.update({
+            where: { id: duelId },
+            data: {
+              status: "completed",
+              winnerId: winnerId,
+              endedAt: new Date()
+            }
+          })
+        ]);
+      }, {
+        timeout: 15000 // 15 seconds interactive transaction timeout
       });
 
       // Broadcast results
@@ -1293,6 +1705,12 @@ io.on('connection', (socket) => {
         score: scoreResult.score,
         feedback: scoreResult.feedback
       });
+
+      // Audit achievements outside transaction scope
+      checkAchievements(winnerId, null, io).catch(console.error);
+      if (loserId) {
+        checkAchievements(loserId, null, io).catch(console.error);
+      }
 
     } catch (error) {
       if (error.message === "ALREADY_COMPLETED") {
@@ -1331,84 +1749,95 @@ io.on('connection', (socket) => {
         const winnerParticipant = dbParticipants.find(p => p.userId !== userId);
         winnerId = winnerParticipant ? winnerParticipant.userId : null;
 
-        const loserUser = await tx.user.findUnique({ where: { id: loserId } });
-        const winnerUser = winnerId ? await tx.user.findUnique({ where: { id: winnerId } }) : null;
+        const [loserUser, winnerUser] = await Promise.all([
+          tx.user.findUnique({ where: { id: loserId } }),
+          winnerId ? tx.user.findUnique({ where: { id: winnerId } }) : null
+        ]);
 
         const languageKey = dbDuel.gameType === 'color_match' ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
 
-        if (loserUser && winnerUser) {
-          const ratingW = winnerUser[languageKey] || 1000;
+        if (loserUser) {
           const ratingL = loserUser[languageKey] || 1000;
+          const ratingW = winnerUser ? (winnerUser[languageKey] || 1000) : 1000;
 
-          const changeW = calculateElo(ratingW, ratingL, 1);
           const changeL = calculateElo(ratingL, ratingW, 0);
+          const changeW = winnerUser ? calculateElo(ratingW, ratingL, 1) : 0;
 
-          eloChanges[winnerId] = changeW;
+          if (winnerId) eloChanges[winnerId] = changeW;
           eloChanges[loserId] = changeL;
 
           const bet = dbDuel.betAmount;
           const totalBonus = 50 + bet;
 
-          tokenChanges[winnerId] = totalBonus;
+          if (winnerId) tokenChanges[winnerId] = totalBonus;
           tokenChanges[loserId] = -bet;
 
-          await awardXP(winnerId, 50, tx);
-          await awardXP(loserId, 15, tx);
+          const lXp = (loserUser.xp || 0) + 15;
+          const lLevel = Math.floor(Math.sqrt(lXp / 100)) + 1;
 
-          // DB updates - using transaction delegate!
-          await tx.user.update({
-            where: { id: winnerId },
-            data: {
-              eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
-              eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
-              eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
-              eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
-              tokens: { increment: totalBonus },
-              totalWins: { increment: 1 },
-              totalDuels: { increment: 1 },
-              currentStreak: { increment: 1 },
-              rank: getRankTier(ratingW + changeW)
-            }
-          });
+          let wXp = 0;
+          let wLevel = 1;
+          if (winnerUser) {
+            wXp = (winnerUser.xp || 0) + 50;
+            wLevel = Math.floor(Math.sqrt(wXp / 100)) + 1;
+          }
 
-          await tx.user.update({
-            where: { id: loserId },
-            data: {
-              eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
-              eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
-              eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
-              eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
-              tokens: { decrement: bet },
-              totalDuels: { increment: 1 },
-              currentStreak: 0,
-              rank: getRankTier(ratingL + changeL)
-            }
-          });
-
-          // Audit achievements
-          await checkAchievements(winnerId, tx, io);
-          await checkAchievements(loserId, tx, io);
+          await Promise.all([
+            tx.user.update({
+              where: { id: loserId },
+              data: {
+                eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
+                eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
+                eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
+                eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
+                tokens: { decrement: bet },
+                totalDuels: { increment: 1 },
+                currentStreak: 0,
+                xp: lXp,
+                level: lLevel,
+                rank: getRankTier(ratingL + changeL)
+              }
+            }),
+            winnerUser ? tx.user.update({
+              where: { id: winnerId },
+              data: {
+                eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
+                eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
+                eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
+                eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
+                tokens: { increment: totalBonus },
+                totalWins: { increment: 1 },
+                totalDuels: { increment: 1 },
+                currentStreak: { increment: 1 },
+                xp: wXp,
+                level: wLevel,
+                rank: getRankTier(ratingW + changeW)
+              }
+            }) : Promise.resolve()
+          ]);
         }
 
-        if (winnerId) {
-          await tx.duelParticipant.updateMany({
+        // Update participants and duel in parallel
+        await Promise.all([
+          winnerId ? tx.duelParticipant.updateMany({
             where: { duelId, userId: winnerId },
             data: { isWinner: true }
-          });
-        }
-        await tx.duelParticipant.updateMany({
-          where: { duelId, userId: loserId },
-          data: { isWinner: false }
-        });
-
-        await tx.duel.update({
-          where: { id: duelId },
-          data: {
-            status: "completed",
-            winnerId: winnerId,
-            endedAt: new Date()
-          }
-        });
+          }) : Promise.resolve(),
+          tx.duelParticipant.updateMany({
+            where: { duelId, userId: loserId },
+            data: { isWinner: false }
+          }),
+          tx.duel.update({
+            where: { id: duelId },
+            data: {
+              status: "completed",
+              winnerId: winnerId,
+              endedAt: new Date()
+            }
+          })
+        ]);
+      }, {
+        timeout: 15000 // 15 seconds interactive transaction timeout
       });
 
       io.to(`duel:${duelId}`).emit('opponent_forfeited', {
@@ -1416,6 +1845,12 @@ io.on('connection', (socket) => {
         eloChanges,
         tokenChanges
       });
+
+      // Audit achievements outside transaction scope
+      if (winnerId) {
+        checkAchievements(winnerId, null, io).catch(console.error);
+      }
+      checkAchievements(loserId, null, io).catch(console.error);
 
     } catch (e) {
       if (e.message === "ALREADY_COMPLETED") {

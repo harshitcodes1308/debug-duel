@@ -9,6 +9,7 @@ import {
   Timer, Flame, Award, Swords, HelpCircle, 
   Send, AlertTriangle, Play, Sparkles, CheckCircle2 
 } from 'lucide-react';
+import { KbcAudio } from '@/utils/kbc/audio';
 
 export default function DuelArena() {
   const { id: duelId } = useParams();
@@ -36,6 +37,29 @@ export default function DuelArena() {
   const [hintCostDeducted, setHintCostDeducted] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
+
+  // Sound effects & tension ticking
+  useEffect(() => {
+    KbcAudio.playReveal();
+    return () => {
+      KbcAudio.stopSuspense();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loading || !currentDuel || currentDuel.status !== 'active' || showExplanationModal || judgingCode) {
+      KbcAudio.stopSuspense();
+      return;
+    }
+    if (secondsLeft <= 30 && secondsLeft > 0) {
+      KbcAudio.startSuspense(true);
+    } else {
+      KbcAudio.stopSuspense();
+    }
+    return () => {
+      KbcAudio.stopSuspense();
+    };
+  }, [secondsLeft, currentDuel?.status, loading, showExplanationModal, judgingCode]);
 
   // 1. Initial Load & Sync
   useEffect(() => {
@@ -104,10 +128,12 @@ export default function DuelArena() {
     socket.on('opponent_submitted', () => {
       setOpponentSubmitted(true);
       setFomo("Your opponent submitted a fix! They are writing their explanation! HURRY!", 95);
+      KbcAudio.playReveal(); // Alert sound indicating opponent has submitted
     });
 
     // Opponent forfeited
     socket.on('opponent_forfeited', ({ winnerId, eloChanges, tokenChanges }) => {
+      KbcAudio.playWin(); // Win fanfare
       alert("Your opponent has forfeited! You win!");
       if (user && tokenChanges[user.id]) {
         setUser({
@@ -123,6 +149,22 @@ export default function DuelArena() {
       router.push(`/duel/${duelId}/result`);
     });
 
+    // Error handling to prevent getting stuck
+    socket.on('error_message', ({ message }) => {
+      alert(message);
+      setSubmittingExplanation(false);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn("Socket disconnected:", reason);
+      setSubmittingExplanation(false);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error("Socket connection error:", error);
+      setSubmittingExplanation(false);
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -136,36 +178,48 @@ export default function DuelArena() {
 
   // Submit Code Fix
   const handleSubmitCode = () => {
-    if (!socketRef.current || judgingCode) return;
-    setJudgingCode(true);
     setCodeError('');
+    KbcAudio.playSelect(); // Play selection chime indicating modal is opening
+    setShowExplanationModal(true);
+  };
 
+  // Submit Explanation (Triggers sequential code verification & win submission)
+  const handleExplanationSubmit = () => {
+    if (!socketRef.current || submittingExplanation || !explanation.trim()) return;
+    setSubmittingExplanation(true);
+    KbcAudio.playLock(); // Play deep dramatic lock sound
+
+    // Setup a fallback timeout to prevent getting stuck
+    const timeoutId = setTimeout(() => {
+      setSubmittingExplanation(false);
+      setCodeError("The verification server is not responding. Please try again!");
+    }, 15000);
+
+    // 1. Submit code first for verification
     socketRef.current.emit('submit_code', {
       duelId,
       userId: user?.id,
       code
     });
 
-    // Listener for response
+    // 2. Wait for code judgment results
     socketRef.current.once('code_judged', (result) => {
-      setJudgingCode(false);
+      clearTimeout(timeoutId);
       if (result.passed) {
-        setShowExplanationModal(true);
+        // Code passes validation! Proceed to finalize win with explanation
+        KbcAudio.playCorrect(); // Play success fanfare
+        socketRef.current?.emit('submit_explanation', {
+          duelId,
+          userId: user?.id,
+          explanation
+        });
       } else {
+        // Code failed validation!
+        KbcAudio.playWrong(); // Play wrong answer buzzer
+        setSubmittingExplanation(false);
         setCodeError(result.reason || "Your solution did not fix the bug. Try again!");
+        setShowExplanationModal(false); // Return to editor to fix code
       }
-    });
-  };
-
-  // Submit Explanation
-  const handleExplanationSubmit = () => {
-    if (!socketRef.current || submittingExplanation || !explanation.trim()) return;
-    setSubmittingExplanation(true);
-
-    socketRef.current.emit('submit_explanation', {
-      duelId,
-      userId: user?.id,
-      explanation
     });
   };
 
@@ -189,6 +243,7 @@ export default function DuelArena() {
   const handleGetHint = () => {
     if (!user || !currentDuel) return;
     if (user.tokens < 15) {
+      KbcAudio.playWrong(); // Play buzzer sound on error
       alert("Insufficient tokens! Hints cost 15 tokens.");
       return;
     }
@@ -201,6 +256,7 @@ export default function DuelArena() {
     });
     setHintCostDeducted(true);
     setShowHint(true);
+    KbcAudio.playLifeline(); // Play wind chime sweep on hint purchase
   };
 
   // Format Time (seconds to mm:ss)
@@ -294,6 +350,27 @@ export default function DuelArena() {
             </div>
           )}
 
+          {opponentSubmitted && (
+            <div className="alert-priority-flash" style={{
+              padding: '12px 24px',
+              color: 'var(--accent-red)',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+              fontFamily: 'JetBrains Mono, monospace'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertTriangle size={16} className="pulse-glow" style={{ color: 'var(--accent-red)' }} />
+                <span>WARNING: Opponent @{opponent?.username || 'Opponent'} has submitted a fix! They are writing their explanation! HURRY!</span>
+              </div>
+              <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 8px', borderRadius: '4px' }}>CRITICAL PRIOR</span>
+            </div>
+          )}
+
           <div style={{ flex: 1, position: 'relative' }}>
             <Editor
               height="100%"
@@ -330,26 +407,31 @@ export default function DuelArena() {
           
           {/* Rival block */}
           <div>
-            <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Rival State</h3>
-            <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', fontFamily: 'JetBrains Mono, monospace' }}>Rival State</h3>
+            <div className="panel-tactical panel-accent-blue" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="panel-tactical-tr"></div>
+              <div className="panel-tactical-bl"></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>@{opponent?.username || 'Opponent'}</span>
-                {opponentSubmitted && <span className="badge badge-js" style={{ fontSize: '9px', background: 'rgba(0, 255, 148, 0.1)', color: 'var(--accent-green)', borderColor: 'rgba(0, 255, 148, 0.2)' }}>SUBMITTED</span>}
+                <span style={{ fontWeight: 'bold', fontSize: '14px', fontFamily: 'JetBrains Mono, monospace' }}>@{opponent?.username || 'Opponent'}</span>
+                {opponentSubmitted && <span className="badge" style={{ fontSize: '9px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>SUBMITTED</span>}
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: 'JetBrains Mono, monospace' }}>
                   <span>Progress estimation</span>
                   <span style={{ fontWeight: 'bold' }}>{opponentProgress}%</span>
                 </div>
                 <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${opponentProgress}%`,
-                    height: '100%',
-                    background: opponentSubmitted ? 'var(--accent-green)' : 'linear-gradient(to right, var(--accent-purple), var(--accent-red))',
-                    borderRadius: '3px',
-                    transition: 'width 0.8s ease-in-out'
-                  }}></div>
+                  <div 
+                    className="progress-tactical-bar"
+                    style={{
+                      width: `${opponentProgress}%`,
+                      height: '100%',
+                      background: opponentSubmitted ? 'var(--accent-green)' : 'linear-gradient(to right, var(--accent-blue), var(--accent-red))',
+                      borderRadius: '3px',
+                      transition: 'width 0.8s ease-in-out'
+                    }}
+                  ></div>
                 </div>
               </div>
             </div>
@@ -357,11 +439,8 @@ export default function DuelArena() {
 
           {/* FOMO Signal Ticker */}
           <div>
-            <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>FOMO Signals</h3>
-            <div className="pulse-glow" style={{
-              background: 'rgba(139, 92, 246, 0.05)',
-              border: '1px solid rgba(139, 92, 246, 0.15)',
-              borderRadius: '8px',
+            <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontFamily: 'JetBrains Mono, monospace' }}>FOMO Signals</h3>
+            <div className="panel-tactical panel-accent-purple" style={{
               padding: '16px',
               fontSize: '13px',
               color: 'var(--accent-purple)',
@@ -369,8 +448,11 @@ export default function DuelArena() {
               lineHeight: 1.5,
               minHeight: '70px',
               display: 'flex',
-              alignItems: 'center'
+              alignItems: 'center',
+              fontFamily: 'JetBrains Mono, monospace'
             }}>
+              <div className="panel-tactical-tr"></div>
+              <div className="panel-tactical-bl"></div>
               {fomoMessage}
             </div>
           </div>
@@ -378,14 +460,16 @@ export default function DuelArena() {
           {/* Hints Section */}
           <div style={{ marginTop: 'auto' }}>
             {showHint ? (
-              <div className="glass-panel" style={{ padding: '14px', background: 'rgba(245, 166, 35, 0.05)', borderColor: 'rgba(245, 166, 35, 0.2)', fontSize: '12px', lineHeight: '18px' }}>
+              <div className="panel-tactical panel-accent-amber" style={{ padding: '14px', fontSize: '12px', lineHeight: '18px' }}>
+                <div className="panel-tactical-tr"></div>
+                <div className="panel-tactical-bl"></div>
                 <strong style={{ color: 'var(--accent-amber)', display: 'block', marginBottom: '4px' }}>HINT REVEALED:</strong>
                 Category is <strong>{currentDuel.bug?.category}</strong>. Analyze the code syntax around data validation or structure checks.
               </div>
             ) : (
               <button 
                 className="btn btn-secondary" 
-                style={{ width: '100%', fontSize: '13px', borderStyle: 'dashed', gap: '4px' }}
+                style={{ width: '100%', fontSize: '13px', borderStyle: 'dashed', gap: '4px', fontFamily: 'Space Grotesk, sans-serif' }}
                 onClick={handleGetHint}
               >
                 <HelpCircle size={14} /> Buy Hint (-15 tokens)
@@ -409,8 +493,15 @@ export default function DuelArena() {
       }}>
         <button 
           onClick={handleForfeit} 
-          className="btn btn-danger"
-          style={{ padding: '8px 16px', fontSize: '13px' }}
+          className="btn btn-secondary"
+          style={{ 
+            padding: '8px 16px', 
+            fontSize: '13px', 
+            borderColor: 'rgba(239, 68, 68, 0.4)', 
+            color: 'var(--accent-red)',
+            background: 'rgba(239, 68, 68, 0.05)',
+            fontFamily: 'Space Grotesk, sans-serif'
+          }}
         >
           Forfeit Match 🏳️
         </button>
@@ -418,11 +509,17 @@ export default function DuelArena() {
         <button 
           onClick={handleSubmitCode} 
           className="btn btn-success"
-          style={{ padding: '10px 28px', fontSize: '15px', color: 'black', gap: '8px' }}
-          disabled={judgingCode}
+          style={{ 
+            padding: '10px 28px', 
+            fontSize: '15px', 
+            color: 'black', 
+            gap: '8px',
+            fontFamily: 'Space Grotesk, sans-serif',
+            boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)'
+          }}
         >
           <Play size={16} fill="black" /> 
-          {judgingCode ? "Judging solution..." : "SUBMIT FIX"}
+          SUBMIT FIX
         </button>
       </div>
 
@@ -434,7 +531,7 @@ export default function DuelArena() {
           left: 0,
           width: '100vw',
           height: '100vh',
-          background: 'rgba(13, 13, 18, 0.8)',
+          background: 'rgba(9, 9, 13, 0.85)',
           backdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
@@ -442,60 +539,113 @@ export default function DuelArena() {
           zIndex: 1100,
           padding: '20px'
         }}>
-          <div className="glass-panel" style={{
+          <div className="panel-tactical panel-accent-green" style={{
             width: '100%',
-            maxWidth: '500px',
-            background: 'var(--bg-secondary)',
+            maxWidth: '520px',
+            background: '#0D0D12',
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px'
+            gap: '20px',
+            padding: '24px'
           }}>
+            <div className="panel-tactical-tr"></div>
+            <div className="panel-tactical-bl"></div>
+
             <div style={{ textAlign: 'center' }}>
-              <div className="flex-center" style={{ gap: '8px', color: 'var(--accent-green)', marginBottom: '8px' }}>
-                <CheckCircle2 size={28} />
-                <h2 style={{ fontSize: '24px', color: '#fff' }}>Code Passed!</h2>
+              <div className="flex-center" style={{ gap: '8px', color: 'var(--accent-amber)', marginBottom: '8px' }}>
+                <Sparkles size={28} className="pulse-glow" style={{ color: 'var(--accent-amber)' }} />
+                <h2 style={{ fontSize: '22px', color: '#fff', fontFamily: 'Space Grotesk, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Few moments away from result...
+                </h2>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                Your fix is correct! To lock in your victory, explain the bug.
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', fontFamily: 'Inter, sans-serif' }}>
+                Provide the final explanation of your fix. The test runner will verify both your code and description to score points.
               </p>
             </div>
 
+            {/* Tactical session state */}
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.05)',
+              border: '1px dashed rgba(245, 158, 11, 0.25)',
+              padding: '12px 16px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              color: 'var(--accent-amber)',
+              fontFamily: 'JetBrains Mono, monospace',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }}>
+              <div>{"// CONSOLE SESSION STATE: VERIFICATION_PENDING"}</div>
+              <div>{"// STATUS: LATCH_EXPLANATION_TO_RUN_TESTS"}</div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
-                EXPLAIN THE BUG (1-2 SENTENCES)
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace' }}>
+                  DESCRIBE THE ROOT CAUSE & FIX
+                </label>
+                <span style={{ fontSize: '11px', color: explanation.length > 180 ? 'var(--accent-red)' : 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace' }}>
+                  {explanation.length}/200
+                </span>
+              </div>
               <textarea
                 value={explanation}
-                onChange={(e) => setExplanation(e.target.value)}
-                placeholder="What was the root cause? Why did it break, and how does your fix resolve it?"
+                onChange={(e) => {
+                  if (e.target.value.length <= 200) {
+                    setExplanation(e.target.value);
+                  }
+                }}
+                placeholder="What was the bug? How does your fix resolve it? (1-2 sentences)"
                 style={{
                   height: '120px',
-                  background: '#0D0D12',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px',
+                  background: '#07070a',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '4px',
                   padding: '12px',
                   color: '#fff',
-                  fontFamily: 'inherit',
+                  fontFamily: 'JetBrains Mono, monospace',
                   fontSize: '13px',
-                  lineHeight: '1.5',
+                  lineHeight: '1.6',
                   outline: 'none',
-                  resize: 'none'
+                  resize: 'none',
+                  transition: 'border-color 0.15s ease'
                 }}
+                onFocus={(e) => e.target.style.borderColor = 'rgba(245, 158, 11, 0.4)'}
+                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.06)'}
               />
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                AI judge scores explanation quality (0-20 points) for bonus tokens.
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'Inter, sans-serif' }}>
+                AI judge scores description quality (0-20 points) for bonus tokens.
               </span>
             </div>
 
-            <button
-              onClick={handleExplanationSubmit}
-              className="btn btn-success"
-              style={{ width: '100%', height: '48px', color: 'black', gap: '8px' }}
-              disabled={submittingExplanation || !explanation.trim()}
-            >
-              <Send size={14} />
-              {submittingExplanation ? "Scoring explanation..." : "SUBMIT & CLAIM WIN"}
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowExplanationModal(false)}
+                className="btn btn-secondary"
+                style={{ flex: 1, height: '48px', fontFamily: 'Space Grotesk, sans-serif' }}
+                disabled={submittingExplanation}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleExplanationSubmit}
+                className="btn btn-success"
+                style={{ 
+                  flex: 1, 
+                  height: '48px', 
+                  color: 'black', 
+                  gap: '8px', 
+                  fontFamily: 'Space Grotesk, sans-serif',
+                  fontWeight: 700,
+                  boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)'
+                }}
+                disabled={submittingExplanation || !explanation.trim()}
+              >
+                <Send size={14} />
+                {submittingExplanation ? "TRANSMITTING..." : "SUBMIT & LATCH WIN"}
+              </button>
+            </div>
           </div>
         </div>
       )}
