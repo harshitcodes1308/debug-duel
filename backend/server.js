@@ -246,6 +246,107 @@ app.get('/api/auth/me/:id', async (req, res) => {
   }
 });
 
+// Google Auth Login / Register
+app.post('/api/auth/google', async (req, res) => {
+  const { email, fullName, googleId, accessToken, isSandbox, username } = req.body;
+
+  if (!email && isSandbox) {
+    return res.status(400).json({ error: "Email is required in sandbox mode" });
+  }
+
+  let verifiedEmail = email ? email.toLowerCase().trim() : null;
+  let verifiedName = fullName || "Google User";
+  let verifiedGoogleId = googleId || "";
+
+  if (!isSandbox && accessToken) {
+    try {
+      const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+      if (response.ok) {
+        const payload = await response.json();
+        verifiedEmail = payload.email.toLowerCase().trim();
+        verifiedName = payload.name || verifiedName;
+        verifiedGoogleId = payload.sub || verifiedGoogleId;
+      } else {
+        return res.status(400).json({ error: "Failed to verify Google access token" });
+      }
+    } catch (err) {
+      console.error("Google userinfo fetch failed:", err);
+      return res.status(500).json({ error: "Google Auth verification error" });
+    }
+  }
+
+  if (!verifiedEmail) {
+    return res.status(400).json({ error: "Could not retrieve email from Google" });
+  }
+
+  // Ensure verifiedGoogleId is not empty (especially in sandbox)
+  if (!verifiedGoogleId) {
+    verifiedGoogleId = "sandbox-" + verifiedEmail.split('@')[0];
+  }
+
+  try {
+    // 1. Check if user already exists
+    let user = await prisma.user.findUnique({
+      where: { email: verifiedEmail }
+    });
+
+    if (user) {
+      // If user exists, log them in. Ensure clerkId/googleId is linked
+      if (!user.clerkId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { clerkId: `google-${verifiedGoogleId}` }
+        });
+      }
+      return res.json(user);
+    }
+
+    // 2. Register flow - requires a username selection
+    if (!username) {
+      return res.json({
+        registrationRequired: true,
+        email: verifiedEmail,
+        fullName: verifiedName,
+        googleId: verifiedGoogleId
+      });
+    }
+
+    const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ error: "Username must be at least 3 characters" });
+    }
+
+    // Check username uniqueness
+    const existingUsername = await prisma.user.findUnique({
+      where: { username: cleanUsername }
+    });
+    if (existingUsername) {
+      return res.status(400).json({ error: "Username is already taken" });
+    }
+
+    user = await prisma.user.create({
+      data: {
+        username: cleanUsername,
+        fullName: verifiedName.trim(),
+        email: verifiedEmail,
+        clerkId: `google-${verifiedGoogleId}`,
+        tokens: 500,
+        eloJS: 1000,
+        eloPython: 1000,
+        eloJava: 1000,
+        eloUIUX: 1000,
+        rank: "Bug Hunter",
+        friendKey: generateFriendKey()
+      }
+    });
+
+    return res.json(user);
+  } catch (error) {
+    console.error("Google Auth register/login error:", error);
+    return res.status(500).json({ error: "Failed to authenticate with Google" });
+  }
+});
+
 const io = new Server(server, {
   cors: {
     origin: '*',

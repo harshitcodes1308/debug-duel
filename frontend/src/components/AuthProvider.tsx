@@ -495,6 +495,23 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
   // Requirement counting for sound cues
   const [prevRequirementsCount, setPrevRequirementsCount] = useState(0);
 
+  // Google Auth states
+  const [showGoogleSandboxModal, setShowGoogleSandboxModal] = useState(false);
+  const [sandboxEmail, setSandboxEmail] = useState('');
+  const [sandboxName, setSandboxName] = useState('');
+
+  // Google Registration states
+  const [googleRegisterData, setGoogleRegisterData] = useState<{
+    email: string;
+    fullName: string;
+    googleId: string;
+    accessToken?: string | null;
+    isSandbox: boolean;
+  } | null>(null);
+  const [googleUsername, setGoogleUsername] = useState('');
+  const [googleUsernameAvailable, setGoogleUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingGoogleUsername, setCheckingGoogleUsername] = useState(false);
+
   // Persistence
   useEffect(() => {
     async function loadSession() {
@@ -516,6 +533,146 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
     }
     loadSession();
   }, [setUser]);
+
+  const googleClientId = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID : null;
+
+  useEffect(() => {
+    if (!googleClientId) return;
+
+    // Load GIS script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [googleClientId]);
+
+  const handleGoogleSignIn = () => {
+    KbcAudio.playSelect();
+    if (googleClientId) {
+      if (typeof window !== 'undefined' && (window as any).google) {
+        try {
+          const client = (window as any).google.accounts.oauth2.initTokenClient({
+            client_id: googleClientId,
+            scope: 'openid email profile',
+            callback: async (tokenResponse: any) => {
+              if (tokenResponse.error) {
+                console.error("Google Auth error:", tokenResponse.error);
+                setErrorMsg(`Google Auth error: ${tokenResponse.error}`);
+                KbcAudio.playWrong();
+                return;
+              }
+              if (!tokenResponse.access_token) return;
+
+              setLoading(true);
+              try {
+                const res = await fetch('http://localhost:5001/api/auth/google', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    accessToken: tokenResponse.access_token,
+                    isSandbox: false
+                  })
+                });
+
+                if (res.ok) {
+                  const userProfile = await res.json();
+                  if (userProfile.registrationRequired) {
+                    KbcAudio.playSelect();
+                    setGoogleRegisterData({
+                      email: userProfile.email,
+                      fullName: userProfile.fullName,
+                      googleId: userProfile.googleId,
+                      accessToken: tokenResponse.access_token,
+                      isSandbox: false
+                    });
+                  } else {
+                    localStorage.setItem('dd_user_id', userProfile.id);
+                    KbcAudio.playCorrect();
+                    setUser(userProfile);
+                  }
+                } else {
+                  const errData = await res.json();
+                  setErrorMsg(errData.error || "Google login failed");
+                  KbcAudio.playWrong();
+                }
+              } catch (e) {
+                setErrorMsg("Server error connecting to Google Auth");
+                KbcAudio.playWrong();
+              } finally {
+                setLoading(false);
+              }
+            }
+          });
+          client.requestAccessToken();
+        } catch (err) {
+          console.error("Failed to initialize Google token client:", err);
+          setErrorMsg("Failed to launch Google Auth window.");
+          KbcAudio.playWrong();
+        }
+      } else {
+        setErrorMsg("Google Sign-In SDK is still loading. Try again in a second!");
+        KbcAudio.playWrong();
+      }
+    } else {
+      setShowGoogleSandboxModal(true);
+    }
+  };
+
+  const handleSandboxSelect = async (email: string, name: string) => {
+    KbcAudio.playLock();
+    setShowGoogleSandboxModal(false);
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5001/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          fullName: name,
+          isSandbox: true
+        })
+      });
+      if (res.ok) {
+        const userProfile = await res.json();
+        if (userProfile.registrationRequired) {
+          KbcAudio.playSelect();
+          setGoogleRegisterData({
+            email: userProfile.email,
+            fullName: userProfile.fullName,
+            googleId: userProfile.googleId,
+            accessToken: null,
+            isSandbox: true
+          });
+        } else {
+          localStorage.setItem('dd_user_id', userProfile.id);
+          KbcAudio.playCorrect();
+          setUser(userProfile);
+        }
+      } else {
+        const errData = await res.json();
+        setErrorMsg(errData.error || "Sandbox login failed");
+        KbcAudio.playWrong();
+      }
+    } catch (e) {
+      setErrorMsg("Server connection error during sandbox auth");
+      KbcAudio.playWrong();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSandboxSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sandboxEmail.trim() || !sandboxName.trim()) return;
+    handleSandboxSelect(sandboxEmail.trim(), sandboxName.trim());
+  };
 
   // Audio cue on screen mount (runs when not logged in)
   useEffect(() => {
@@ -560,6 +717,89 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearTimeout(delayDebounceFn);
   }, [username, mode]);
+
+  // Google Username check effect
+  useEffect(() => {
+    if (!googleRegisterData || !googleUsername.trim()) {
+      setGoogleUsernameAvailable(null);
+      return;
+    }
+    if (googleUsername.trim().length < 3) {
+      setGoogleUsernameAvailable(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setCheckingGoogleUsername(true);
+      try {
+        const res = await fetch('http://localhost:5001/api/auth/check-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: googleUsername.trim() })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setGoogleUsernameAvailable(data.available);
+          if (data.available) {
+            KbcAudio.playSelect(); // Tick sound indicating username is valid
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setCheckingGoogleUsername(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [googleUsername, googleRegisterData]);
+
+  const handleGoogleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    KbcAudio.playLock();
+
+    if (!googleRegisterData) return;
+    if (googleUsernameAvailable === false || !googleUsername.trim()) {
+      setErrorMsg("Please select a valid, available username");
+      KbcAudio.playWrong();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5001/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: googleRegisterData.email,
+          fullName: googleRegisterData.fullName,
+          googleId: googleRegisterData.googleId,
+          accessToken: googleRegisterData.accessToken,
+          isSandbox: googleRegisterData.isSandbox,
+          username: googleUsername.trim()
+        })
+      });
+
+      if (res.ok) {
+        const userProfile = await res.json();
+        localStorage.setItem('dd_user_id', userProfile.id);
+        KbcAudio.playCorrect();
+        setUser(userProfile);
+        setGoogleRegisterData(null);
+        setGoogleUsername('');
+      } else {
+        const errData = await res.json();
+        setErrorMsg(errData.error || "Google registration failed");
+        KbcAudio.playWrong();
+      }
+    } catch (err) {
+      setErrorMsg("Server error completing registration");
+      KbcAudio.playWrong();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Password constraint helpers
   const passLength = password.length >= 8;
@@ -763,193 +1003,419 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Tab Selector */}
-          <div style={{
-            display: 'flex',
-            background: 'var(--bg-secondary)',
-            padding: '4px',
-            borderRadius: '8px',
-            border: '1px solid var(--border)'
-          }}>
-            <button 
-              onClick={() => toggleMode('login')}
-              className={`btn ${mode === 'login' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1, border: 'none', height: '36px', fontSize: '13px' }}
-            >
-              Sign In
-            </button>
-            <button 
-              onClick={() => toggleMode('signup')}
-              className={`btn ${mode === 'signup' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1, border: 'none', height: '36px', fontSize: '13px' }}
-            >
-              Create Account
-            </button>
-          </div>
-
-          {errorMsg && (
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
-              padding: '10px 14px',
-              borderRadius: '8px',
-              color: 'var(--danger)',
-              fontSize: '13px',
-              fontWeight: 500,
-              textAlign: 'center'
-            }}>
-              ⚠️ {errorMsg}
-            </div>
-          )}
-
-          {/* Tab Forms */}
-          {mode === 'login' ? (
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>USERNAME OR EMAIL</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. cyber_ninja"
-                  value={usernameOrEmail}
-                  onChange={(e) => setUsernameOrEmail(e.target.value)}
-                  className="input-tactical"
-                  style={{ height: '42px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>PASSWORD</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-tactical"
-                  style={{ height: '42px' }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ height: '42px', marginTop: '8px', fontSize: '14px' }}
-              >
-                Authenticate & Connect
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>FULL NAME</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="input-tactical"
-                  style={{ height: '42px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>USERNAME</label>
-                  {username.trim().length >= 3 && (
-                    <span style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'JetBrains Mono, monospace' }}>
-                      {checkingUsername ? (
-                        <span style={{ color: 'var(--text-muted)' }}>Checking...</span>
-                      ) : usernameAvailable ? (
-                        <span style={{ color: 'var(--success)' }}>✓ Available</span>
-                      ) : (
-                        <span style={{ color: 'var(--danger)' }}>✗ Taken</span>
-                      )}
-                    </span>
-                  )}
+          {googleRegisterData ? (
+            <>
+              {errorMsg && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  color: 'var(--danger)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  textAlign: 'center'
+                }}>
+                  ⚠️ {errorMsg}
                 </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. cyber_ninja"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                  className="input-tactical"
-                  style={{ height: '42px' }}
-                />
-              </div>
+              )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>EMAIL ADDRESS</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="name@domain.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-tactical"
-                  style={{ height: '42px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>PASSWORD</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-tactical"
-                  style={{ height: '42px' }}
-                />
-
-                {/* Password validation feedback checklist */}
-                {password && (
-                  <div style={{
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    marginTop: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    fontSize: '11px',
-                    fontFamily: 'JetBrains Mono, monospace'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '2px', fontFamily: 'Space Grotesk, sans-serif' }}>
-                      REQUIREMENTS:
-                    </div>
-                    <div style={{ color: passLength ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span>{passLength ? '🟢' : '⚪'}</span> 8+ Characters
-                    </div>
-                    <div style={{ color: passCapital ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span>{passCapital ? '🟢' : '⚪'}</span> Capital Letter (A-Z)
-                    </div>
-                    <div style={{ color: passNumber ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span>{passNumber ? '🟢' : '⚪'}</span> Number (0-9)
-                    </div>
-                    <div style={{ color: passSpecial ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span>{passSpecial ? '🟢' : '⚪'}</span> Special Sign (@, $, !, etc.)
-                    </div>
+              <form onSubmit={handleGoogleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'center', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Authenticated as <strong style={{ color: '#fff' }}>{googleRegisterData.email}</strong>
                   </div>
-                )}
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Choose your tactical username to complete registration in DebugDuel.
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>USERNAME</label>
+                    {googleUsername.trim().length >= 3 && (
+                      <span style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'JetBrains Mono, monospace' }}>
+                        {checkingGoogleUsername ? (
+                          <span style={{ color: 'var(--text-muted)' }}>Checking...</span>
+                        ) : googleUsernameAvailable ? (
+                          <span style={{ color: 'var(--success)' }}>✓ Available</span>
+                        ) : (
+                          <span style={{ color: 'var(--danger)' }}>✗ Taken</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. cyber_ninja"
+                    value={googleUsername}
+                    onChange={(e) => setGoogleUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    className="input-tactical"
+                    style={{ height: '42px' }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={googleUsernameAvailable === false || checkingGoogleUsername || !googleUsername.trim()}
+                  className="btn btn-success"
+                  style={{ height: '42px', marginTop: '8px', fontSize: '14px' }}
+                >
+                  Complete Registration
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    KbcAudio.playSelect();
+                    setGoogleRegisterData(null);
+                    setGoogleUsername('');
+                    setErrorMsg('');
+                  }}
+                  className="btn btn-secondary"
+                  style={{ height: '36px', fontSize: '12px' }}
+                >
+                  Cancel
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              {/* Tab Selector */}
+              <div style={{
+                display: 'flex',
+                background: 'var(--bg-secondary)',
+                padding: '4px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)'
+              }}>
+                <button 
+                  onClick={() => toggleMode('login')}
+                  className={`btn ${mode === 'login' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ flex: 1, border: 'none', height: '36px', fontSize: '13px' }}
+                >
+                  Sign In
+                </button>
+                <button 
+                  onClick={() => toggleMode('signup')}
+                  className={`btn ${mode === 'signup' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ flex: 1, border: 'none', height: '36px', fontSize: '13px' }}
+                >
+                  Create Account
+                </button>
+              </div>
+
+              {errorMsg && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  color: 'var(--danger)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  textAlign: 'center'
+                }}>
+                  ⚠️ {errorMsg}
+                </div>
+              )}
+
+              {/* Tab Forms */}
+              {mode === 'login' ? (
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>USERNAME OR EMAIL</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. cyber_ninja"
+                      value={usernameOrEmail}
+                      onChange={(e) => setUsernameOrEmail(e.target.value)}
+                      className="input-tactical"
+                      style={{ height: '42px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>PASSWORD</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="input-tactical"
+                      style={{ height: '42px' }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ height: '42px', marginTop: '8px', fontSize: '14px' }}
+                  >
+                    Authenticate & Connect
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>FULL NAME</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="input-tactical"
+                      style={{ height: '42px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>USERNAME</label>
+                      {username.trim().length >= 3 && (
+                        <span style={{ fontSize: '11px', fontWeight: 'bold', fontFamily: 'JetBrains Mono, monospace' }}>
+                          {checkingUsername ? (
+                            <span style={{ color: 'var(--text-muted)' }}>Checking...</span>
+                          ) : usernameAvailable ? (
+                            <span style={{ color: 'var(--success)' }}>✓ Available</span>
+                          ) : (
+                            <span style={{ color: 'var(--danger)' }}>✗ Taken</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. cyber_ninja"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                      className="input-tactical"
+                      style={{ height: '42px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>EMAIL ADDRESS</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="name@domain.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="input-tactical"
+                      style={{ height: '42px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>PASSWORD</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="input-tactical"
+                      style={{ height: '42px' }}
+                    />
+
+                    {/* Password validation feedback checklist */}
+                    {password && (
+                      <div style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        marginTop: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        fontSize: '11px',
+                        fontFamily: 'JetBrains Mono, monospace'
+                      }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '2px', fontFamily: 'Space Grotesk, sans-serif' }}>
+                          REQUIREMENTS:
+                        </div>
+                        <div style={{ color: passLength ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span>{passLength ? '🟢' : '⚪'}</span> 8+ Characters
+                        </div>
+                        <div style={{ color: passCapital ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span>{passCapital ? '🟢' : '⚪'}</span> Capital Letter (A-Z)
+                        </div>
+                        <div style={{ color: passNumber ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span>{passNumber ? '🟢' : '⚪'}</span> Number (0-9)
+                        </div>
+                        <div style={{ color: passSpecial ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span>{passSpecial ? '🟢' : '⚪'}</span> Special Sign (@, $, !, etc.)
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={!passwordValid || usernameAvailable === false || checkingUsername}
+                    className="btn btn-success"
+                    style={{ height: '42px', marginTop: '8px', fontSize: '14px' }}
+                  >
+                    Register Account
+                  </button>
+                </form>
+              )}
+
+              {/* Google Connect Divider & Button */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+                <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>OR CONNECT VIA</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
               </div>
 
               <button
-                type="submit"
-                disabled={!passwordValid || usernameAvailable === false || checkingUsername}
-                className="btn btn-success"
-                style={{ height: '42px', marginTop: '8px', fontSize: '14px' }}
+                type="button"
+                onClick={handleGoogleSignIn}
+                className="btn btn-secondary"
+                style={{
+                  height: '42px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  fontFamily: 'Space Grotesk, sans-serif',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                }}
               >
-                Register Account
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                </svg>
+                {mode === 'login' ? 'SIGN IN WITH GOOGLE' : 'SIGN UP USING GOOGLE'}
               </button>
-            </form>
+            </>
           )}
 
         </div>
+
+        {/* Sandbox Modal Overlay */}
+        {showGoogleSandboxModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            fontFamily: 'Inter, sans-serif'
+          }}>
+            <div className="card-tactical" style={{
+              width: '100%',
+              maxWidth: '400px',
+              padding: '28px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              border: '2px solid var(--accent-blue)',
+              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.25)'
+            }}>
+              <div className="panel-tactical-tr"></div>
+              <div className="panel-tactical-bl"></div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  🛡️ GOOGLE AUTH SANDBOX
+                </h3>
+                <button
+                  onClick={() => {
+                    KbcAudio.playSelect();
+                    setShowGoogleSandboxModal(false);
+                  }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '18px', margin: 0 }}>
+                No Client ID configured in <code>.env.local</code>. Choose a preset account below or input mock credentials to simulate Google sign-in.
+              </p>
+
+              {/* Preset buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  onClick={() => handleSandboxSelect('cyber_dev@gmail.com', 'Cyber Developer')}
+                  className="btn btn-secondary"
+                  style={{ justifyContent: 'flex-start', padding: '10px 14px', fontSize: '13px' }}
+                >
+                  👤 cyber_dev@gmail.com (Cyber Developer)
+                </button>
+                <button
+                  onClick={() => handleSandboxSelect('code_wizard@gmail.com', 'Code Wizard')}
+                  className="btn btn-secondary"
+                  style={{ justifyContent: 'flex-start', padding: '10px 14px', fontSize: '13px' }}
+                >
+                  👤 code_wizard@gmail.com (Code Wizard)
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+                <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>OR CUSTOM</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }}></div>
+              </div>
+
+              {/* Custom Mock Input Form */}
+              <form onSubmit={handleSandboxSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>MOCK EMAIL</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="custom_user@gmail.com"
+                    value={sandboxEmail}
+                    onChange={(e) => setSandboxEmail(e.target.value)}
+                    className="input-tactical"
+                    style={{ height: '36px', fontSize: '13px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>MOCK NAME</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Custom User"
+                    value={sandboxName}
+                    onChange={(e) => setSandboxName(e.target.value)}
+                    className="input-tactical"
+                    style={{ height: '36px', fontSize: '13px' }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ height: '38px', marginTop: '4px', fontSize: '13px', background: 'var(--accent-blue)', color: '#fff' }}
+                >
+                  Bypass & Authenticate
+                </button>
+              </form>
+
+            </div>
+          </div>
+        )}
+
       </div>
     );
   }
