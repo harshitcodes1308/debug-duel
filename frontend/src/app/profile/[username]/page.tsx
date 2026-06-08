@@ -357,6 +357,7 @@ export default function PlayerProfile() {
   // Seasonal Ranked States
   const [seasonStats, setSeasonStats] = useState<SeasonStats | null>(null);
   const [rewards, setRewards] = useState<SeasonRewardClaim[]>([]);
+  const [seasonHistory, setSeasonHistory] = useState<any[]>([]);
   const [loadingRanked, setLoadingRanked] = useState(true);
 
   useEffect(() => {
@@ -389,15 +390,19 @@ export default function PlayerProfile() {
     async function fetchRankedData() {
       setLoadingRanked(true);
       try {
-        const [statsRes, rewardsRes] = await Promise.all([
+        const [statsRes, rewardsRes, historyRes] = await Promise.all([
           fetch(`http://localhost:5001/api/season/stats/${username}`),
-          fetch(`http://localhost:5001/api/season/rewards/my?userId=${profileId}`)
+          fetch(`http://localhost:5001/api/season/rewards/my?userId=${profileId}`),
+          fetch(`http://localhost:5001/api/season/history/${username}`)
         ]);
         if (statsRes.ok) {
           setSeasonStats(await statsRes.json());
         }
         if (rewardsRes.ok) {
           setRewards(await rewardsRes.json());
+        }
+        if (historyRes.ok) {
+          setSeasonHistory(await historyRes.json());
         }
       } catch (e) {
         console.error("Error fetching ranked data:", e);
@@ -1327,6 +1332,92 @@ export default function PlayerProfile() {
                 </div>
               )}
             </div>
+          </div>
+          
+          {/* Season History Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+            <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+              Season History
+            </h3>
+            
+            {loadingRanked ? (
+              <div className="skeleton-box" style={{ width: '100%', height: '140px', borderRadius: '16px' }} />
+            ) : seasonHistory.length === 0 ? (
+              <div className="card-base" style={{ textAlign: 'center', padding: '32px 24px', color: 'var(--text-secondary)', borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)' }}>
+                <p style={{ fontSize: '13px', margin: 0 }}>No historical seasons recorded yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                {seasonHistory.map((historyItem) => (
+                  <div 
+                    key={historyItem.id} 
+                    className="card-base"
+                    style={{
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      border: '1px solid var(--border)',
+                      background: 'rgba(26, 26, 36, 0.2)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#fff', fontFamily: 'Space Grotesk' }}>
+                        {historyItem.seasonName}
+                      </span>
+                      {historyItem.placement && (
+                        <span className="badge" style={{
+                          fontSize: '10px',
+                          background: 'rgba(245, 158, 11, 0.1)',
+                          color: 'var(--accent-amber)',
+                          border: '1px solid rgba(245, 158, 11, 0.25)',
+                          fontWeight: 'bold'
+                        }}>
+                          Rank #{historyItem.placement}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>FINAL STANDING</span>
+                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-purple)' }}>
+                          {historyItem.finalRank}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'right' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>PEAK RANK</span>
+                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-amber)' }}>
+                          {historyItem.peakRank}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '8px',
+                      borderTop: '1px solid var(--border)',
+                      paddingTop: '12px',
+                      fontSize: '12px'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>WINS</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--accent-green)' }}>{historyItem.wins} W</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>LOSSES</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--accent-red)' }}>{historyItem.losses} L</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>WIN RATE</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>{historyItem.winRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Prestige Rewards Section */}

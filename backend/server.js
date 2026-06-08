@@ -1916,7 +1916,7 @@ io.on('connection', (socket) => {
           isDraw,
           eloChanges,
           tokenChanges,
-          isRanked: dbDuel.isRanked,
+          isRanked: duel.isRanked,
           rpChanges,
           newRanks
         });
