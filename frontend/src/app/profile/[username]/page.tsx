@@ -439,7 +439,7 @@ export default function PlayerProfile() {
   }
 
   const isOwnProfile = currentUser?.username === profile.username;
-  const highestElo = Math.max(profile.eloJS, profile.eloPython, profile.eloJava);
+  const highestElo = Math.max(profile.eloJS, profile.eloPython, profile.eloJava, profile.eloUIUX || 1000);
 
   // Compute stats
   const winRate = profile.totalDuels > 0 
@@ -768,8 +768,13 @@ export default function PlayerProfile() {
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'var(--space-2)' }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Language Ratings</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Skill & Language Ratings</span>
                 
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>UI/UX Rating</span>
+                  <strong style={{ color: '#38bdf8', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloUIUX || 1000} /> ELO</strong>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>JavaScript Rating</span>
                   <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloJS} /> ELO</strong>

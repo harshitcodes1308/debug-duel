@@ -1,0 +1,355 @@
+'use client';
+
+import React, { useEffect, useState, useRef } from 'react';
+import { useStore } from '@/store/useStore';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { io, Socket } from 'socket.io-client';
+import { Copy, Check, Users, Palette, ArrowLeft } from 'lucide-react';
+
+export default function DesignLobby() {
+  const { id: duelId } = useParams();
+  const router = useRouter();
+  const { user, setCurrentDuel, resetDuelState } = useStore();
+  const [copied, setCopied] = useState(false);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [status, setStatus] = useState<string>('waiting');
+  const [error, setError] = useState('');
+  
+  const socketRef = useRef<Socket | null>(null);
+
+  // Fetch initial details
+  const [duelDetails, setDuelDetails] = useState<any>(null);
+  useEffect(() => {
+    async function fetchDetails() {
+      try {
+        const res = await fetch(`http://localhost:5001/api/duel/${duelId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDuelDetails(data);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchDetails();
+  }, [duelId, participants]);
+
+  useEffect(() => {
+    if (!user || !duelId) return;
+
+    // Reset store state on entering new lobby
+    resetDuelState();
+
+    // Connect to WebSocket server
+    const socket = io('http://localhost:5001');
+    socketRef.current = socket;
+
+    socket.emit('join_duel', { duelId, userId: user.id });
+
+    socket.on('lobby_update', ({ participants: newParticipants, status: newStatus }) => {
+      setParticipants(newParticipants);
+      setStatus(newStatus);
+    });
+
+    socket.on('countdown_started', ({ duration }) => {
+      setCountdown(duration);
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    });
+
+    socket.on('duel_started', () => {
+      setCurrentDuel({
+        id: duelId as string,
+        bugId: '',
+        status: 'active',
+        betAmount: duelDetails?.betAmount || 50,
+        language: 'uiux',
+        difficulty: 'medium',
+        participants: []
+      });
+      
+      router.push(`/change-design/duel/${duelId}`);
+    });
+
+    socket.on('error_message', ({ message }) => {
+      setError(message);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user, duelId, duelDetails?.betAmount]);
+
+  const handleCopyLink = () => {
+    const inviteLink = `${window.location.origin}/change-design/lobby/${duelId}`;
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!user) return null;
+
+  const opponent = participants.find((p: any) => p.userId !== user.id);
+  const host = participants.find((p: any) => p.userId === user.id) || { user };
+
+  return (
+    <div className="container" style={{ padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 'calc(100vh - 64px)', justifyContent: 'center', backgroundColor: '#0D0D12' }}>
+      
+      {countdown !== null && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(13, 13, 18, 0.95)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          fontFamily: 'Space Grotesk, sans-serif'
+        }}>
+          <span style={{ fontSize: '14px', color: '#38bdf8', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '16px' }}>DESIGN BATTLE READY. PREPARING CANVAS...</span>
+          <h1 style={{
+            fontSize: '120px',
+            color: countdown === 0 ? '#38bdf8' : '#fff',
+            textShadow: countdown === 0 ? '0 0 40px rgba(56, 189, 248, 0.4)' : '0 0 20px rgba(255,255,255,0.1)',
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            fontWeight: 'bold',
+            margin: 0
+          }}>
+            {countdown === 0 ? "START!" : countdown}
+          </h1>
+        </div>
+      )}
+
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '32px', border: '1px solid #1f1f2e', background: '#13131a', padding: '32px', borderRadius: '12px' }}>
+        
+        {/* Header */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#38bdf8', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>
+            <Palette size={24} /> Design Duel Lobby
+          </div>
+          {duelDetails && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#71717a' }}>
+              <span className="badge" style={{
+                color: '#38bdf8',
+                borderColor: 'rgba(56, 189, 248, 0.2)',
+                background: 'rgba(56, 189, 248, 0.02)',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid'
+              }}>
+                UI/UX Game
+              </span>
+              <span>•</span>
+              <span style={{ textTransform: 'capitalize' }}>Difficulty: Medium</span>
+              <span>•</span>
+              <span style={{ color: '#eab308', fontWeight: 'bold' }}>{duelDetails.betAmount} Tokens Bet</span>
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div style={{
+            background: 'rgba(255, 68, 68, 0.1)',
+            border: '1px solid rgba(255, 68, 68, 0.3)',
+            borderRadius: '8px',
+            padding: '12px',
+            color: '#ef4444',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            textAlign: 'center'
+          }}>
+            {error}
+            <div style={{ marginTop: '8px' }}>
+              <Link href="/" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>Back Home</Link>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '16px', margin: '12px 0' }}>
+          
+          {/* Host Player */}
+          <div style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid #1f1f2e',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '24px 16px',
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: '#38bdf8',
+              color: '#000',
+              fontWeight: 'bold',
+              fontSize: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              {host.user.username[0].toUpperCase()}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#fff' }}>@{host.user.username}</div>
+              <div style={{ fontSize: '11px', color: '#71717a', marginTop: '2px' }}>Host • {host.user.rank}</div>
+            </div>
+          </div>
+
+          {/* VS Divider */}
+          <div style={{
+            fontFamily: 'Space Grotesk, sans-serif',
+            fontWeight: 'bold',
+            color: '#71717a',
+            fontSize: '20px',
+            background: 'rgba(255,255,255,0.04)',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #1f1f2e'
+          }}>VS</div>
+
+          {/* Opponent Player */}
+          <div style={{
+            background: opponent ? 'rgba(255,255,255,0.02)' : 'rgba(255, 255, 255, 0.01)',
+            border: opponent ? '1px solid #1f1f2e' : '1px dashed rgba(255,255,255,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '24px 16px',
+            borderRadius: '8px'
+          }}>
+            {opponent ? (
+              <>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: '#8b5cf6',
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  fontSize: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {opponent.user.username[0].toUpperCase()}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#fff' }}>@{opponent.user.username}</div>
+                  <div style={{ fontSize: '11px', color: '#71717a', marginTop: '2px' }}>Opponent • {opponent.user.rank}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  border: '1px dashed rgba(255,255,255,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Users size={20} color="#71717a" style={{ opacity: 0.5 }} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#71717a' }}>Waiting for rival...</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginTop: '2px' }}>Invite friend to start</div>
+                </div>
+              </>
+            )}
+          </div>
+
+        </div>
+
+        {/* Invite Link copy */}
+        {!opponent && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#71717a' }}>INVITE LINK</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                readOnly
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/change-design/lobby/${duelId}`}
+                style={{
+                  flex: 1,
+                  background: '#141419',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  color: '#71717a',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  fontSize: '13px'
+                }}
+                onClick={handleCopyLink}
+              />
+              <button
+                onClick={handleCopyLink}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  background: copied ? '#10b981' : '#38bdf8',
+                  color: copied ? 'white' : 'black',
+                  transition: 'background 0.2s'
+                }}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p style={{ fontSize: '11px', color: '#71717a', textAlign: 'center', margin: 0 }}>
+              Send this link to a teammate. Once they click it, they will join this lobby room.
+            </p>
+          </div>
+        )}
+
+        {/* Back Link */}
+        {!opponent && (
+          <Link href="/" style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: '#71717a',
+            textDecoration: 'none',
+            fontSize: '14px',
+            alignSelf: 'center',
+            marginTop: '8px'
+          }}>
+            <ArrowLeft size={16} /> Leave Lobby
+          </Link>
+        )}
+
+      </div>
+    </div>
+  );
+}

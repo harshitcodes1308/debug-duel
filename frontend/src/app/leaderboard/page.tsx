@@ -12,6 +12,7 @@ interface LeaderboardEntry {
   eloJS: number;
   eloPython: number;
   eloJava: number;
+  eloUIUX: number;
   tokens: number;
   rank: string;
   totalWins: number;
@@ -33,7 +34,7 @@ interface SeasonalLeaderboardEntry {
 export default function LeaderboardPage() {
   const { user } = useStore();
   const [leaderboardType, setLeaderboardType] = useState<'classic' | 'seasonal'>('classic');
-  const [language, setLanguage] = useState<'javascript' | 'python' | 'java'>('javascript');
+  const [language, setLanguage] = useState<'javascript' | 'python' | 'java' | 'uiux'>('javascript');
   
   // Data lists
   const [list, setList] = useState<LeaderboardEntry[]>([]);
@@ -167,7 +168,7 @@ export default function LeaderboardPage() {
           background: 'var(--bg-secondary)',
           padding: '4px',
           borderRadius: '8px',
-          maxWidth: '360px',
+          maxWidth: '480px',
           border: '1px solid var(--border)'
         }}>
           <button 
@@ -190,6 +191,13 @@ export default function LeaderboardPage() {
             style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
           >
             Java
+          </button>
+          <button 
+            onClick={() => setLanguage('uiux')} 
+            className={`btn ${language === 'uiux' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+          >
+            UI/UX
           </button>
         </div>
       ) : (
@@ -266,7 +274,7 @@ export default function LeaderboardPage() {
               <tbody>
                 {activeList.map((entry: any, index) => {
                   const elo = leaderboardType === 'classic' 
-                    ? (language === 'javascript' ? entry.eloJS : language === 'python' ? entry.eloPython : entry.eloJava)
+                    ? (language === 'javascript' ? entry.eloJS : language === 'python' ? entry.eloPython : language === 'java' ? entry.eloJava : entry.eloUIUX)
                     : entry.rp;
                   
                   const isCurrentUser = entry.username === user.username;

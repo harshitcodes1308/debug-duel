@@ -123,6 +123,11 @@ async function createRankedMatch(gameType, language, p1, p2) {
   } else if (gameType === 'kbc') {
     duelData.language = 'general_tech'; // Default category
     duelData.difficulty = 'mixed';
+  } else if (gameType === 'change_design') {
+    const { designChallenges } = require('./designChallenges');
+    const randomChallenge = designChallenges[Math.floor(Math.random() * designChallenges.length)];
+    duelData.designChallengeId = randomChallenge.id;
+    duelData.difficulty = randomChallenge.difficulty.toLowerCase();
   }
 
   // Create Duel and Participants in a transaction

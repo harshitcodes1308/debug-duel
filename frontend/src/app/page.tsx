@@ -619,15 +619,37 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Change That Design Card */}
+                <div className="glass-panel card-shine glow-primary theme-change-design interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <Palette size={24} color="#38bdf8" />
+                      <span className="badge" style={{ borderColor: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
+                    </div>
+                    <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>Change That Design</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                      Interactive UI/UX design battle. Tweak style properties of a poorly designed component on a live resizable canvas, satisfy accessibility requirements, and submit for AI judging!
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                    <Link href="/change-design/solo" className="btn btn-secondary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', fontSize: '13px' }}>
+                      Practice Solo
+                    </Link>
+                    <Link href="/change-design/create" className="btn" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', fontSize: '13px', background: '#38bdf8', color: '#000', borderColor: 'rgba(56, 189, 248, 0.4)', gap: '6px' }}>
+                      <Play size={14} fill="currentColor" /> Battle Friends
+                    </Link>
+                  </div>
+                </div>
+
                 {/* Info Box */}
                 <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', minHeight: '230px', padding: '24px' }}>
                   <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>UI/UX Arena Status</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                      Your current ColorMatch ELO: <strong style={{ color: 'var(--accent-purple)', fontSize: '16px', fontFamily: 'Space Grotesk, sans-serif' }}>{user.eloUIUX || 1000}</strong>
+                      Your ELO Rating: <strong style={{ color: 'var(--accent-purple)', fontSize: '16px', fontFamily: 'Space Grotesk, sans-serif' }}>{user.eloUIUX || 1000}</strong>
                     </p>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-                      Train your visual memory and RGB composition speed. Match with others to climb the Zero-Day God ranks in styling!
+                      Train your visual aesthetics, relative spacing, and accessibility requirements. Climb the ELO rankings in the styling arena!
                     </p>
                   </div>
                 </div>

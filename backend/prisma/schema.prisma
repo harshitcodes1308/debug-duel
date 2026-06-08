@@ -66,9 +66,10 @@ model Bug {
 
 model Duel {
   id           String   @id @default(cuid())
-  gameType     String   @default("debug") // "debug" | "color_match"
+  gameType     String   @default("debug") // "debug" | "color_match" | "change_design"
   bugId        String?
   bug          Bug?     @relation(fields: [bugId], references: [id])
+  designChallengeId String?
   status       String   @default("waiting") // "waiting" | "active" | "completed"
   betAmount    Int      @default(50)
   winnerId     String?
@@ -95,6 +96,8 @@ model DuelParticipant {
   explanation     String?
   submittedColor  String?  // for color matching game e.g., "rgb(120, 85, 195)"
   colorScore      Int?     // score out of 1000
+  submittedDesign String?  // for Change That Design mode (JSON string representing modified node tree)
+  designScore     Int?     // score out of 100
   submitTime      Int?     // seconds from duel start
   explanationScore Int?    // 0-20, AI judged
   isWinner        Boolean  @default(false)

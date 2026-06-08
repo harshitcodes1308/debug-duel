@@ -1151,13 +1151,17 @@ app.get('/api/profile/:username', async (req, res) => {
     const colorMatchCount = await prisma.duelParticipant.count({
       where: { userId: user.id, duel: { gameType: 'color_match' } }
     });
+    const changeDesignCount = await prisma.duelParticipant.count({
+      where: { userId: user.id, duel: { gameType: 'change_design' } }
+    });
     const kbcCount = kbcRuns.length;
 
     let mostPlayedGame = "None";
-    const maxCount = Math.max(debugDuelsCount, colorMatchCount, kbcCount);
+    const maxCount = Math.max(debugDuelsCount, colorMatchCount, changeDesignCount, kbcCount);
     if (maxCount > 0) {
       if (maxCount === debugDuelsCount) mostPlayedGame = "Debug Duel";
       else if (maxCount === colorMatchCount) mostPlayedGame = "Color Match";
+      else if (maxCount === changeDesignCount) mostPlayedGame = "Change That Design";
       else mostPlayedGame = "Code KBC";
     }
 
@@ -1956,6 +1960,303 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Submit Change That Design layout
+  socket.on('submit_design', async ({ duelId, userId, submittedDesign }) => {
+    try {
+      const duel = await prisma.duel.findUnique({
+        where: { id: duelId },
+        include: {
+          participants: { include: { user: true } }
+        }
+      });
+
+      if (!duel || duel.status !== 'active') {
+        socket.emit('design_submitted', { success: false, reason: "Duel is not active." });
+        return;
+      }
+
+      const { designChallenges } = require('./services/designChallenges');
+      const challenge = designChallenges.find(c => c.id === duel.designChallengeId);
+      if (!challenge) {
+        socket.emit('design_submitted', { success: false, reason: "Design challenge template not found." });
+        return;
+      }
+
+      // Grade the design
+      const { gradeDesign } = require('./services/designJudge');
+      const submittedDesignJsonStr = typeof submittedDesign === 'string' ? submittedDesign : JSON.stringify(submittedDesign);
+      const gradeResult = await gradeDesign(challenge, submittedDesignJsonStr);
+      const score = gradeResult.score;
+
+      const submitTime = Math.round((Date.now() - new Date(duel.startedAt).getTime()) / 1000);
+
+      let eloChanges = {};
+      let tokenChanges = {};
+      let rpChanges = {};
+      let newRanks = {};
+      let winnerId = null;
+      let loserId = null;
+      let isDraw = false;
+      let triggerResultBroadcast = false;
+
+      await prisma.$transaction(async (tx) => {
+        // Row-level lock to prevent concurrency race conditions
+        const duels = await tx.$queryRaw`SELECT status, "startedAt", "betAmount", "designChallengeId", "isRanked", "seasonId" FROM "Duel" WHERE id = ${duelId} FOR UPDATE`;
+        const dbDuel = duels[0];
+        if (!dbDuel || dbDuel.status !== 'active') {
+          throw new Error("ALREADY_COMPLETED");
+        }
+
+        // Lock participants
+        await tx.$queryRaw`SELECT id FROM "DuelParticipant" WHERE "duelId" = ${duelId} FOR UPDATE`;
+
+        // Save user submission
+        await tx.duelParticipant.updateMany({
+          where: { duelId, userId },
+          data: {
+            submittedDesign: submittedDesignJsonStr,
+            designScore: score,
+            submitTime
+          }
+        });
+
+        // Refetch participants inside locked transaction scope
+        const dbParticipants = await tx.duelParticipant.findMany({
+          where: { duelId },
+          include: { user: true }
+        });
+
+        const pCurrent = dbParticipants.find(p => p.userId === userId);
+        const pOpponent = dbParticipants.find(p => p.userId !== userId);
+
+        const allSubmitted = dbParticipants.every(p => p.submittedDesign !== null);
+        if (allSubmitted) {
+          triggerResultBroadcast = true;
+
+          // Stop FOMO if any
+          stopFomoEngine(duelId);
+
+          const p1 = dbParticipants[0];
+          const p2 = dbParticipants[1];
+
+          if (p1.designScore > p2.designScore) {
+            winnerId = p1.userId;
+            loserId = p2.userId;
+          } else if (p2.designScore > p1.designScore) {
+            winnerId = p2.userId;
+            loserId = p1.userId;
+          } else {
+            // Tiebreaker: faster submitTime
+            if (p1.submitTime < p2.submitTime) {
+              winnerId = p1.userId;
+              loserId = p2.userId;
+            } else if (p2.submitTime < p1.submitTime) {
+              winnerId = p2.userId;
+              loserId = p1.userId;
+            } else {
+              isDraw = true;
+            }
+          }
+
+          if (dbDuel.isRanked) {
+            // Resolve Ranked Match using ELO UIUX pools
+            const rankedRes = await resolveRankedMatch(dbDuel.seasonId, p1.userId, p2.userId, isDraw ? null : winnerId, isDraw, tx);
+            eloChanges = rankedRes.eloChanges;
+            rpChanges = rankedRes.rpChanges;
+            newRanks = rankedRes.newRanks;
+
+            tokenChanges[p1.userId] = 0;
+            tokenChanges[p2.userId] = 0;
+
+            if (!isDraw && winnerId && loserId) {
+              await tx.duelParticipant.updateMany({
+                where: { duelId, userId: winnerId },
+                data: { isWinner: true }
+              });
+              await tx.duelParticipant.updateMany({
+                where: { duelId, userId: loserId },
+                data: { isWinner: false }
+              });
+            }
+
+            await tx.duel.update({
+              where: { id: duelId },
+              data: {
+                status: "completed",
+                winnerId: isDraw ? null : winnerId,
+                endedAt: new Date()
+              }
+            });
+          } else {
+            // Standard Match Resolution
+            if (!isDraw && winnerId && loserId) {
+              const [winnerUser, loserUser] = await Promise.all([
+                tx.user.findUnique({ where: { id: winnerId } }),
+                tx.user.findUnique({ where: { id: loserId } })
+              ]);
+
+              if (winnerUser && loserUser) {
+                const ratingW = winnerUser.eloUIUX || 1000;
+                const ratingL = loserUser.eloUIUX || 1000;
+
+                const changeW = calculateElo(ratingW, ratingL, 1);
+                const changeL = calculateElo(ratingL, ratingW, 0);
+
+                eloChanges[winnerId] = changeW;
+                eloChanges[loserId] = changeL;
+
+                const bet = dbDuel.betAmount;
+                const streakBonus = winnerUser.currentStreak >= 2 ? 15 : 0;
+                const closenessBonus = Math.round(p1.userId === winnerId ? p1.designScore / 5 : p2.designScore / 5);
+                const totalBonus = 50 + bet + streakBonus + closenessBonus;
+
+                tokenChanges[winnerId] = totalBonus;
+                tokenChanges[loserId] = -bet;
+
+                const wXp = (winnerUser.xp || 0) + 50;
+                const wLevel = Math.floor(Math.sqrt(wXp / 100)) + 1;
+
+                const lXp = (loserUser.xp || 0) + 15;
+                const lLevel = Math.floor(Math.sqrt(lXp / 100)) + 1;
+
+                const newStreak = winnerUser.currentStreak + 1;
+                const bestStreak = Math.max(winnerUser.bestStreak, newStreak);
+
+                await Promise.all([
+                  tx.user.update({
+                    where: { id: winnerId },
+                    data: {
+                      eloUIUX: { increment: changeW },
+                      tokens: { increment: totalBonus },
+                      totalWins: { increment: 1 },
+                      totalDuels: { increment: 1 },
+                      currentStreak: newStreak,
+                      bestStreak,
+                      xp: wXp,
+                      level: wLevel,
+                      rank: getRankTier(winnerUser.eloUIUX + changeW)
+                    }
+                  }),
+                  tx.user.update({
+                    where: { id: loserId },
+                    data: {
+                      eloUIUX: { increment: changeL },
+                      tokens: { decrement: bet },
+                      totalDuels: { increment: 1 },
+                      currentStreak: 0,
+                      xp: lXp,
+                      level: lLevel,
+                      rank: getRankTier(loserUser.eloUIUX + changeL)
+                    }
+                  })
+                ]);
+              }
+
+              // Update participant isWinner
+              await tx.duelParticipant.updateMany({
+                where: { duelId, userId: winnerId },
+                data: { isWinner: true }
+              });
+
+              await tx.duelParticipant.updateMany({
+                where: { duelId, userId: loserId },
+                data: { isWinner: false }
+              });
+
+              // Update duel status
+              await tx.duel.update({
+                where: { id: duelId },
+                data: {
+                  status: "completed",
+                  winnerId,
+                  endedAt: new Date()
+                }
+              });
+            } else {
+              // Draw
+              tokenChanges[p1.userId] = 0;
+              tokenChanges[p2.userId] = 0;
+              eloChanges[p1.userId] = 0;
+              eloChanges[p2.userId] = 0;
+
+              await tx.duel.update({
+                where: { id: duelId },
+                data: {
+                  status: "completed",
+                  endedAt: new Date()
+                }
+              });
+            }
+          }
+        }
+      }, { timeout: 25000 }); // Account for AI grading latency
+
+      // Notify user that design is submitted
+      socket.emit('design_submitted', { success: true, score, gradeResult });
+
+      // Notify opponent
+      socket.to(`duel:${duelId}`).emit('opponent_submitted', { message: "Your opponent has submitted their design!" });
+
+      // Broadcast results if completed
+      if (triggerResultBroadcast) {
+        // Refetch participants with submittedDesign to send results
+        const finalParticipants = await prisma.duelParticipant.findMany({
+          where: { duelId },
+          include: { user: true }
+        });
+
+        io.to(`duel:${duelId}`).emit('duel_result', {
+          winnerId,
+          isDraw,
+          eloChanges,
+          tokenChanges,
+          isRanked: duel.isRanked,
+          rpChanges,
+          newRanks,
+          participants: finalParticipants.map(p => ({
+            userId: p.userId,
+            username: p.user.username,
+            score: p.designScore,
+            submittedDesign: p.submittedDesign,
+            isWinner: p.isWinner
+          }))
+        });
+
+        // Audit achievements and quests outside transaction scope
+        if (winnerId && loserId && !isDraw) {
+          checkAchievements(winnerId, null, io).catch(console.error);
+          updateQuestProgress(winnerId, "play_duel", 1, null, io).catch(console.error);
+          updateQuestProgress(winnerId, "win_duel", 1, null, io).catch(console.error);
+          if (!duel.isRanked) {
+            updateQuestProgress(winnerId, "gain_xp", 50, null, io).catch(console.error);
+            if (tokenChanges[winnerId]) {
+              updateQuestProgress(winnerId, "earn_tokens", tokenChanges[winnerId], null, io).catch(console.error);
+            }
+          }
+
+          checkAchievements(loserId, null, io).catch(console.error);
+          updateQuestProgress(loserId, "play_duel", 1, null, io).catch(console.error);
+          if (!duel.isRanked) {
+            updateQuestProgress(loserId, "gain_xp", 15, null, io).catch(console.error);
+          }
+        } else {
+          const p1 = duel.participants[0];
+          const p2 = duel.participants[1];
+          if (p1) updateQuestProgress(p1.userId, "play_duel", 1, null, io).catch(console.error);
+          if (p2) updateQuestProgress(p2.userId, "play_duel", 1, null, io).catch(console.error);
+        }
+      }
+
+    } catch (e) {
+      if (e.message === "ALREADY_COMPLETED") {
+        console.log(`Design duel ${duelId} was already resolved.`);
+      } else {
+        console.error(e);
+        socket.emit('design_submitted', { success: false, reason: "Server processing error." });
+      }
+    }
+  });
+
   // Submit explanation (Final Win Trigger)
   socket.on('submit_explanation', async ({ duelId, userId, explanation }) => {
     try {
@@ -2248,7 +2549,7 @@ io.on('connection', (socket) => {
             winnerId ? tx.user.findUnique({ where: { id: winnerId } }) : null
           ]);
 
-          const languageKey = dbDuel.gameType === 'color_match' ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
+          const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
 
           if (loserUser) {
             const ratingL = loserUser[languageKey] || 1000;
@@ -2442,9 +2743,13 @@ setupKbcSocket(io);
 // ==================== SEASONAL RANKED MODULES ====================
 const seasonRouter = require('./routes/season');
 const setupRankedSocket = require('./socket/ranked');
+const designChallengeRouter = require('./routes/designChallenges');
 
 // Register Season REST API routes
 app.use('/api/season', seasonRouter);
+
+// Register Design Challenge REST API routes
+app.use('/api/design-challenge', designChallengeRouter);
 
 // Register Ranked Queue Socket.io event handlers
 setupRankedSocket(io);

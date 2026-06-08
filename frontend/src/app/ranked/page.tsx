@@ -17,7 +17,7 @@ export default function RankedHub() {
   const [loadingSeason, setLoadingSeason] = useState(true);
 
   // Queue state
-  const [selectedGame, setSelectedGame] = useState<'debug' | 'color_match' | 'kbc'>('debug');
+  const [selectedGame, setSelectedGame] = useState<'debug' | 'color_match' | 'kbc' | 'change_design'>('debug');
   const [selectedLang, setSelectedLang] = useState<'javascript' | 'python' | 'java'>('javascript');
   const [queueStatus, setQueueStatus] = useState<'idle' | 'searching' | 'match_found' | 'accepted'>('idle');
   const [queueSeconds, setQueueSeconds] = useState(0);
@@ -203,6 +203,8 @@ export default function RankedHub() {
           window.location.href = `/kbc/multiplayer/lobby/${payload.roomCode}`;
         } else if (payload.gameType === 'color_match') {
           window.location.href = `/color-match/duel/${payload.duelId}`;
+        } else if (payload.gameType === 'change_design') {
+          window.location.href = `/change-design/duel/${payload.duelId}`;
         } else {
           // Debug Duel
           window.location.href = `/duel/lobby/${payload.duelId}`;
@@ -384,6 +386,27 @@ export default function RankedHub() {
                     </div>
                     <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '18px' }}>
                       Fast-paced technical trivia faceoff.
+                    </p>
+                  </div>
+
+                  {/* Change That Design Ranked option */}
+                  <div 
+                    onClick={() => setSelectedGame('change_design')}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      background: selectedGame === 'change_design' ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255, 255, 255, 0.01)',
+                      border: `1.5px solid ${selectedGame === 'change_design' ? '#38bdf8' : 'var(--border)'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <h4 style={{ margin: 0, fontWeight: 'bold', color: '#fff' }}>Change That Design Ranked</h4>
+                      <Shield size={16} color="#38bdf8" />
+                    </div>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '18px' }}>
+                      Refine layout aesthetics and accessibility settings.
                     </p>
                   </div>
 
