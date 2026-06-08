@@ -189,19 +189,21 @@ async function runTest() {
     gameSocketA.on('opponent_submitted', (msg) => console.log('[Socket A Opponent Submitted]', msg));
     gameSocketA.on('lobby_update', (data) => console.log('[Socket A Lobby Update] Status:', data.status));
     gameSocketA.on('countdown_started', (data) => console.log('[Socket A Countdown Started] Duration:', data.duration));
-    gameSocketA.on('duel_started', (data) => console.log('[Socket A Duel Started] targetColor:', data.targetColor));
+    
+    gameSocketA.on('duel_started', (data) => {
+      console.log('[Socket A Duel Started] targetColor:', data.targetColor);
+      console.log("[Game Socket A] Game active. Submitting color guess in 1s...");
+      setTimeout(() => {
+        console.log("[Game Socket A] Submitting color guess...");
+        gameSocketA.emit('submit_color_guess', {
+          duelId,
+          userId: PLAYER_A.id,
+          r: 100, g: 100, b: 100
+        });
+      }, 1000);
+    });
 
     gameSocketA.emit('join_duel', { duelId, userId: PLAYER_A.id });
-    
-    // Simulate player A submitting a guess (after countdown is active)
-    setTimeout(() => {
-      console.log("[Game Socket A] Submitting color guess...");
-      gameSocketA.emit('submit_color_guess', {
-        duelId,
-        userId: PLAYER_A.id,
-        r: 100, g: 100, b: 100
-      });
-    }, 5000);
   });
 
   gameSocketB.on('connect', () => {
@@ -213,19 +215,21 @@ async function runTest() {
     gameSocketB.on('opponent_submitted', (msg) => console.log('[Socket B Opponent Submitted]', msg));
     gameSocketB.on('lobby_update', (data) => console.log('[Socket B Lobby Update] Status:', data.status));
     gameSocketB.on('countdown_started', (data) => console.log('[Socket B Countdown Started] Duration:', data.duration));
-    gameSocketB.on('duel_started', (data) => console.log('[Socket B Duel Started] targetColor:', data.targetColor));
+    
+    gameSocketB.on('duel_started', (data) => {
+      console.log('[Socket B Duel Started] targetColor:', data.targetColor);
+      console.log("[Game Socket B] Game active. Submitting color guess in 1.5s...");
+      setTimeout(() => {
+        console.log("[Game Socket B] Submitting color guess...");
+        gameSocketB.emit('submit_color_guess', {
+          duelId,
+          userId: PLAYER_B.id,
+          r: 200, g: 200, b: 200
+        });
+      }, 1500);
+    });
 
     gameSocketB.emit('join_duel', { duelId, userId: PLAYER_B.id });
-
-    // Simulate player B submitting a guess (after countdown is active)
-    setTimeout(() => {
-      console.log("[Game Socket B] Submitting color guess...");
-      gameSocketB.emit('submit_color_guess', {
-        duelId,
-        userId: PLAYER_B.id,
-        r: 200, g: 200, b: 200
-      });
-    }, 5500);
   });
 
   const duelOutcome = await resultPromise;

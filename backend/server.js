@@ -1901,7 +1901,7 @@ io.on('connection', (socket) => {
             }
           }
         }
-      });
+      }, { timeout: 15000 });
 
       // Notify user that guess is submitted
       socket.emit('color_guess_submitted', { success: true, score, submittedColor });

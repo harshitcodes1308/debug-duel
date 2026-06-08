@@ -377,7 +377,7 @@ async function endGame(roomCode, io) {
           }
         }
       }
-    });
+    }, { timeout: 15000 });
   } catch (dbErr) {
     if (dbErr.message === "ALREADY_COMPLETED") {
       console.log(`KBC match ${room.duelId} was already resolved.`);
