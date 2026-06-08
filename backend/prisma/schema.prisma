@@ -33,6 +33,7 @@ model User {
   duels         DuelParticipant[]
   kbcSoloRuns   KbcSoloRun[]
   achievements  UserAchievement[]
+  quests        UserQuest[]
   
   friendKey     String   @unique @default(cuid())
   friends       Friendship[] @relation("UserFriends")
@@ -129,4 +130,32 @@ model UserAchievement {
   achievement   Achievement @relation(fields: [achievementId], references: [id])
 
   @@unique([userId, achievementId])
+}
+
+model Quest {
+  id            String      @id
+  title         String
+  description   String
+  type          String      // e.g. "win_duel", "play_duel", "play_kbc", "win_kbc", "earn_tokens", "claim_daily_reward", "gain_xp", "add_friend"
+  target        Int
+  rewardXP      Int
+  rewardTokens  Int
+  category      String      // "DAILY" | "WEEKLY"
+  userQuests    UserQuest[]
+}
+
+model UserQuest {
+  id            String    @id @default(cuid())
+  userId        String
+  questId       String
+  progress      Int       @default(0)
+  completed     Boolean   @default(false)
+  claimed       Boolean   @default(false)
+  completedAt   DateTime?
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id])
+  quest         Quest     @relation(fields: [questId], references: [id])
+
+  @@unique([userId, questId, expiresAt])
 }

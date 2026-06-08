@@ -4,6 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { awardXP } = require('../../utils/xp');
 const { checkAchievements } = require('../../services/achievements');
+const { updateQuestProgress } = require('../../services/quests');
 
 // Helper to serialize room state safely
 function serializeRoom(room) {
@@ -287,12 +288,18 @@ async function endGame(roomCode, io) {
           }
         }
 
-        // Audit achievements
+        // Audit achievements and quests
         if (winnerId) {
           await checkAchievements(winnerId, tx, io);
+          await updateQuestProgress(winnerId, "play_duel", 1, tx, io);
+          await updateQuestProgress(winnerId, "win_duel", 1, tx, io);
+          await updateQuestProgress(winnerId, "gain_xp", 50, tx, io);
+          await updateQuestProgress(winnerId, "earn_tokens", wager, tx, io);
         }
         if (loserId) {
           await checkAchievements(loserId, tx, io);
+          await updateQuestProgress(loserId, "play_duel", 1, tx, io);
+          await updateQuestProgress(loserId, "gain_xp", 15, tx, io);
         }
 
         // Update Duel record

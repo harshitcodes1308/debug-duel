@@ -6,6 +6,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { awardXP } = require('../../utils/xp');
 const { checkAchievements } = require('../../services/achievements');
+const { updateQuestProgress } = require('../../services/quests');
 
 // Helper to generate a 6-character room code
 function generateRoomCode() {
@@ -226,9 +227,17 @@ router.post('/solo/end', async (req, res) => {
         }
       });
 
-      // Audit achievements
+      // Audit achievements and quests
       const io = req.app.get('io');
       await checkAchievements(userId, tx, io);
+      await updateQuestProgress(userId, "play_kbc", 1, tx, io);
+      if (status === 'win' || cleared === 15 || questionsAnswered === 15) {
+        await updateQuestProgress(userId, "win_kbc", 1, tx, io);
+      }
+      if (prizeEarned > 0) {
+        await updateQuestProgress(userId, "earn_tokens", prizeEarned, tx, io);
+      }
+      await updateQuestProgress(userId, "gain_xp", xpAward, tx, io);
 
       // Fetch final user record to ensure accurate return values
       const finalUser = await tx.user.findUnique({

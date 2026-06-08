@@ -43,6 +43,7 @@ console.log("========================================================");
 const prisma = new PrismaClient();
 const { awardXP } = require('./utils/xp');
 const { seedAchievements, checkAchievements } = require('./services/achievements');
+const { seedQuests, ensureActiveQuests, updateQuestProgress } = require('./services/quests');
 const app = express();
 const server = http.createServer(app);
 
@@ -830,6 +831,8 @@ app.post('/api/friends/add', async (req, res) => {
     const io = req.app.get('io');
     await checkAchievements(userId, null, io);
     await checkAchievements(friend.id, null, io);
+    updateQuestProgress(userId, "add_friend", 1, null, io).catch(console.error);
+    updateQuestProgress(friend.id, "add_friend", 1, null, io).catch(console.error);
 
     res.json({ success: true, friend: { id: friend.id, username: friend.username } });
   } catch (error) {
@@ -932,6 +935,8 @@ app.post('/api/user/dailylogin', async (req, res) => {
 
     const io = req.app.get('io');
     checkAchievements(userId, null, io).catch(console.error);
+    updateQuestProgress(userId, "claim_daily_reward", 1, null, io).catch(console.error);
+    updateQuestProgress(userId, "earn_tokens", result.added, null, io).catch(console.error);
 
     res.json({ success: true, tokens: result.tokens, streak: result.streak, added: result.added, xp: result.xp, level: result.level });
   } catch (error) {
@@ -942,6 +947,97 @@ app.post('/api/user/dailylogin', async (req, res) => {
     } else {
       console.error("Daily login error:", error);
       res.status(500).json({ error: "Daily login action failed" });
+    }
+  }
+});
+
+// Get active daily and weekly quests for a user
+app.get('/api/quests', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const activeQuests = await ensureActiveQuests(userId);
+    res.json(activeQuests);
+  } catch (error) {
+    console.error("Error fetching quests:", error);
+    res.status(500).json({ error: "Failed to fetch quests" });
+  }
+});
+
+// Claim quest reward
+app.post('/api/quests/claim/:id', async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+  
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const userQuest = await tx.userQuest.findUnique({
+        where: { id },
+        include: { quest: true }
+      });
+
+      if (!userQuest) throw new Error("QUEST_NOT_FOUND");
+      if (userQuest.userId !== userId) throw new Error("UNAUTHORIZED");
+      if (!userQuest.completed) throw new Error("NOT_COMPLETED");
+      if (userQuest.claimed) throw new Error("ALREADY_CLAIMED");
+
+      // Mark claimed
+      const updatedUserQuest = await tx.userQuest.update({
+        where: { id },
+        data: { claimed: true }
+      });
+
+      // Award XP
+      await awardXP(userId, userQuest.quest.rewardXP, tx);
+
+      // Award Tokens
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          tokens: { increment: userQuest.quest.rewardTokens }
+        }
+      });
+
+      // Fetch final user record to get updated tokens
+      const finalUser = await tx.user.findUnique({
+        where: { id: userId }
+      });
+
+      return {
+        userQuest: updatedUserQuest,
+        xp: finalUser.xp,
+        level: finalUser.level,
+        tokens: finalUser.tokens
+      };
+    });
+
+    const io = req.app.get('io');
+    // Audit achievements after claiming quest reward
+    checkAchievements(userId, null, io).catch(console.error);
+    updateQuestProgress(userId, "earn_tokens", userQuest.quest.rewardTokens, null, io).catch(console.error);
+
+    res.json({
+      success: true,
+      userQuest: result.userQuest,
+      xp: result.xp,
+      level: result.level,
+      tokens: result.tokens
+    });
+  } catch (error) {
+    if (error.message === "QUEST_NOT_FOUND") {
+      res.status(404).json({ error: "Quest assignment not found" });
+    } else if (error.message === "UNAUTHORIZED") {
+      res.status(403).json({ error: "Unauthorized to claim this quest" });
+    } else if (error.message === "NOT_COMPLETED") {
+      res.status(400).json({ error: "Quest is not completed yet" });
+    } else if (error.message === "ALREADY_CLAIMED") {
+      res.status(400).json({ error: "Quest reward already claimed" });
+    } else {
+      console.error("Error claiming quest reward:", error);
+      res.status(500).json({ error: "Failed to claim quest reward" });
     }
   }
 });
@@ -976,7 +1072,36 @@ app.get('/api/profile/:username', async (req, res) => {
     });
 
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
+
+    const dailyQuestsCompleted = await prisma.userQuest.count({
+      where: {
+        userId: user.id,
+        completed: true,
+        quest: { category: "DAILY" }
+      }
+    });
+
+    const weeklyQuestsCompleted = await prisma.userQuest.count({
+      where: {
+        userId: user.id,
+        completed: true,
+        quest: { category: "WEEKLY" }
+      }
+    });
+
+    const lifetimeQuestsCompleted = await prisma.userQuest.count({
+      where: {
+        userId: user.id,
+        completed: true
+      }
+    });
+
+    res.json({
+      ...user,
+      dailyQuestsCompleted,
+      weeklyQuestsCompleted,
+      lifetimeQuestsCompleted
+    });
   } catch (error) {
     res.status(500).json({ error: "Fetch failed" });
   }
@@ -1633,12 +1758,24 @@ io.on('connection', (socket) => {
           tokenChanges
         });
 
-        // Audit achievements outside transaction scope
-        if (winnerId) {
+        // Audit achievements and quests outside transaction scope
+        if (winnerId && loserId && !isDraw) {
           checkAchievements(winnerId, null, io).catch(console.error);
-        }
-        if (loserId) {
+          updateQuestProgress(winnerId, "play_duel", 1, null, io).catch(console.error);
+          updateQuestProgress(winnerId, "win_duel", 1, null, io).catch(console.error);
+          updateQuestProgress(winnerId, "gain_xp", 50, null, io).catch(console.error);
+          if (tokenChanges[winnerId]) {
+            updateQuestProgress(winnerId, "earn_tokens", tokenChanges[winnerId], null, io).catch(console.error);
+          }
+
           checkAchievements(loserId, null, io).catch(console.error);
+          updateQuestProgress(loserId, "play_duel", 1, null, io).catch(console.error);
+          updateQuestProgress(loserId, "gain_xp", 15, null, io).catch(console.error);
+        } else {
+          const p1 = duel.participants[0];
+          const p2 = duel.participants[1];
+          if (p1) updateQuestProgress(p1.userId, "play_duel", 1, null, io).catch(console.error);
+          if (p2) updateQuestProgress(p2.userId, "play_duel", 1, null, io).catch(console.error);
         }
       }
 
@@ -1807,10 +1944,19 @@ io.on('connection', (socket) => {
         feedback: scoreResult.feedback
       });
 
-      // Audit achievements outside transaction scope
+      // Audit achievements and quests outside transaction scope
       checkAchievements(winnerId, null, io).catch(console.error);
+      updateQuestProgress(winnerId, "play_duel", 1, null, io).catch(console.error);
+      updateQuestProgress(winnerId, "win_duel", 1, null, io).catch(console.error);
+      updateQuestProgress(winnerId, "gain_xp", 50, null, io).catch(console.error);
+      if (tokenChanges[winnerId]) {
+        updateQuestProgress(winnerId, "earn_tokens", tokenChanges[winnerId], null, io).catch(console.error);
+      }
+
       if (loserId) {
         checkAchievements(loserId, null, io).catch(console.error);
+        updateQuestProgress(loserId, "play_duel", 1, null, io).catch(console.error);
+        updateQuestProgress(loserId, "gain_xp", 15, null, io).catch(console.error);
       }
 
     } catch (error) {
@@ -1947,11 +2093,19 @@ io.on('connection', (socket) => {
         tokenChanges
       });
 
-      // Audit achievements outside transaction scope
+      // Audit achievements and quests outside transaction scope
       if (winnerId) {
         checkAchievements(winnerId, null, io).catch(console.error);
+        updateQuestProgress(winnerId, "play_duel", 1, null, io).catch(console.error);
+        updateQuestProgress(winnerId, "win_duel", 1, null, io).catch(console.error);
+        updateQuestProgress(winnerId, "gain_xp", 50, null, io).catch(console.error);
+        if (tokenChanges[winnerId]) {
+          updateQuestProgress(winnerId, "earn_tokens", tokenChanges[winnerId], null, io).catch(console.error);
+        }
       }
       checkAchievements(loserId, null, io).catch(console.error);
+      updateQuestProgress(loserId, "play_duel", 1, null, io).catch(console.error);
+      updateQuestProgress(loserId, "gain_xp", 15, null, io).catch(console.error);
 
     } catch (e) {
       if (e.message === "ALREADY_COMPLETED") {
@@ -2034,5 +2188,6 @@ setupKbcSocket(io);
 server.listen(PORT, () => {
   console.log(`DebugDuel Backend listening on port ${PORT}`);
   seedAchievements();
+  seedQuests();
 });
 

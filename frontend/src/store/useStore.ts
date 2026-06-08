@@ -19,6 +19,29 @@ export interface UserAchievement {
   achievement: Achievement;
 }
 
+export interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  target: number;
+  rewardXP: number;
+  rewardTokens: number;
+  category: 'DAILY' | 'WEEKLY';
+}
+
+export interface UserQuest {
+  id: string;
+  userId: string;
+  questId: string;
+  progress: number;
+  completed: boolean;
+  claimed: boolean;
+  completedAt?: string;
+  expiresAt: string;
+  quest: Quest;
+}
+
 export interface UserProfile {
   id: string;
   clerkId: string;
@@ -37,6 +60,9 @@ export interface UserProfile {
   level?: number;
   friendKey?: string;
   achievements?: UserAchievement[];
+  dailyQuestsCompleted?: number;
+  weeklyQuestsCompleted?: number;
+  lifetimeQuestsCompleted?: number;
 }
 
 export interface Bug {

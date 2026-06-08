@@ -61,6 +61,18 @@ const renderToastIcon = (iconName: string, size = 20) => {
   }
 };
 
+const getQuestIcon = (type: string) => {
+  switch (type) {
+    case 'play_duel': return 'Play';
+    case 'win_duel': return 'Trophy';
+    case 'play_kbc': return 'Award';
+    case 'claim_daily_reward': return 'Calendar';
+    case 'gain_xp': return 'Zap';
+    case 'add_friend': return 'Users';
+    default: return 'Award';
+  }
+};
+
 const getToastRarityStyles = (rarity: string) => {
   switch (rarity) {
     case 'Rare':
@@ -194,7 +206,12 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
     });
 
     socket.on('achievement_unlocked', (data) => {
-      addToast(data);
+      addToast({ ...data, toastType: 'achievement' });
+      playUnlockSound();
+    });
+
+    socket.on('quest_completed', (data) => {
+      addToast({ ...data.quest, toastType: 'quest' });
       playUnlockSound();
     });
 
@@ -347,7 +364,14 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
           }
         `}</style>
         {toasts.map((toast) => {
-          const styles = getToastRarityStyles(toast.rarity);
+          const isQuest = toast.toastType === 'quest';
+          const rarityForStyle = isQuest ? (toast.category === 'DAILY' ? 'Common' : 'Epic') : toast.rarity;
+          const styles = getToastRarityStyles(rarityForStyle);
+          const iconName = isQuest ? getQuestIcon(toast.type) : toast.icon;
+          const titleLabel = isQuest ? `${toast.category === 'DAILY' ? 'Daily' : 'Weekly'} Quest Completed` : 'Achievement Unlocked';
+          const xpReward = isQuest ? toast.rewardXP : toast.xpReward;
+          const tokenReward = isQuest ? toast.rewardTokens : toast.tokenReward;
+
           return (
             <div 
               key={toast.id}
@@ -378,7 +402,7 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
                 color: styles.color,
                 flexShrink: 0
               }}>
-                {renderToastIcon(toast.icon)}
+                {renderToastIcon(iconName)}
               </div>
 
               {/* Text info */}
@@ -391,7 +415,7 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
                     letterSpacing: '0.08em',
                     color: styles.color
                   }}>
-                    Achievement Unlocked
+                    {titleLabel}
                   </span>
                   <button 
                     onClick={() => removeToast(toast.id)}
@@ -417,10 +441,10 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
 
                 <div style={{ display: 'flex', gap: '12px', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>
-                    +{toast.xpReward} XP
+                    +{xpReward} XP
                   </span>
                   <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-amber)' }}>
-                    +{toast.tokenReward} Tokens
+                    +{tokenReward} Tokens
                   </span>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { awardXP } = require('../utils/xp');
+const { updateQuestProgress } = require('./quests');
 
 // Static Achievements definitions
 const STATIC_ACHIEVEMENTS = [
@@ -372,6 +373,8 @@ async function checkAchievements(userId, tx = null, io = null) {
 
         // 3. Payout rewards
         await awardXP(userId, ach.xpReward, tx);
+        await updateQuestProgress(userId, "gain_xp", ach.xpReward, tx, io);
+        await updateQuestProgress(userId, "earn_tokens", ach.tokenReward, tx, io);
         await client.user.update({
           where: { id: userId },
           data: {
