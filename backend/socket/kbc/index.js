@@ -484,7 +484,7 @@ function setupKbcSocket(io) {
       if (!room.guest) return; // Cannot start without a guest
 
       try {
-        room.questions = kbcService.generateQuestionSet(room.category);
+        room.questions = await kbcService.generateQuestionSet(room.category);
         room.status = 'active';
         room.host.totalTimeTaken = 0;
         room.guest.totalTimeTaken = 0;
@@ -538,7 +538,7 @@ function setupKbcSocket(io) {
     });
 
     // 5. Use Lifeline
-    socket.on('kbc_use_lifeline', ({ roomCode, lifelineType }) => {
+    socket.on('kbc_use_lifeline', async ({ roomCode, lifelineType }) => {
       const code = roomCode.toUpperCase();
       const room = kbcRooms.get(code);
 
@@ -594,7 +594,7 @@ function setupKbcSocket(io) {
       } else if (lifelineType === 'skip') {
         // Swap current question with a new one of same difficulty from kbcService
         try {
-          const matchingPool = kbcService.generateQuestionSet(room.category);
+          const matchingPool = await kbcService.generateQuestionSet(room.category);
           // Find replacement not already in the set
           const replacement = matchingPool.find(item => 
             item.difficulty === q.difficulty && 

@@ -32,6 +32,7 @@ model User {
   createdAt     DateTime @default(now())
   duels         DuelParticipant[]
   kbcSoloRuns   KbcSoloRun[]
+  dailyChallengeRuns DailyChallengeRun[]
   achievements  UserAchievement[]
   quests        UserQuest[]
   
@@ -104,9 +105,30 @@ model KbcSoloRun {
   questionsAnswered Int
   accuracy          Float
   fastestAnswerTime Int
+  averageAnswerTime Float    @default(0)
   lifelinesUsed     String
   prizeEarned       Int
   createdAt         DateTime @default(now())
+}
+
+model DailyChallenge {
+  id        String   @id @default(cuid())
+  date      String   @unique // "YYYY-MM-DD"
+  questions String   // JSON array of 15 questions
+  createdAt DateTime @default(now())
+}
+
+model DailyChallengeRun {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  date             String   // "YYYY-MM-DD"
+  questionsCleared Int
+  timeTaken        Float
+  prizeEarned      Int
+  createdAt        DateTime @default(now())
+
+  @@unique([userId, date])
 }
 
 model Achievement {

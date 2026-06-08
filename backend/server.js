@@ -1096,11 +1096,58 @@ app.get('/api/profile/:username', async (req, res) => {
       }
     });
 
+    // Calculate KBC statistics
+    const kbcRuns = await prisma.kbcSoloRun.findMany({
+      where: { userId: user.id }
+    });
+
+    let kbcStats = {
+      totalRuns: kbcRuns.length,
+      questionsAnswered: 0,
+      averageAccuracy: 0,
+      fastestAnswer: 0,
+      averageTime: 0,
+      maxPrize: 0,
+      bestRun: 0
+    };
+
+    if (kbcRuns.length > 0) {
+      let totalQuestionsAnswered = 0;
+      let totalAccuracy = 0;
+      let fastestTime = Infinity;
+      let totalAvgTime = 0;
+      let maxPrize = 0;
+      let bestRun = 0;
+
+      kbcRuns.forEach(run => {
+        totalQuestionsAnswered += run.questionsAnswered;
+        totalAccuracy += run.accuracy;
+        if (run.fastestAnswerTime > 0 && run.fastestAnswerTime < fastestTime) {
+          fastestTime = run.fastestAnswerTime;
+        }
+        totalAvgTime += run.averageAnswerTime;
+        if (run.prizeEarned > maxPrize) {
+          maxPrize = run.prizeEarned;
+        }
+        if (run.questionsAnswered > bestRun) {
+          bestRun = run.questionsAnswered;
+        }
+      });
+
+      kbcStats.questionsAnswered = totalQuestionsAnswered;
+      kbcStats.averageAccuracy = Math.round((totalAccuracy / kbcRuns.length) * 10) / 10;
+      kbcStats.fastestAnswer = fastestTime === Infinity ? 0 : fastestTime;
+      kbcStats.averageTime = Math.round((totalAvgTime / kbcRuns.length) * 10) / 10;
+      kbcStats.maxPrize = maxPrize;
+      kbcStats.bestRun = bestRun;
+    }
+
     res.json({
       ...user,
       dailyQuestsCompleted,
       weeklyQuestsCompleted,
-      lifetimeQuestsCompleted
+      lifetimeQuestsCompleted,
+      kbcStats
     });
   } catch (error) {
     res.status(500).json({ error: "Fetch failed" });

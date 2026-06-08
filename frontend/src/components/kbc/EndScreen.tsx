@@ -15,7 +15,7 @@ interface Question {
 }
 
 interface EndScreenProps {
-  status: 'win' | 'lost' | 'timeout';
+  status: 'win' | 'lost' | 'timeout' | 'quit';
   questionsCleared: number;
   failedQuestion: Question | null;
   userAnswerIndex: number | null;
@@ -41,6 +41,10 @@ export default function EndScreen({
   // Safety Milestone XP calculation
   const calculateFinalXp = (): number => {
     if (status === 'win') return 1000000;
+    if (status === 'quit') {
+      const xpValues = [0, 100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000];
+      return xpValues[Math.min(15, Math.max(0, questionsCleared))];
+    }
     if (questionsCleared >= 10) return 32000; // Level 10 Milestone
     if (questionsCleared >= 5) return 1000;   // Level 5 Milestone
     return 0;
@@ -50,7 +54,7 @@ export default function EndScreen({
   const optionLetters = ['A', 'B', 'C', 'D'];
 
   useEffect(() => {
-    if (status === 'win') {
+    if (status === 'win' || status === 'quit') {
       // Trigger fireworks confetti
       const duration = 5 * 1000;
       const animationEnd = Date.now() + duration;
@@ -94,8 +98,8 @@ export default function EndScreen({
           padding: '48px 40px',
           textAlign: 'center',
           background: 'rgba(20, 16, 45, 0.5)',
-          borderColor: status === 'win' ? 'var(--accent-amber)' : 'rgba(255,255,255,0.08)',
-          boxShadow: status === 'win' 
+          borderColor: (status === 'win' || status === 'quit') ? 'var(--accent-amber)' : 'rgba(255,255,255,0.08)',
+          boxShadow: (status === 'win' || status === 'quit') 
             ? '0 20px 50px rgba(245, 166, 35, 0.15), inset 0 0 30px rgba(245, 166, 35, 0.05)' 
             : '0 12px 40px rgba(0, 0, 0, 0.6)',
           display: 'flex',
@@ -105,7 +109,7 @@ export default function EndScreen({
         }}
       >
         {/* Banner Graphics */}
-        {status === 'win' ? (
+        {status === 'win' || status === 'quit' ? (
           <div>
             <div className="float-anim" style={{
               width: '96px',
@@ -132,13 +136,15 @@ export default function EndScreen({
               borderRadius: '99px',
               border: '1px solid rgba(245, 166, 35, 0.2)'
             }}>
-              Master Developer
+              {status === 'win' ? 'Master Developer' : 'Walked Away'}
             </span>
             <h1 style={{ fontSize: '38px', marginTop: '20px', color: '#FFF', fontFamily: 'Space Grotesk, sans-serif' }}>
-              Congratulations!
+              {status === 'win' ? 'Congratulations!' : 'Tactical Walkaway!'}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '15px', marginTop: '8px' }}>
-              You answered all 15 questions correctly and conquered the Code KBC ladder!
+              {status === 'win' 
+                ? 'You answered all 15 questions correctly and conquered the Code KBC ladder!' 
+                : `You walked away with your secured points at level ${questionsCleared}. Smart play!`}
             </p>
           </div>
         ) : (
@@ -210,7 +216,7 @@ export default function EndScreen({
         </div>
 
         {/* Failed Question Detail Panel */}
-        {status !== 'win' && failedQuestion && (
+        {status !== 'win' && status !== 'quit' && failedQuestion && (
           <div style={{
             width: '100%',
             background: 'rgba(26, 26, 34, 0.4)',

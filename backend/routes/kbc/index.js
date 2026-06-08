@@ -22,10 +22,10 @@ function generateRoomCode() {
 }
 
 // Fetch 15 progressive questions for a specific category
-router.get('/questions', (req, res) => {
+router.get('/questions', async (req, res) => {
   const { category } = req.query;
   try {
-    const questionSet = kbcService.generateQuestionSet(category);
+    const questionSet = await kbcService.generateQuestionSet(category);
     res.json(questionSet);
   } catch (error) {
     console.error("Failed to generate KBC question set:", error);
@@ -182,16 +182,33 @@ router.post('/solo/end', async (req, res) => {
     }
   }
 
+  // Calculate average answer time
+  let averageAnswerTime = 0;
+  if (Array.isArray(timePerQuestion) && timePerQuestion.length > 0) {
+    const validTimes = timePerQuestion.filter(t => t !== null && t !== undefined && typeof t === 'number');
+    if (validTimes.length > 0) {
+      const sum = validTimes.reduce((acc, t) => acc + t, 0);
+      averageAnswerTime = Math.round((sum / validTimes.length) * 10) / 10;
+    }
+  }
+
   // Determine safety milestone prize (KBC Safety guarantees at Level 5 and 10)
   let prizeEarned = 0;
-  if (status === 'win' || cleared === 15) {
+  if (status === 'quit') {
+    // Walk away: get exact prize for cleared levels
+    const walkAwayPrizes = [0, 10, 20, 30, 40, 50, 80, 110, 140, 170, 200, 260, 320, 380, 440, 500];
+    prizeEarned = walkAwayPrizes[Math.min(15, Math.max(0, cleared))];
+  } else if (status === 'win' || cleared === 15) {
     prizeEarned = 500;
-  } else if (cleared >= 10) {
-    prizeEarned = 200;
-  } else if (cleared >= 5) {
-    prizeEarned = 50;
   } else {
-    prizeEarned = cleared * 10;
+    // Loss or Timeout: drop to safety milestones
+    if (cleared >= 10) {
+      prizeEarned = 200;
+    } else if (cleared >= 5) {
+      prizeEarned = 50;
+    } else {
+      prizeEarned = 0;
+    }
   }
 
   const lifelinesStr = Array.isArray(lifelinesUsed) ? lifelinesUsed.join(',') : '';
@@ -211,6 +228,7 @@ router.post('/solo/end', async (req, res) => {
           questionsAnswered,
           accuracy,
           fastestAnswerTime,
+          averageAnswerTime,
           lifelinesUsed: lifelinesStr,
           prizeEarned
         }
@@ -220,7 +238,7 @@ router.post('/solo/end', async (req, res) => {
       const xpAward = (status === 'win' || cleared === 15) ? 40 : 10;
       await awardXP(userId, xpAward, tx);
 
-      const updatedUser = await tx.user.update({
+      await tx.user.update({
         where: { id: userId },
         data: {
           tokens: { increment: prizeEarned }
@@ -259,6 +277,7 @@ router.post('/solo/end', async (req, res) => {
       runId: result.runId,
       accuracy,
       fastestAnswerTime,
+      averageAnswerTime,
       xp: result.xp,
       level: result.level
     });
@@ -270,6 +289,195 @@ router.post('/solo/end', async (req, res) => {
     } else {
       res.status(500).json({ error: "Internal Server Error" });
     }
+  }
+});
+
+// Fetch daily challenge questions
+router.get('/daily/questions', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  try {
+    // Check if user already completed the challenge today
+    const existingRun = await prisma.dailyChallengeRun.findUnique({
+      where: {
+        userId_date: {
+          userId,
+          date: todayStr
+        }
+      }
+    });
+
+    if (existingRun) {
+      return res.status(400).json({ hasAttempted: true, error: "You have already attempted today's Daily Challenge." });
+    }
+
+    // Find or create daily challenge
+    let challenge = await prisma.dailyChallenge.findUnique({
+      where: { date: todayStr }
+    });
+
+    if (!challenge) {
+      const questionSet = await kbcService.generateQuestionSet("general_tech");
+      challenge = await prisma.dailyChallenge.create({
+        data: {
+          date: todayStr,
+          questions: JSON.stringify(questionSet)
+        }
+      });
+    }
+
+    res.json(JSON.parse(challenge.questions));
+  } catch (error) {
+    console.error("Failed to fetch/generate daily challenge:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// End KBC Daily Challenge run and store stats & rewards (double tokens)
+router.post('/daily/end', async (req, res) => {
+  const { userId, questionsCleared, timePerQuestion, status } = req.body;
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const cleared = Number(questionsCleared || 0);
+
+  let totalTime = 0;
+  if (Array.isArray(timePerQuestion) && timePerQuestion.length > 0) {
+    const validTimes = timePerQuestion.filter(t => t !== null && t !== undefined && typeof t === 'number');
+    totalTime = validTimes.reduce((acc, t) => acc + t, 0);
+  }
+
+  let basePrize = 0;
+  if (status === 'quit') {
+    const walkAwayPrizes = [0, 10, 20, 30, 40, 50, 80, 110, 140, 170, 200, 260, 320, 380, 440, 500];
+    basePrize = walkAwayPrizes[Math.min(15, Math.max(0, cleared))];
+  } else if (status === 'win' || cleared === 15) {
+    basePrize = 500;
+  } else {
+    if (cleared >= 10) {
+      basePrize = 200;
+    } else if (cleared >= 5) {
+      basePrize = 50;
+    } else {
+      basePrize = 0;
+    }
+  }
+  const prizeEarned = basePrize * 2; // Double tokens for Daily Challenge
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if user already completed the challenge today
+      const existingRun = await tx.dailyChallengeRun.findUnique({
+        where: {
+          userId_date: {
+            userId,
+            date: todayStr
+          }
+        }
+      });
+
+      if (existingRun) {
+        throw new Error("ALREADY_ATTEMPTED");
+      }
+
+      // Create daily challenge run log
+      const runLog = await tx.dailyChallengeRun.create({
+        data: {
+          userId,
+          date: todayStr,
+          questionsCleared: cleared,
+          timeTaken: totalTime,
+          prizeEarned
+        }
+      });
+
+      // Increment user tokens and award XP
+      const xpAward = (status === 'win' || cleared === 15) ? 40 : 10;
+      await awardXP(userId, xpAward, tx);
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          tokens: { increment: prizeEarned }
+        }
+      });
+
+      // Audit achievements and quests
+      const io = req.app.get('io');
+      await checkAchievements(userId, tx, io);
+      await updateQuestProgress(userId, "play_kbc", 1, tx, io);
+      if (status === 'win' || cleared === 15) {
+        await updateQuestProgress(userId, "win_kbc", 1, tx, io);
+      }
+      if (prizeEarned > 0) {
+        await updateQuestProgress(userId, "earn_tokens", prizeEarned, tx, io);
+      }
+      await updateQuestProgress(userId, "gain_xp", xpAward, tx, io);
+
+      // Fetch final user record
+      const finalUser = await tx.user.findUnique({
+        where: { id: userId }
+      });
+
+      return {
+        runId: runLog.id,
+        newTokens: finalUser.tokens,
+        xp: finalUser.xp,
+        level: finalUser.level
+      };
+    });
+
+    res.json({
+      success: true,
+      prizeEarned,
+      newTokens: result.newTokens,
+      runId: result.runId,
+      xp: result.xp,
+      level: result.level
+    });
+
+  } catch (error) {
+    console.error("Failed to save KBC Daily Challenge run:", error);
+    if (error.message === "ALREADY_ATTEMPTED") {
+      res.status(400).json({ error: "You have already attempted today's Daily Challenge." });
+    } else {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+});
+
+// Fetch Daily Challenge leaderboard
+router.get('/daily/leaderboard', async (req, res) => {
+  const todayStr = new Date().toISOString().split('T')[0];
+  try {
+    const runs = await prisma.dailyChallengeRun.findMany({
+      where: { date: todayStr },
+      include: {
+        user: {
+          select: {
+            username: true,
+            avatar: true,
+            level: true
+          }
+        }
+      },
+      orderBy: [
+        { questionsCleared: 'desc' },
+        { timeTaken: 'asc' }
+      ],
+      take: 20
+    });
+    res.json(runs);
+  } catch (error) {
+    console.error("Failed to fetch KBC daily leaderboard:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

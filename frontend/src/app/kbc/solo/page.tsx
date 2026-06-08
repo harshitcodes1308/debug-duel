@@ -31,7 +31,11 @@ function SoloChallengeGame() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gameState, setGameState] = useState<'playing' | 'win' | 'lost' | 'timeout'>('playing');
+  const [gameState, setGameState] = useState<'playing' | 'win' | 'lost' | 'timeout' | 'quit'>('playing');
+
+  // Anti-double-click locks
+  const isLockingRef = useRef(false);
+  const isTransitioningRef = useRef(false);
 
   // Question Iteration States
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); 
@@ -63,6 +67,50 @@ function SoloChallengeGame() {
   } | null>(null);
 
   const optionLetters = ['A', 'B', 'C', 'D'];
+
+  // Exit Arena button handler with confirmation
+  const handleExitArena = () => {
+    if (gameState === 'playing' && !loading && !error) {
+      const confirmExit = window.confirm("Are you sure you want to exit the Hot Seat? Your current progress will be lost.");
+      if (!confirmExit) {
+        return;
+      }
+    }
+    router.push('/kbc/categories');
+  };
+
+  // Walk Away / Quit handler
+  const handleWalkAway = async () => {
+    if (gameState !== 'playing' || lockedOptionIndex !== null || revealedAnswer) return;
+    const confirmWalk = window.confirm(
+      `Are you sure you want to Walk Away? You will secure your progress of ${currentQuestionIndex} cleared question(s) and claim ${
+        PRIZE_LADDER.find(s => s.level === currentQuestionIndex)?.xp.toLocaleString() || 0
+      } XP!`
+    );
+    if (!confirmWalk) return;
+
+    if (timerRef.current) clearInterval(timerRef.current);
+    KbcAudio.stopSuspense();
+    KbcAudio.playIntro();
+
+    setGameState('quit');
+    await persistSoloRunOutcome('quit', currentQuestionIndex);
+  };
+
+  // Before unload listener
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (gameState === 'playing' && !loading && !error) {
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to exit? Your current game progress will be lost.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [gameState, loading, error]);
 
   // Start Theme music on load
   useEffect(() => {
@@ -106,7 +154,7 @@ function SoloChallengeGame() {
   }, [searchParams]);
 
   // Submit Run outcome to Backend
-  const persistSoloRunOutcome = async (finalState: 'win' | 'lost' | 'timeout', clearedLevel: number) => {
+  const persistSoloRunOutcome = async (finalState: 'win' | 'lost' | 'timeout' | 'quit', clearedLevel: number) => {
     if (!user) return;
 
     KbcAudio.stopSuspense();
@@ -227,16 +275,18 @@ function SoloChallengeGame() {
     );
   }
 
-  // End screens handler (won, lost, timeout)
+  // End screens handler (won, lost, timeout, quit)
   if (gameState !== 'playing') {
     const isLoss = gameState === 'lost' || gameState === 'timeout';
     return (
       <EndScreen 
         status={gameState}
-        questionsCleared={isLoss ? currentQuestionIndex : 15}
+        questionsCleared={gameState === 'win' ? 15 : currentQuestionIndex}
         failedQuestion={isLoss ? questions[currentQuestionIndex] : null}
         userAnswerIndex={isLoss ? lockedOptionIndex : null}
         onReset={() => {
+          isLockingRef.current = false;
+          isTransitioningRef.current = false;
           setCurrentQuestionIndex(0);
           setSelectedOptionIndex(null);
           setLockedOptionIndex(null);
@@ -274,7 +324,8 @@ function SoloChallengeGame() {
 
   // Option lock handler
   const handleLockOption = () => {
-    if (selectedOptionIndex === null) return;
+    if (selectedOptionIndex === null || lockedOptionIndex !== null || isLockingRef.current) return;
+    isLockingRef.current = true;
     setLockedOptionIndex(selectedOptionIndex);
     
     // Stop the timer
@@ -378,9 +429,13 @@ function SoloChallengeGame() {
 
   // Next Question triggers
   const handleNextQuestion = () => {
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+
     if (currentQuestionIndex >= 14) {
       setGameState('win');
       persistSoloRunOutcome('win', 15);
+      isTransitioningRef.current = false;
       return;
     }
 
@@ -392,6 +447,11 @@ function SoloChallengeGame() {
     setEliminatedOptionIndices([]);
     setTimeLeft(30);
     setHostMessage(`Proceeding to Level ${currentQuestionIndex + 2}. Let's see the question.`);
+    isLockingRef.current = false;
+
+    setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, 500);
   };
 
   // Circular timer color mapping
@@ -427,9 +487,23 @@ function SoloChallengeGame() {
           
           {/* Header area */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Link href="/kbc/categories" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+            <button 
+              onClick={handleExitArena} 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 'var(--space-2)', 
+                color: 'var(--text-secondary)', 
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '13px', 
+                fontWeight: 600,
+                padding: 0
+              }}
+            >
               <ArrowLeft size={14} /> Exit Arena
-            </Link>
+            </button>
             
             {/* Round info */}
             <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: '12px' }}>
@@ -535,6 +609,31 @@ function SoloChallengeGame() {
               onLockOption={handleLockOption}
               disabled={lockedOptionIndex !== null || revealedAnswer}
             />
+
+            {/* Walk Away Action Button */}
+            {gameState === 'playing' && lockedOptionIndex === null && !revealedAnswer && currentQuestionIndex > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
+                <button
+                  className="btn interactive-lift"
+                  style={{
+                    padding: '8px 24px',
+                    fontSize: '13px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    borderColor: 'rgba(245, 158, 11, 0.4)',
+                    color: 'var(--accent-amber)',
+                    fontWeight: 700,
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={handleWalkAway}
+                >
+                  Walk Away & Claim {PRIZE_LADDER.find(s => s.level === currentQuestionIndex)?.xp.toLocaleString() || 0} XP
+                </button>
+              </div>
+            )}
 
             {/* Post-reveal explanation box & next question action */}
             {revealedAnswer && (

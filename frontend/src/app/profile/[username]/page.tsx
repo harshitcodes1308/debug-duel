@@ -37,6 +37,15 @@ interface ProfileResponse extends UserProfile {
     userId: string;
     duel: DuelHistoryItem;
   }>;
+  kbcStats?: {
+    totalRuns: number;
+    questionsAnswered: number;
+    averageAccuracy: number;
+    fastestAnswer: number;
+    averageTime: number;
+    maxPrize: number;
+    bestRun: number;
+  };
 }
 
 const ALL_ACHIEVEMENTS = [
@@ -630,6 +639,46 @@ export default function PlayerProfile() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Lifetime Quests Completed</span>
                   <strong style={{ color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.lifetimeQuestsCompleted || 0} /></strong>
+                </div>
+              </div>
+
+              {/* KBC Solo Stats Block */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'var(--space-2)' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Code KBC Stats</span>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>KBC Runs Played</span>
+                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.totalRuns || 0} /></strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Questions Answered</span>
+                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.questionsAnswered || 0} /></strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Average Accuracy</span>
+                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.averageAccuracy || 0} />%</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Average Answer Time</span>
+                  <strong style={{ color: '#fff', fontFamily: 'Space Grotesk' }}>{profile.kbcStats?.averageTime || 0}s</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Fastest Answer</span>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>{profile.kbcStats?.fastestAnswer || 0}s</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Best Run (Max Level)</span>
+                  <strong style={{ color: '#fff', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.bestRun || 0} /> / 15</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Max Token Prize Won</span>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.maxPrize || 0} /></strong>
                 </div>
               </div>
 
