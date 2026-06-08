@@ -137,16 +137,19 @@ export default function DuelResult() {
   const pUser = duel.participants.find(p => p.userId === user.id);
   const pOpponent = duel.participants.find(p => p.userId !== user.id);
   const isWinner = pUser?.isWinner;
+  const isDraw = !duel.winnerId;
 
   return (
     <div className="container" style={{ padding: '60px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
       {/* 1. OUTCOME HEADER BAR */}
       <div className="glass-panel" style={{
-        background: isWinner 
+        background: isDraw
+          ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(13, 13, 18, 0.6) 100%)'
+          : isWinner 
           ? 'linear-gradient(135deg, rgba(0, 255, 148, 0.15) 0%, rgba(13, 13, 18, 0.6) 100%)'
           : 'linear-gradient(135deg, rgba(255, 68, 68, 0.15) 0%, rgba(13, 13, 18, 0.6) 100%)',
-        borderColor: isWinner ? 'rgba(0, 255, 148, 0.3)' : 'rgba(255, 68, 68, 0.3)',
+        borderColor: isDraw ? 'rgba(239, 68, 68, 0.2)' : isWinner ? 'rgba(0, 255, 148, 0.3)' : 'rgba(255, 68, 68, 0.3)',
         padding: '40px',
         textAlign: 'center',
         display: 'flex',
@@ -158,23 +161,24 @@ export default function DuelResult() {
           width: '72px',
           height: '72px',
           borderRadius: '50%',
-          background: isWinner ? 'rgba(0, 255, 148, 0.1)' : 'rgba(255, 68, 68, 0.1)',
-          border: `1px solid ${isWinner ? 'var(--accent-green)' : 'var(--accent-red)'}`,
+          background: isDraw ? 'rgba(239, 68, 68, 0.1)' : isWinner ? 'rgba(0, 255, 148, 0.1)' : 'rgba(255, 68, 68, 0.1)',
+          border: `1px solid ${isDraw ? 'var(--accent-red)' : isWinner ? 'var(--accent-green)' : 'var(--accent-red)'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          {isWinner ? <Trophy size={36} color="var(--accent-green)" /> : <AlertTriangle size={36} color="var(--accent-red)" />}
+          {isDraw ? <AlertTriangle size={36} color="var(--accent-red)" /> : isWinner ? <Trophy size={36} color="var(--accent-green)" /> : <AlertTriangle size={36} color="var(--accent-red)" />}
         </div>
 
         <div>
           <h1 style={{
-            fontSize: '48px',
-            color: isWinner ? 'var(--accent-green)' : 'var(--accent-red)',
+            fontSize: '36px',
+            color: isDraw ? 'var(--accent-red)' : isWinner ? 'var(--accent-green)' : 'var(--accent-red)',
             textShadow: isWinner ? '0 0 25px rgba(0, 255, 148, 0.2)' : 'none',
-            fontFamily: 'Space Grotesk, sans-serif'
+            fontFamily: 'Space Grotesk, sans-serif',
+            textTransform: 'uppercase'
           }}>
-            {isWinner ? "VICTORY!" : "DEFEAT."}
+            {isDraw ? "TIME EXPIRED - BOTH DEFEATED." : isWinner ? "VICTORY!" : "DEFEAT."}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '6px' }}>
             Battle for Bug: <strong style={{ color: '#fff' }}>{duel.bug.title}</strong>
@@ -279,15 +283,15 @@ export default function DuelResult() {
             justifyContent: 'center'
           }}>
             <div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: isWinner ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: isDraw ? 'var(--accent-red)' : isWinner ? 'var(--accent-green)' : 'var(--accent-red)' }}>
                 {isWinner ? `+${50 + duel.betAmount} tokens` : `-${duel.betAmount} tokens`}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>TOKEN ALLOCATION</div>
             </div>
             <div style={{ width: '1px', background: 'var(--border)' }}></div>
             <div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--accent-blue)' }}>
-                {isWinner ? "+18 ELO" : "-14 ELO"}
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: (eloChange !== null ? eloChange >= 0 : isWinner) ? 'var(--accent-blue)' : 'var(--accent-red)' }}>
+                {eloChange !== null ? (eloChange >= 0 ? `+${eloChange}` : `${eloChange}`) : (isWinner ? "+18" : "-14")} ELO
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>RATING CHANGE</div>
             </div>

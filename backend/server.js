@@ -1398,18 +1398,77 @@ const COLOR_FOMO_MESSAGES = [
   "{opponent} is double-checking their guess..."
 ];
 
+const offlineTimeouts = new Map(); // userId -> NodeJS.Timeout
+
+function handleUserOffline(userId) {
+  // Clear any existing offline timeout for this user
+  if (offlineTimeouts.has(userId)) {
+    clearTimeout(offlineTimeouts.get(userId));
+  }
+
+  // 1. Notify room that player is offline
+  prisma.duelParticipant.findFirst({
+    where: {
+      userId: userId,
+      duel: { status: 'active' }
+    }
+  }).then(participant => {
+    if (participant) {
+      const duelId = participant.duelId;
+      io.to(`duel:${duelId}`).emit('opponent_offline', { userId, offline: true });
+
+      // 2. Schedule match auto-win if player remains offline for 20 seconds
+      const timeoutId = setTimeout(async () => {
+        try {
+          if (!onlineUsers.has(userId)) {
+            console.log(`User ${userId} remained offline. Auto-resolving duel ${duelId} as forfeit...`);
+            await resolveForfeit(duelId, userId);
+          }
+        } catch (e) {
+          console.error(`Error in offline auto-win timeout for user ${userId}:`, e);
+        } finally {
+          offlineTimeouts.delete(userId);
+        }
+      }, 20000);
+
+      offlineTimeouts.set(userId, timeoutId);
+    }
+  }).catch(err => {
+    console.error(`Error handling user offline check for ${userId}:`, err);
+  });
+}
+
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
 
   // Register user online
   socket.on('register_user', ({ userId }) => {
     if (!userId) return;
+    
+    // Clear any pending offline timeout
+    if (offlineTimeouts.has(userId)) {
+      clearTimeout(offlineTimeouts.get(userId));
+      offlineTimeouts.delete(userId);
+    }
+
     if (!onlineUsers.has(userId)) {
       onlineUsers.set(userId, new Set());
     }
     onlineUsers.get(userId).add(socket.id);
     socket.join(`user:${userId}`);
     console.log(`Socket registered user ${userId}. Total online: ${onlineUsers.size}`);
+
+    // Notify active duels that player is back online
+    prisma.duelParticipant.findFirst({
+      where: {
+        userId: userId,
+        duel: { status: 'active' }
+      }
+    }).then(participant => {
+      if (participant) {
+        io.to(`duel:${participant.duelId}`).emit('opponent_offline', { userId, offline: false });
+      }
+    }).catch(err => console.error(err));
   });
 
   // Handle disconnect
@@ -1419,6 +1478,8 @@ io.on('connection', (socket) => {
         socketIds.delete(socket.id);
         if (socketIds.size === 0) {
           onlineUsers.delete(userId);
+          // Trigger player offline check and autowin for active duels
+          handleUserOffline(userId);
         }
         console.log(`Socket disconnected user ${userId}. Total online: ${onlineUsers.size}`);
         break;
@@ -1551,6 +1612,31 @@ io.on('connection', (socket) => {
   // Join lobby
   socket.on('join_duel', async ({ duelId, userId }) => {
     try {
+      if (userId) {
+        if (!onlineUsers.has(userId)) {
+          onlineUsers.set(userId, new Set());
+        }
+        onlineUsers.get(userId).add(socket.id);
+        
+        // Clear any pending offline timeouts
+        if (offlineTimeouts.has(userId)) {
+          clearTimeout(offlineTimeouts.get(userId));
+          offlineTimeouts.delete(userId);
+        }
+
+        // Notify active duels that player is back online
+        prisma.duelParticipant.findFirst({
+          where: {
+            userId: userId,
+            duel: { status: 'active' }
+          }
+        }).then(participant => {
+          if (participant) {
+            io.to(`duel:${participant.duelId}`).emit('opponent_offline', { userId, offline: false });
+          }
+        }).catch(err => console.error(err));
+      }
+
       const duel = await prisma.duel.findUnique({
         where: { id: duelId },
         include: {
@@ -1601,7 +1687,7 @@ io.on('connection', (socket) => {
 
       // If lobby is full (2 players) and status is waiting, start countdown
       if (updatedDuel.participants.length === 2 && updatedDuel.status === 'waiting') {
-        io.to(`duel:${duelId}`).emit('countdown_started', { duration: 3 });
+        io.to(`duel:${duelId}`).emit('countdown_started', { duration: 7 });
 
         setTimeout(async () => {
           // Update status to active
@@ -1634,7 +1720,7 @@ io.on('connection', (socket) => {
 
           // Start FOMO Engine interval
           startFomoEngine(duelId, updatedDuel.participants, updatedDuel.gameType);
-        }, 3000);
+        }, 7000);
       }
     } catch (e) {
       console.error(e);
@@ -2486,11 +2572,23 @@ io.on('connection', (socket) => {
   // Forfeit Room
   socket.on('forfeit', async ({ duelId, userId }) => {
     try {
+      await resolveForfeit(duelId, userId);
+    } catch (e) {
+      if (e.message === "ALREADY_COMPLETED") {
+        console.log(`Forfeit for duel ${duelId} was already resolved.`);
+      } else {
+        console.error(e);
+      }
+    }
+  });
+
+  // Match Timeout Room (Double Failure)
+  socket.on('match_timeout', async ({ duelId }) => {
+    try {
       let eloChanges = {};
       let tokenChanges = {};
       let rpChanges = {};
       let newRanks = {};
-      let winnerId = null;
       let isRankedGame = false;
 
       await prisma.$transaction(async (tx) => {
@@ -2508,136 +2606,75 @@ io.on('connection', (socket) => {
 
         // Fetch participants inside locked transaction scope
         const dbParticipants = await tx.duelParticipant.findMany({
-          where: { duelId }
+          where: { duelId },
+          include: { user: true }
         });
 
-        const loserId = userId;
-        const winnerParticipant = dbParticipants.find(p => p.userId !== userId);
-        winnerId = winnerParticipant ? winnerParticipant.userId : null;
+        const bet = dbDuel.betAmount;
 
-        if (dbDuel.isRanked) {
-          // Resolve Ranked Match
-          const rankedRes = await resolveRankedMatch(dbDuel.seasonId, loserId, winnerId, winnerId, false, tx);
-          eloChanges = rankedRes.eloChanges;
-          rpChanges = rankedRes.rpChanges;
-          newRanks = rankedRes.newRanks;
-
-          tokenChanges[loserId] = 0;
-          if (winnerId) tokenChanges[winnerId] = 0;
-
-          await Promise.all([
-            winnerId ? tx.duelParticipant.updateMany({
-              where: { duelId, userId: winnerId },
-              data: { isWinner: true }
-            }) : Promise.resolve(),
-            tx.duelParticipant.updateMany({
-              where: { duelId, userId: loserId },
-              data: { isWinner: false }
-            }),
-            tx.duel.update({
-              where: { id: duelId },
-              data: {
-                status: "completed",
-                winnerId: winnerId,
-                endedAt: new Date()
-              }
-            })
-          ]);
-        } else {
-          const [loserUser, winnerUser] = await Promise.all([
-            tx.user.findUnique({ where: { id: loserId } }),
-            winnerId ? tx.user.findUnique({ where: { id: winnerId } }) : null
-          ]);
-
-          const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
-
-          if (loserUser) {
-            const ratingL = loserUser[languageKey] || 1000;
-            const ratingW = winnerUser ? (winnerUser[languageKey] || 1000) : 1000;
-
-            const changeL = calculateElo(ratingL, ratingW, 0);
-            const changeW = winnerUser ? calculateElo(ratingW, ratingL, 1) : 0;
-
-            if (winnerId) eloChanges[winnerId] = changeW;
-            eloChanges[loserId] = changeL;
-
-            const bet = dbDuel.betAmount;
-            const totalBonus = 50 + bet;
-
-            if (winnerId) tokenChanges[winnerId] = totalBonus;
-            tokenChanges[loserId] = -bet;
-
-            const lXp = (loserUser.xp || 0) + 15;
-            const lLevel = Math.floor(Math.sqrt(lXp / 100)) + 1;
-
-            let wXp = 0;
-            let wLevel = 1;
-            if (winnerUser) {
-              wXp = (winnerUser.xp || 0) + 50;
-              wLevel = Math.floor(Math.sqrt(wXp / 100)) + 1;
-            }
-
-            await Promise.all([
-              tx.user.update({
-                where: { id: loserId },
-                data: {
-                  eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
-                  eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
-                  eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
-                  eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
-                  tokens: { decrement: bet },
-                  totalDuels: { increment: 1 },
-                  currentStreak: 0,
-                  xp: lXp,
-                  level: lLevel,
-                  rank: getRankTier(ratingL + changeL)
-                }
-              }),
-              winnerUser ? tx.user.update({
-                where: { id: winnerId },
-                data: {
-                  eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
-                  eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
-                  eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
-                  eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
-                  tokens: { increment: totalBonus },
-                  totalWins: { increment: 1 },
-                  totalDuels: { increment: 1 },
-                  currentStreak: { increment: 1 },
-                  xp: wXp,
-                  level: wLevel,
-                  rank: getRankTier(ratingW + changeW)
-                }
-              }) : Promise.resolve()
-            ]);
+        if (isRankedGame) {
+          // Resolve Ranked Match as a double defeat (winnerId is null)
+          for (const p of dbParticipants) {
+            const userId = p.userId;
+            const rankedRes = await resolveRankedMatch(dbDuel.seasonId, userId, null, null, false, tx);
+            eloChanges[userId] = rankedRes.eloChanges[userId] || -15;
+            rpChanges[userId] = rankedRes.rpChanges[userId] || -15;
+            newRanks[userId] = rankedRes.newRanks[userId] || p.user.rank;
+            tokenChanges[userId] = 0;
           }
+        } else {
+          // Normal Match: ELO deduction and token loss for both
+          for (const p of dbParticipants) {
+            const userId = p.userId;
+            const user = p.user;
+            const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
+            const rating = user[languageKey] || 1000;
+            const change = calculateElo(rating, 1000, 0); // Lose against base rating
 
-          // Update participants and duel in parallel
-          await Promise.all([
-            winnerId ? tx.duelParticipant.updateMany({
-              where: { duelId, userId: winnerId },
-              data: { isWinner: true }
-            }) : Promise.resolve(),
-            tx.duelParticipant.updateMany({
-              where: { duelId, userId: loserId },
-              data: { isWinner: false }
-            }),
-            tx.duel.update({
-              where: { id: duelId },
+            eloChanges[userId] = change;
+            tokenChanges[userId] = -bet;
+
+            const newXp = (user.xp || 0) + 15;
+            const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
+
+            await tx.user.update({
+              where: { id: userId },
               data: {
-                status: "completed",
-                winnerId: winnerId,
-                endedAt: new Date()
+                eloUIUX: languageKey === 'eloUIUX' ? { increment: change } : undefined,
+                eloJS: languageKey === 'eloJS' ? { increment: change } : undefined,
+                eloPython: languageKey === 'eloPython' ? { increment: change } : undefined,
+                eloJava: languageKey === 'eloJava' ? { increment: change } : undefined,
+                tokens: { decrement: bet },
+                totalDuels: { increment: 1 },
+                currentStreak: 0,
+                xp: newXp,
+                level: newLevel,
+                rank: getRankTier(rating + change)
               }
-            })
-          ]);
+            });
+          }
         }
+
+        // Update participants and duel
+        await Promise.all([
+          tx.duelParticipant.updateMany({
+            where: { duelId },
+            data: { isWinner: false }
+          }),
+          tx.duel.update({
+            where: { id: duelId },
+            data: {
+              status: "completed",
+              winnerId: null,
+              endedAt: new Date()
+            }
+          })
+        ]);
       }, {
-        timeout: 15000 // 15 seconds interactive transaction timeout
+        timeout: 15000
       });
 
-      io.to(`duel:${duelId}`).emit('opponent_forfeited', {
-        winnerId,
+      io.to(`duel:${duelId}`).emit('match_timed_out', {
         eloChanges,
         tokenChanges,
         isRanked: isRankedGame,
@@ -2645,32 +2682,204 @@ io.on('connection', (socket) => {
         newRanks
       });
 
-      // Audit achievements and quests outside transaction scope
-      if (winnerId) {
-        checkAchievements(winnerId, null, io).catch(console.error);
-        updateQuestProgress(winnerId, "play_duel", 1, null, io).catch(console.error);
-        updateQuestProgress(winnerId, "win_duel", 1, null, io).catch(console.error);
+      // Audit achievements and quests for both
+      const dbParticipants = await prisma.duelParticipant.findMany({
+        where: { duelId }
+      });
+
+      for (const p of dbParticipants) {
+        const userId = p.userId;
+        checkAchievements(userId, null, io).catch(console.error);
+        updateQuestProgress(userId, "play_duel", 1, null, io).catch(console.error);
         if (!isRankedGame) {
-          updateQuestProgress(winnerId, "gain_xp", 50, null, io).catch(console.error);
-          if (tokenChanges[winnerId]) {
-            updateQuestProgress(winnerId, "earn_tokens", tokenChanges[winnerId], null, io).catch(console.error);
-          }
+          updateQuestProgress(userId, "gain_xp", 15, null, io).catch(console.error);
         }
-      }
-      checkAchievements(loserId, null, io).catch(console.error);
-      updateQuestProgress(loserId, "play_duel", 1, null, io).catch(console.error);
-      if (!isRankedGame) {
-        updateQuestProgress(loserId, "gain_xp", 15, null, io).catch(console.error);
       }
 
     } catch (e) {
       if (e.message === "ALREADY_COMPLETED") {
-        console.log(`Forfeit for duel ${duelId} was already resolved.`);
+        console.log(`Timeout for duel ${duelId} was already resolved.`);
       } else {
         console.error(e);
       }
     }
   });
+
+async function resolveForfeit(duelId, loserId) {
+  let eloChanges = {};
+  let tokenChanges = {};
+  let rpChanges = {};
+  let newRanks = {};
+  let winnerId = null;
+  let isRankedGame = false;
+
+  await prisma.$transaction(async (tx) => {
+    // Row-level lock to prevent concurrent forfeit or double-resolution race conditions
+    const duels = await tx.$queryRaw`SELECT status, "startedAt", "betAmount", "gameType", "language", "isRanked", "seasonId" FROM "Duel" WHERE id = ${duelId} FOR UPDATE`;
+    const dbDuel = duels[0];
+    if (!dbDuel || dbDuel.status !== 'active') {
+      throw new Error("ALREADY_COMPLETED");
+    }
+
+    isRankedGame = !!dbDuel.isRanked;
+
+    // Stop FOMO
+    stopFomoEngine(duelId);
+
+    // Fetch participants inside locked transaction scope
+    const dbParticipants = await tx.duelParticipant.findMany({
+      where: { duelId }
+    });
+
+    const winnerParticipant = dbParticipants.find(p => p.userId !== loserId);
+    winnerId = winnerParticipant ? winnerParticipant.userId : null;
+
+    if (dbDuel.isRanked) {
+      // Resolve Ranked Match
+      const rankedRes = await resolveRankedMatch(dbDuel.seasonId, loserId, winnerId, winnerId, false, tx);
+      eloChanges = rankedRes.eloChanges;
+      rpChanges = rankedRes.rpChanges;
+      newRanks = rankedRes.newRanks;
+
+      tokenChanges[loserId] = 0;
+      if (winnerId) tokenChanges[winnerId] = 0;
+
+      await Promise.all([
+        winnerId ? tx.duelParticipant.updateMany({
+          where: { duelId, userId: winnerId },
+          data: { isWinner: true }
+        }) : Promise.resolve(),
+        tx.duelParticipant.updateMany({
+          where: { duelId, userId: loserId },
+          data: { isWinner: false }
+        }),
+        tx.duel.update({
+          where: { id: duelId },
+          data: {
+            status: "completed",
+            winnerId: winnerId,
+            endedAt: new Date()
+          }
+        })
+      ]);
+    } else {
+      const [loserUser, winnerUser] = await Promise.all([
+        tx.user.findUnique({ where: { id: loserId } }),
+        winnerId ? tx.user.findUnique({ where: { id: winnerId } }) : null
+      ]);
+
+      const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
+
+      if (loserUser) {
+        const ratingL = loserUser[languageKey] || 1000;
+        const ratingW = winnerUser ? (winnerUser[languageKey] || 1000) : 1000;
+
+        const changeL = calculateElo(ratingL, ratingW, 0);
+        const changeW = winnerUser ? calculateElo(ratingW, ratingL, 1) : 0;
+
+        if (winnerId) eloChanges[winnerId] = changeW;
+        eloChanges[loserId] = changeL;
+
+        const bet = dbDuel.betAmount;
+        const totalBonus = 50 + bet;
+
+        if (winnerId) tokenChanges[winnerId] = totalBonus;
+        tokenChanges[loserId] = -bet;
+
+        const lXp = (loserUser.xp || 0) + 15;
+        const lLevel = Math.floor(Math.sqrt(lXp / 100)) + 1;
+
+        let wXp = 0;
+        let wLevel = 1;
+        if (winnerUser) {
+          wXp = (winnerUser.xp || 0) + 50;
+          wLevel = Math.floor(Math.sqrt(wXp / 100)) + 1;
+        }
+
+        await Promise.all([
+          tx.user.update({
+            where: { id: loserId },
+            data: {
+              eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
+              eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
+              eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
+              eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
+              tokens: { decrement: bet },
+              totalDuels: { increment: 1 },
+              currentStreak: 0,
+              xp: lXp,
+              level: lLevel,
+              rank: getRankTier(ratingL + changeL)
+            }
+          }),
+          winnerUser ? tx.user.update({
+            where: { id: winnerId },
+            data: {
+              eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
+              eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
+              eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
+              eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
+              tokens: { increment: totalBonus },
+              totalWins: { increment: 1 },
+              totalDuels: { increment: 1 },
+              currentStreak: { increment: 1 },
+              xp: wXp,
+              level: wLevel,
+              rank: getRankTier(ratingW + changeW)
+            }
+          }) : Promise.resolve()
+        ]);
+      }
+
+      await Promise.all([
+        winnerId ? tx.duelParticipant.updateMany({
+          where: { duelId, userId: winnerId },
+          data: { isWinner: true }
+        }) : Promise.resolve(),
+        tx.duelParticipant.updateMany({
+          where: { duelId, userId: loserId },
+          data: { isWinner: false }
+        }),
+        tx.duel.update({
+          where: { id: duelId },
+          data: {
+            status: "completed",
+            winnerId: winnerId,
+            endedAt: new Date()
+          }
+        })
+      ]);
+    }
+  }, {
+    timeout: 15000
+  });
+
+  io.to(`duel:${duelId}`).emit('opponent_forfeited', {
+    winnerId,
+    eloChanges,
+    tokenChanges,
+    isRanked: isRankedGame,
+    rpChanges,
+    newRanks
+  });
+
+  if (winnerId) {
+    checkAchievements(winnerId, null, io).catch(console.error);
+    updateQuestProgress(winnerId, "play_duel", 1, null, io).catch(console.error);
+    updateQuestProgress(winnerId, "win_duel", 1, null, io).catch(console.error);
+    if (!isRankedGame) {
+      updateQuestProgress(winnerId, "gain_xp", 50, null, io).catch(console.error);
+      if (tokenChanges[winnerId]) {
+        updateQuestProgress(winnerId, "earn_tokens", tokenChanges[winnerId], null, io).catch(console.error);
+      }
+    }
+  }
+  checkAchievements(loserId, null, io).catch(console.error);
+  updateQuestProgress(loserId, "play_duel", 1, null, io).catch(console.error);
+  if (!isRankedGame) {
+    updateQuestProgress(loserId, "gain_xp", 15, null, io).catch(console.error);
+  }
+}
 
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);

@@ -74,7 +74,7 @@ export default function DesignLobby() {
         betAmount: duelDetails?.betAmount || 50,
         language: 'uiux',
         difficulty: 'medium',
-        participants: []
+        participants: participants
       });
       
       router.push(`/change-design/duel/${duelId}`);

@@ -27,6 +27,7 @@ export default function ColorMatchArena() {
 
   const [loading, setLoading] = useState(true);
   const [gameState, setGameState] = useState<'memorize' | 'guess' | 'submitted'>('memorize');
+  const [opponentOffline, setOpponentOffline] = useState(false);
   
   // Color challenges state
   const [targetColorString, setTargetColorString] = useState<string>('rgb(0, 0, 0)');
@@ -239,6 +240,7 @@ export default function ColorMatchArena() {
     socketRef.current = socket;
 
     socket.emit('join_duel', { duelId, userId: user.id });
+    socket.emit('register_user', { userId: user.id });
 
     // FOMO updates
     socket.on('fomo_update', ({ message, opponentProgress: progress }) => {
@@ -272,6 +274,13 @@ export default function ColorMatchArena() {
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
       router.push(`/color-match/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
+    });
+
+    // Opponent online/offline state sync
+    socket.on('opponent_offline', ({ userId, offline }) => {
+      if (userId !== user?.id) {
+        setOpponentOffline(offline);
+      }
     });
 
     return () => {
@@ -412,6 +421,33 @@ export default function ColorMatchArena() {
           padding: '40px'
         }}>
           
+          {opponentOffline && (
+            <div className="alert-priority-flash" style={{
+              width: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              padding: '12px 24px',
+              color: 'var(--accent-red)',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(239, 68, 68, 0.15)',
+              fontFamily: 'JetBrains Mono, monospace',
+              zIndex: 10
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertTriangle size={16} className="pulse-glow" style={{ color: 'var(--accent-red)' }} />
+                <span>RIVAL DISCONNECTED! Auto-forfeit in progress, waiting 20s for reconnection...</span>
+              </div>
+              <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 8px', borderRadius: '4px' }}>DISCONNECTED</span>
+            </div>
+          )}
+
           {/* ================= STATE 1: MEMORIZE ================= */}
           {gameState === 'memorize' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', width: '100%', maxWidth: '480px', animation: 'fadeIn 0.3s ease-out' }}>
@@ -718,8 +754,26 @@ export default function ColorMatchArena() {
             <h3 style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Rival State</h3>
             <div className="glass-panel" style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>@{opponent?.username || 'Opponent'}</span>
-                {opponentSubmitted && <span className="badge badge-js" style={{ fontSize: '9px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)', borderColor: 'rgba(245, 158, 11, 0.2)' }}>SUBMITTED</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '14px' }}>@{opponent?.username || 'Opponent'}</span>
+                  {opponentOffline && (
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-red)',
+                      boxShadow: '0 0 8px var(--accent-red)'
+                    }} />
+                  )}
+                </div>
+                {opponentOffline ? (
+                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>OFFLINE</span>
+                ) : opponentSubmitted ? (
+                  <span className="badge badge-js" style={{ fontSize: '9px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)', borderColor: 'rgba(245, 158, 11, 0.2)' }}>SUBMITTED</span>
+                ) : (
+                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>ONLINE</span>
+                )}
               </div>
 
               <div>

@@ -175,6 +175,7 @@ export default function DesignArena() {
   const [viewportWidth, setViewportWidth] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [activeInspectorTab, setActiveInspectorTab] = useState<'style' | 'layout' | 'content'>('style');
   const [a11yIssues, setA11yIssues] = useState<AccessibilityIssue[]>([]);
+  const [opponentOffline, setOpponentOffline] = useState(false);
   
   // Timer State
   const [phaseTimer, setPhaseTimer] = useState(180); // 3 minutes for design challenge
@@ -248,6 +249,7 @@ export default function DesignArena() {
     socketRef.current = socket;
 
     socket.emit('join_duel', { duelId, userId: user.id });
+    socket.emit('register_user', { userId: user.id });
 
     socket.on('fomo_update', ({ message, opponentProgress: progress }) => {
       setFomo(message, progress);
@@ -277,6 +279,13 @@ export default function DesignArena() {
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
       router.push(`/change-design/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
+    });
+
+    // Opponent online/offline state sync
+    socket.on('opponent_offline', ({ userId, offline }) => {
+      if (userId !== user?.id) {
+        setOpponentOffline(offline);
+      }
     });
 
     return () => {
@@ -628,6 +637,29 @@ export default function DesignArena() {
             overflow: 'hidden',
             position: 'relative'
           }}>
+            {opponentOffline && (
+              <div className="alert-priority-flash" style={{
+                width: '100%',
+                padding: '12px 24px',
+                color: 'var(--accent-red)',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+                borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+                background: 'rgba(239, 68, 68, 0.15)',
+                fontFamily: 'JetBrains Mono, monospace',
+                zIndex: 100
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertTriangle size={16} className="pulse-glow" style={{ color: 'var(--accent-red)' }} />
+                  <span>RIVAL DISCONNECTED! Auto-forfeit in progress, waiting 20s for reconnection...</span>
+                </div>
+                <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 8px', borderRadius: '4px' }}>DISCONNECTED</span>
+              </div>
+            )}
             
             {/* Viewport bar */}
             <div style={{
@@ -1116,8 +1148,26 @@ export default function DesignArena() {
               gap: '12px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '13px' }}>@{opponent?.username || 'Opponent'}</span>
-                {opponentSubmitted && <span style={{ fontSize: '9px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', border: '1px solid rgba(234, 179, 8, 0.2)' }}>SUBMITTED</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '13px' }}>@{opponent?.username || 'Opponent'}</span>
+                  {opponentOffline && (
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-red)',
+                      boxShadow: '0 0 8px var(--accent-red)'
+                    }} />
+                  )}
+                </div>
+                {opponentOffline ? (
+                  <span style={{ fontSize: '9px', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', border: '1px solid rgba(239, 68, 68, 0.2)' }}>OFFLINE</span>
+                ) : opponentSubmitted ? (
+                  <span style={{ fontSize: '9px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', border: '1px solid rgba(234, 179, 8, 0.2)' }}>SUBMITTED</span>
+                ) : (
+                  <span style={{ fontSize: '9px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', border: '1px solid rgba(56, 189, 248, 0.2)' }}>ONLINE</span>
+                )}
               </div>
 
               <div>

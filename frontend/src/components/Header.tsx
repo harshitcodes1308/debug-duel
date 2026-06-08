@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { useAuth } from '@/components/AuthProvider';
 import Link from 'next/link';
-import { LogOut, Coins, Flame, Award, Terminal, Swords, Search } from 'lucide-react';
+import { LogOut, Coins, Flame, Award, Terminal, Search } from 'lucide-react';
 import CommandCenter from './CommandCenter';
 
 export default function Header() {
@@ -33,7 +33,8 @@ export default function Header() {
       <header className="nav-header">
       <Link href="/" style={{ textDecoration: 'none' }}>
         <div className="logo" style={{ fontSize: '19px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Swords size={20} color="var(--accent-blue)" /> DebugDuel
+          <span>⚔️</span>
+          <span className="header-logo-text">DebugDuel</span>
         </div>
       </Link>
 

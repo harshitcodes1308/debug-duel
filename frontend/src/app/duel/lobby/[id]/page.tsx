@@ -98,6 +98,8 @@ export default function DuelLobby() {
   const [isSpinning, setIsSpinning] = useState(true);
   const [realOpponent, setRealOpponent] = useState<any>(null);
   const [activeOpponent, setActiveOpponent] = useState<any>(null);
+  const [receivedCountdown, setReceivedCountdown] = useState<number | null>(null);
+  const [receivedAt, setReceivedAt] = useState<number | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -117,18 +119,8 @@ export default function DuelLobby() {
     });
 
     socket.on('countdown_started', ({ duration }) => {
-      setCountdown(duration);
-      playSound('countdown');
-      const interval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev === null || prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          playSound('countdown');
-          return prev - 1;
-        });
-      }, 1000);
+      setReceivedCountdown(duration);
+      setReceivedAt(Date.now());
     });
 
     socket.on('duel_started', ({ bug }) => {
@@ -140,7 +132,7 @@ export default function DuelLobby() {
         betAmount: 50,
         language: bug.language,
         difficulty: bug.difficulty,
-        participants: []
+        participants: participants
       });
       router.push(`/duel/${duelId}`);
     });
@@ -193,6 +185,32 @@ export default function DuelLobby() {
       setActiveOpponent(null);
     }
   }, [participants, user?.id]);
+
+  // Local countdown starting after the reel finishes spinning and countdown is received
+  useEffect(() => {
+    if (!isSpinning && receivedCountdown !== null && receivedAt !== null && countdown === null) {
+      const elapsed = (Date.now() - receivedAt) / 1000;
+      // Subtract 0.5s buffer so the user has time to see "FIGHT!" before redirection
+      const remaining = Math.max(1, Math.round(receivedCountdown - elapsed - 0.5));
+
+      let localTimer = remaining;
+      setCountdown(localTimer);
+      playSound('countdown');
+
+      const interval = setInterval(() => {
+        localTimer -= 1;
+        if (localTimer <= 0) {
+          clearInterval(interval);
+          setCountdown(0);
+        } else {
+          setCountdown(localTimer);
+          playSound('countdown');
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isSpinning, receivedCountdown, receivedAt, countdown]);
 
   // Fetch initial details
   const [duelDetails, setDuelDetails] = useState<any>(null);

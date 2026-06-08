@@ -1023,8 +1023,8 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
           
           {/* Logo & Header (No inheritance from .logo class to prevent SVG transparency) */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-            <div className="logo" style={{ fontSize: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Swords size={32} color="var(--accent-blue)" /> DebugDuel
+            <div className="logo" style={{ fontSize: '32px' }}>
+              ⚔️ DebugDuel
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'JetBrains Mono, monospace', marginTop: '4px' }}>
               Arena Client v1.0.0
@@ -1483,8 +1483,8 @@ function LoadingScreen() {
       color: '#F0F0F0',
       fontFamily: 'Space Grotesk, sans-serif'
     }}>
-      <div className="logo pulse-glow" style={{ fontSize: '32px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Swords size={32} color="var(--accent-blue)" /> DEBUGDUEL
+      <div className="logo pulse-glow" style={{ fontSize: '32px', marginBottom: '16px' }}>
+        ⚔️ DEBUGDUEL
       </div>
       <div style={{ color: '#8888A0', fontSize: '14px' }}>Loading session...</div>
     </div>

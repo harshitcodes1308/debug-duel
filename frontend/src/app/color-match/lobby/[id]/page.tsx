@@ -75,7 +75,7 @@ export default function ColorMatchLobby() {
         betAmount: duelDetails?.betAmount || 50,
         language: 'uiux',
         difficulty: 'medium',
-        participants: []
+        participants: participants
       });
       
       // Navigate to the color match arena

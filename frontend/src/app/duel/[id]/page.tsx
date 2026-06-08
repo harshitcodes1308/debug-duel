@@ -26,6 +26,7 @@ export default function DuelArena() {
   const [loading, setLoading] = useState(true);
   const [judgingCode, setJudgingCode] = useState(false);
   const [codeError, setCodeError] = useState('');
+  const [opponentOffline, setOpponentOffline] = useState(false);
   
   // Explanation Modal State
   const [showExplanationModal, setShowExplanationModal] = useState(false);
@@ -82,7 +83,7 @@ export default function DuelArena() {
       }
     }
 
-    if (!currentDuel) {
+    if (!currentDuel || !currentDuel.participants || currentDuel.participants.length < 2) {
       loadDuel();
     } else {
       if (currentDuel.bug) {
@@ -90,7 +91,7 @@ export default function DuelArena() {
       }
       setLoading(false);
     }
-  }, [duelId]);
+  }, [duelId, currentDuel]);
 
   // 2. Timer Tick Loop
   useEffect(() => {
@@ -106,9 +107,11 @@ export default function DuelArena() {
   // 3. Auto forfeit if timer runs out
   useEffect(() => {
     if (secondsLeft === 0 && currentDuel?.status === 'active') {
-      handleForfeit();
+      if (socketRef.current) {
+        socketRef.current.emit('match_timeout', { duelId });
+      }
     }
-  }, [secondsLeft]);
+  }, [secondsLeft, currentDuel?.status, duelId]);
 
   // 4. Socket Connection inside Arena
   useEffect(() => {
@@ -118,6 +121,7 @@ export default function DuelArena() {
     socketRef.current = socket;
 
     socket.emit('join_duel', { duelId, userId: user.id });
+    socket.emit('register_user', { userId: user.id });
 
     // FOMO updates
     socket.on('fomo_update', ({ message, opponentProgress: progress }) => {
@@ -149,6 +153,29 @@ export default function DuelArena() {
 
     // Final result broadcast
     socket.on('duel_result', (payload) => {
+      const myRpChange = payload.rpChanges?.[user.id] || 0;
+      const myNewRank = payload.newRanks?.[user.id] || '';
+      const myEloChange = payload.eloChanges?.[user.id] || 0;
+      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
+    });
+
+    // Opponent online/offline state sync
+    socket.on('opponent_offline', ({ userId, offline }) => {
+      if (userId !== user?.id) {
+        setOpponentOffline(offline);
+      }
+    });
+
+    // Match timed out (double defeat)
+    socket.on('match_timed_out', (payload) => {
+      KbcAudio.playWrong(); // error buzzer sound
+      alert("Time expired! Both players failed to resolve the bug in time and suffered ELO/Token deductions.");
+      if (user && payload.tokenChanges?.[user.id]) {
+        setUser({
+          ...user,
+          tokens: Math.max(0, user.tokens + payload.tokenChanges[user.id])
+        });
+      }
       const myRpChange = payload.rpChanges?.[user.id] || 0;
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
@@ -356,6 +383,28 @@ export default function DuelArena() {
             </div>
           )}
 
+          {opponentOffline && (
+            <div className="alert-priority-flash" style={{
+              padding: '12px 24px',
+              color: 'var(--accent-red)',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(239, 68, 68, 0.15)',
+              fontFamily: 'JetBrains Mono, monospace'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertTriangle size={16} className="pulse-glow" style={{ color: 'var(--accent-red)' }} />
+                <span>RIVAL DISCONNECTED! Auto-forfeit in progress, waiting 20s for reconnection...</span>
+              </div>
+              <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 8px', borderRadius: '4px' }}>DISCONNECTED</span>
+            </div>
+          )}
+
           {opponentSubmitted && (
             <div className="alert-priority-flash" style={{
               padding: '12px 24px',
@@ -418,8 +467,26 @@ export default function DuelArena() {
               <div className="panel-tactical-tr"></div>
               <div className="panel-tactical-bl"></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '14px', fontFamily: 'JetBrains Mono, monospace' }}>@{opponent?.username || 'Opponent'}</span>
-                {opponentSubmitted && <span className="badge" style={{ fontSize: '9px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>SUBMITTED</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '14px', fontFamily: 'JetBrains Mono, monospace' }}>@{opponent?.username || 'Opponent'}</span>
+                  {opponentOffline && (
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-red)',
+                      boxShadow: '0 0 8px var(--accent-red)'
+                    }} />
+                  )}
+                </div>
+                {opponentOffline ? (
+                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>OFFLINE</span>
+                ) : opponentSubmitted ? (
+                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>SUBMITTED</span>
+                ) : (
+                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>ONLINE</span>
+                )}
               </div>
 
               <div>
