@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Trophy, AlertTriangle, ArrowLeft, RefreshCw, 
@@ -35,15 +35,22 @@ interface DuelResultData {
     explanation: string;
   };
   participants: ParticipantDetails[];
+  isRanked?: boolean;
+  seasonId?: string | null;
 }
 
 export default function DuelResult() {
   const { id: duelId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useStore();
   const [loading, setLoading] = useState(true);
   const [duel, setDuel] = useState<DuelResultData | null>(null);
   const [rematching, setRematching] = useState(false);
+
+  const rpChange = searchParams.get('rpChange') ? parseInt(searchParams.get('rpChange')!) : null;
+  const newRank = searchParams.get('newRank') || null;
+  const eloChange = searchParams.get('eloChange') ? parseInt(searchParams.get('eloChange')!) : null;
 
   useEffect(() => {
     async function fetchResult() {
@@ -174,29 +181,118 @@ export default function DuelResult() {
           </p>
         </div>
 
-        <div style={{
-          display: 'flex',
-          gap: '24px',
-          borderTop: '1px solid var(--border)',
-          paddingTop: '20px',
-          width: '100%',
-          maxWidth: '400px',
-          justifyContent: 'center'
-        }}>
-          <div>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: isWinner ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-              {isWinner ? `+${50 + duel.betAmount} tokens` : `-${duel.betAmount} tokens`}
+        {duel.isRanked ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            width: '100%',
+            maxWidth: '500px',
+            alignItems: 'center',
+            borderTop: '1px solid var(--border)',
+            paddingTop: '20px'
+          }}>
+            <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', width: '100%' }}>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: (rpChange ?? 0) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                  {(rpChange ?? 0) >= 0 ? `+${rpChange ?? 0}` : rpChange} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>RP</span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>PROGRESS ADJUSTMENT</div>
+              </div>
+              <div style={{ width: '1px', background: 'var(--border)' }}></div>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--accent-blue)' }}>
+                  {(eloChange ?? 0) >= 0 ? `+${eloChange ?? 0}` : eloChange} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>ELO</span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MATCHMAKING MMR</div>
+              </div>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>TOKEN ALLOCATION</div>
+
+            {newRank && (
+              <div style={{
+                background: 'rgba(139, 92, 246, 0.05)',
+                border: '1px solid rgba(139, 92, 246, 0.15)',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '8px'
+              }}>
+                <Award size={14} color="var(--accent-purple)" />
+                <span>New Rank Standing: <strong style={{ color: 'var(--accent-purple)' }}>{newRank}</strong></span>
+              </div>
+            )}
+
+            {/* Promotion / Demotion alert */}
+            {newRank && user?.currentRank && newRank !== user.currentRank && (
+              <div style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                background: (rpChange ?? 0) > 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                color: (rpChange ?? 0) > 0 ? 'var(--accent-green)' : 'var(--accent-red)',
+                border: `1px solid ${(rpChange ?? 0) > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+              }}>
+                {(rpChange ?? 0) > 0 ? "PROMOTED!" : "DEMOTED!"}
+              </div>
+            )}
+
+            {/* Demotion Warning panel */}
+            {(!rpChange || rpChange < 0) && user && (
+              (() => {
+                const currentRP = user.rankPoints || 0;
+                const newRP = Math.max(0, currentRP + (rpChange || 0));
+                const isLowRP = newRP === 0 || (newRP % 100 < 15);
+                if (isLowRP) {
+                  return (
+                    <div style={{
+                      padding: '8px 14px',
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.15)',
+                      color: 'var(--accent-amber)',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      marginTop: '4px'
+                    }}>
+                      <Info size={13} /> Warning: You are near division demotion! Win the next match to secure your tier.
+                    </div>
+                  );
+                }
+                return null;
+              })()
+            )}
           </div>
-          <div style={{ width: '1px', background: 'var(--border)' }}></div>
-          <div>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--accent-blue)' }}>
-              {isWinner ? "+18 ELO" : "-14 ELO"}
+        ) : (
+          <div style={{
+            display: 'flex',
+            gap: '24px',
+            borderTop: '1px solid var(--border)',
+            paddingTop: '20px',
+            width: '100%',
+            maxWidth: '400px',
+            justifyContent: 'center'
+          }}>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: isWinner ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                {isWinner ? `+${50 + duel.betAmount} tokens` : `-${duel.betAmount} tokens`}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>TOKEN ALLOCATION</div>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>RATING CHANGE</div>
+            <div style={{ width: '1px', background: 'var(--border)' }}></div>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--accent-blue)' }}>
+                {isWinner ? "+18 ELO" : "-14 ELO"}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>RATING CHANGE</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* 2. REPLAY & JUDGE SUMMARY PANEL */}

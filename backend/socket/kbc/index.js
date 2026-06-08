@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 const { awardXP } = require('../../utils/xp');
 const { checkAchievements } = require('../../services/achievements');
 const { updateQuestProgress } = require('../../services/quests');
+const { resolveRankedMatch } = require('../../services/rank');
 
 // Helper to serialize room state safely
 function serializeRoom(room) {
@@ -226,121 +227,154 @@ async function endGame(roomCode, io) {
   const hostRewards = { tokenChange: 0, eloChange: 0, winner: winnerId === room.host.userId };
   const guestRewards = room.guest ? { tokenChange: 0, eloChange: 0, winner: winnerId === room.guest.userId } : null;
 
+  let isRankedGame = false;
+  let rankedDetails = null;
+
   try {
     await prisma.$transaction(async (tx) => {
-      // Row-level lock to prevent duplicate KBC game resolutions or race conditions
+      let dbDuel = null;
       if (room.duelId) {
-        const duels = await tx.$queryRaw`SELECT status FROM "Duel" WHERE id = ${room.duelId} FOR UPDATE`;
-        const dbDuel = duels[0];
+        const duels = await tx.$queryRaw`SELECT status, "isRanked", "seasonId" FROM "Duel" WHERE id = ${room.duelId} FOR UPDATE`;
+        dbDuel = duels[0];
         if (!dbDuel || dbDuel.status !== 'active') {
           throw new Error("ALREADY_COMPLETED");
         }
       }
 
-      if (winnerId) {
-        // Winner update
-        const winnerIsHost = winnerId === room.host.userId;
-        const loserId = winnerIsHost ? (room.guest ? room.guest.userId : null) : room.host.userId;
+      if (dbDuel && dbDuel.isRanked) {
+        isRankedGame = true;
+        const p1Id = room.host.userId;
+        const p2Id = room.guest.userId;
+        const isDraw = (winnerId === null);
+        rankedDetails = await resolveRankedMatch(dbDuel.seasonId, p1Id, p2Id, winnerId, isDraw, tx);
 
-        // Increment Winner Stats
-        const winnerUser = await tx.user.findUnique({ where: { id: winnerId } });
-        if (winnerUser) {
-          const nextStreak = winnerUser.currentStreak + 1;
-          const newTokens = winnerUser.tokens + 50 + wager; // 50 base prize + guest's wager matches
-          
-          await awardXP(winnerId, 50, tx);
-
-          await tx.user.update({
-            where: { id: winnerId },
-            data: {
-              totalDuels: { increment: 1 },
-              totalWins: { increment: 1 },
-              tokens: newTokens,
-              currentStreak: nextStreak,
-              bestStreak: Math.max(winnerUser.bestStreak, nextStreak)
-            }
-          });
-
-          if (winnerIsHost) {
-            hostRewards.tokenChange = 50 + wager;
-          } else if (guestRewards) {
-            guestRewards.tokenChange = 50 + wager;
-          }
-        }
-
-        // Decrement Loser Stats
-        if (loserId) {
-          await awardXP(loserId, 15, tx);
-
-          await tx.user.update({
-            where: { id: loserId },
-            data: {
-              totalDuels: { increment: 1 },
-              tokens: { decrement: wager },
-              currentStreak: 0
-            }
-          });
-
-          if (winnerIsHost && guestRewards) {
-            guestRewards.tokenChange = -wager;
-          } else {
-            hostRewards.tokenChange = -wager;
-          }
-        }
-
-        // Audit achievements and quests
-        if (winnerId) {
-          await checkAchievements(winnerId, tx, io);
-          await updateQuestProgress(winnerId, "play_duel", 1, tx, io);
-          await updateQuestProgress(winnerId, "win_duel", 1, tx, io);
-          await updateQuestProgress(winnerId, "gain_xp", 50, tx, io);
-          await updateQuestProgress(winnerId, "earn_tokens", wager, tx, io);
-        }
-        if (loserId) {
-          await checkAchievements(loserId, tx, io);
-          await updateQuestProgress(loserId, "play_duel", 1, tx, io);
-          await updateQuestProgress(loserId, "gain_xp", 15, tx, io);
-        }
-
-        // Update Duel record
-        if (room.duelId) {
-          await tx.duel.update({
-            where: { id: room.duelId },
-            data: {
-              status: "completed",
-              winnerId: winnerId,
-              endedAt: new Date()
-            }
-          });
-
-          // Update DuelParticipant record for winner
+        // Update participant records isWinner
+        if (!isDraw) {
           await tx.duelParticipant.updateMany({
             where: { duelId: room.duelId, userId: winnerId },
             data: { isWinner: true }
           });
-        }
-      } else {
-        // Draw or no winner (both scores equal, speed identical)
-        if (room.duelId) {
-          await tx.duel.update({
-            where: { id: room.duelId },
-            data: {
-              status: "completed",
-              endedAt: new Date()
-            }
+          await tx.duelParticipant.updateMany({
+            where: { duelId: room.duelId, userId: winnerId === p1Id ? p2Id : p1Id },
+            data: { isWinner: false }
           });
         }
 
-        // Increment matches for both
-        await tx.user.update({
-          where: { id: room.host.userId },
-          data: { totalDuels: { increment: 1 } }
+        // Update Duel record
+        await tx.duel.update({
+          where: { id: room.duelId },
+          data: {
+            status: "completed",
+            winnerId: winnerId,
+            endedAt: new Date()
+          }
         });
-        if (room.guest) {
+      } else {
+        if (winnerId) {
+          // Winner update
+          const winnerIsHost = winnerId === room.host.userId;
+          const loserId = winnerIsHost ? (room.guest ? room.guest.userId : null) : room.host.userId;
+
+          // Increment Winner Stats
+          const winnerUser = await tx.user.findUnique({ where: { id: winnerId } });
+          if (winnerUser) {
+            const nextStreak = winnerUser.currentStreak + 1;
+            const newTokens = winnerUser.tokens + 50 + wager; // 50 base prize + guest's wager matches
+            
+            await awardXP(winnerId, 50, tx);
+
+            await tx.user.update({
+              where: { id: winnerId },
+              data: {
+                totalDuels: { increment: 1 },
+                totalWins: { increment: 1 },
+                tokens: newTokens,
+                currentStreak: nextStreak,
+                bestStreak: Math.max(winnerUser.bestStreak, nextStreak)
+              }
+            });
+
+            if (winnerIsHost) {
+              hostRewards.tokenChange = 50 + wager;
+            } else if (guestRewards) {
+              guestRewards.tokenChange = 50 + wager;
+            }
+          }
+
+          // Decrement Loser Stats
+          if (loserId) {
+            await awardXP(loserId, 15, tx);
+
+            await tx.user.update({
+              where: { id: loserId },
+              data: {
+                totalDuels: { increment: 1 },
+                tokens: { decrement: wager },
+                currentStreak: 0
+              }
+            });
+
+            if (winnerIsHost && guestRewards) {
+              guestRewards.tokenChange = -wager;
+            } else {
+              hostRewards.tokenChange = -wager;
+            }
+          }
+
+          // Audit achievements and quests
+          if (winnerId) {
+            await checkAchievements(winnerId, tx, io);
+            await updateQuestProgress(winnerId, "play_duel", 1, tx, io);
+            await updateQuestProgress(winnerId, "win_duel", 1, tx, io);
+            await updateQuestProgress(winnerId, "gain_xp", 50, tx, io);
+            await updateQuestProgress(winnerId, "earn_tokens", wager, tx, io);
+          }
+          if (loserId) {
+            await checkAchievements(loserId, tx, io);
+            await updateQuestProgress(loserId, "play_duel", 1, tx, io);
+            await updateQuestProgress(loserId, "gain_xp", 15, tx, io);
+          }
+
+          // Update Duel record
+          if (room.duelId) {
+            await tx.duel.update({
+              where: { id: room.duelId },
+              data: {
+                status: "completed",
+                winnerId: winnerId,
+                endedAt: new Date()
+              }
+            });
+
+            // Update DuelParticipant record for winner
+            await tx.duelParticipant.updateMany({
+              where: { duelId: room.duelId, userId: winnerId },
+              data: { isWinner: true }
+            });
+          }
+        } else {
+          // Draw or no winner (both scores equal, speed identical)
+          if (room.duelId) {
+            await tx.duel.update({
+              where: { id: room.duelId },
+              data: {
+                status: "completed",
+                endedAt: new Date()
+              }
+            });
+          }
+
+          // Increment matches for both
           await tx.user.update({
-            where: { id: room.guest.userId },
+            where: { id: room.host.userId },
             data: { totalDuels: { increment: 1 } }
           });
+          if (room.guest) {
+            await tx.user.update({
+              where: { id: room.guest.userId },
+              data: { totalDuels: { increment: 1 } }
+            });
+          }
         }
       }
     });
@@ -358,7 +392,11 @@ async function endGame(roomCode, io) {
     room: serializeRoom(room),
     winnerId,
     hostRewards,
-    guestRewards
+    guestRewards,
+    isRanked: isRankedGame,
+    rpChanges: rankedDetails ? rankedDetails.rpChanges : null,
+    eloChanges: rankedDetails ? rankedDetails.eloChanges : null,
+    newRanks: rankedDetails ? rankedDetails.newRanks : null
   });
 }
 

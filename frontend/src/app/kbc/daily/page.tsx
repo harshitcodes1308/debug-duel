@@ -265,6 +265,13 @@ function DailyChallengeGame() {
     await persistDailyRunOutcome('quit', currentQuestionIndex);
   };
 
+  // Circular timer color mapping
+  const getTimerColor = () => {
+    if (timeLeft > 15) return 'var(--accent-purple)';
+    if (timeLeft > 10) return 'var(--accent-amber)';
+    return 'var(--accent-red)';
+  };
+
   // Start Game trigger
   const handleStartGame = () => {
     KbcAudio.playReveal();
@@ -559,6 +566,16 @@ function DailyChallengeGame() {
         color: 'var(--text-primary)',
         fontFamily: 'Inter, sans-serif'
       }}>
+        <style>{`
+          @keyframes timerFlash {
+            0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
+            50% { transform: scale(1.08); filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.8)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.4)); }
+          }
+          .timer-warning {
+            animation: timerFlash 0.5s infinite ease-in-out;
+          }
+        `}</style>
         <div className="container kbc-arena-grid">
           
           {/* Main game board */}
@@ -638,7 +655,10 @@ function DailyChallengeGame() {
               padding: 'var(--space-8)'
             }}>
               {/* Circular Timer UI */}
-              <div style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div 
+                className={timeLeft <= 10 && lockedOptionIndex === null ? 'timer-warning' : ''}
+                style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'var(--transition)' }}
+              >
                 <svg width="90" height="90" style={{ transform: 'rotate(-90deg)', position: 'absolute' }}>
                   <circle cx="45" cy="45" r="38" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="6" />
                   <circle 
@@ -646,14 +666,24 @@ function DailyChallengeGame() {
                     cy="45" 
                     r="38" 
                     fill="transparent" 
-                    stroke="var(--accent-purple)" 
+                    stroke={getTimerColor()} 
                     strokeWidth="6" 
                     strokeDasharray={2 * Math.PI * 38}
                     strokeDashoffset={2 * Math.PI * 38 * (1 - timeLeft / 30)}
-                    style={{ transition: 'stroke-dashoffset 1s linear' }}
+                    style={{
+                      transition: 'stroke-dashoffset 1s linear, stroke 0.2s ease',
+                    }}
                   />
                 </svg>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--accent-purple)', fontWeight: 'bold' }}>
+                <div className="flex-center" style={{ 
+                  flexDirection: 'column', 
+                  gap: '2px', 
+                  zIndex: 10,
+                  color: getTimerColor(),
+                  fontWeight: 'bold',
+                  fontFamily: 'Space Grotesk, sans-serif',
+                  transition: 'color 0.2s'
+                }}>
                   <Clock size={14} />
                   <span style={{ fontSize: '18px' }}>{timeLeft}s</span>
                 </div>

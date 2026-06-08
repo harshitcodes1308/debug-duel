@@ -7,7 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import Editor from '@monaco-editor/react';
 import { 
   Timer, Flame, Award, Swords, HelpCircle, 
-  Send, AlertTriangle, Play, Sparkles, CheckCircle2 
+  Send, AlertTriangle, Play, Sparkles, CheckCircle2, Flag
 } from 'lucide-react';
 import { KbcAudio } from '@/utils/kbc/audio';
 
@@ -132,21 +132,27 @@ export default function DuelArena() {
     });
 
     // Opponent forfeited
-    socket.on('opponent_forfeited', ({ winnerId, eloChanges, tokenChanges }) => {
+    socket.on('opponent_forfeited', (payload) => {
       KbcAudio.playWin(); // Win fanfare
       alert("Your opponent has forfeited! You win!");
-      if (user && tokenChanges[user.id]) {
+      if (user && payload.tokenChanges?.[user.id]) {
         setUser({
           ...user,
-          tokens: user.tokens + tokenChanges[user.id]
+          tokens: user.tokens + payload.tokenChanges[user.id]
         });
       }
-      router.push(`/duel/${duelId}/result`);
+      const myRpChange = payload.rpChanges?.[user.id] || 0;
+      const myNewRank = payload.newRanks?.[user.id] || '';
+      const myEloChange = payload.eloChanges?.[user.id] || 0;
+      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
     });
 
     // Final result broadcast
-    socket.on('duel_result', () => {
-      router.push(`/duel/${duelId}/result`);
+    socket.on('duel_result', (payload) => {
+      const myRpChange = payload.rpChanges?.[user.id] || 0;
+      const myNewRank = payload.newRanks?.[user.id] || '';
+      const myEloChange = payload.eloChanges?.[user.id] || 0;
+      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
     });
 
     // Error handling to prevent getting stuck
@@ -500,10 +506,13 @@ export default function DuelArena() {
             borderColor: 'rgba(239, 68, 68, 0.4)', 
             color: 'var(--accent-red)',
             background: 'rgba(239, 68, 68, 0.05)',
-            fontFamily: 'Space Grotesk, sans-serif'
+            fontFamily: 'Space Grotesk, sans-serif',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          Forfeit Match 🏳️
+          Forfeit Match <Flag size={14} />
         </button>
 
         <button 

@@ -252,20 +252,26 @@ export default function ColorMatchArena() {
     });
 
     // Opponent forfeited
-    socket.on('opponent_forfeited', ({ winnerId, eloChanges, tokenChanges }) => {
+    socket.on('opponent_forfeited', (payload) => {
       alert("Your opponent has forfeited! You win!");
-      if (user && tokenChanges[user.id]) {
+      if (user && payload.tokenChanges?.[user.id]) {
         setUser({
           ...user,
-          tokens: user.tokens + tokenChanges[user.id]
+          tokens: user.tokens + payload.tokenChanges[user.id]
         });
       }
-      router.push(`/color-match/duel/${duelId}/result`);
+      const myRpChange = payload.rpChanges?.[user.id] || 0;
+      const myNewRank = payload.newRanks?.[user.id] || '';
+      const myEloChange = payload.eloChanges?.[user.id] || 0;
+      router.push(`/color-match/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
     });
 
     // Final result broadcast
-    socket.on('duel_result', () => {
-      router.push(`/color-match/duel/${duelId}/result`);
+    socket.on('duel_result', (payload) => {
+      const myRpChange = payload.rpChanges?.[user.id] || 0;
+      const myNewRank = payload.newRanks?.[user.id] || '';
+      const myEloChange = payload.eloChanges?.[user.id] || 0;
+      router.push(`/color-match/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
     });
 
     return () => {

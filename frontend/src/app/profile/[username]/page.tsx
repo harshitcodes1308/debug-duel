@@ -7,9 +7,31 @@ import Link from 'next/link';
 import { 
   ArrowLeft, Award, Flame, Zap, Shield, 
   History, Swords, TrendingUp, Sparkles,
-  Trophy, Play, Calendar, Users, Lock
+  Trophy, Play, Calendar, Users, Lock, Crown, Clock
 } from 'lucide-react';
 import AnimatedCounter from '@/components/AnimatedCounter';
+import RankedProgressWidget from '@/components/RankedProgressWidget';
+
+interface SeasonStats {
+  seasonName: string;
+  currentRank: string;
+  rankPoints: number;
+  peakRank: string;
+  wins: number;
+  losses: number;
+  matchesPlayed: number;
+  winRate: number;
+  overallElo: number;
+}
+
+interface SeasonRewardClaim {
+  claimId: string;
+  seasonName: string;
+  rewardType: 'TITLE' | 'BADGE' | 'FRAME';
+  rewardName: string;
+  rewardValue: string;
+  claimedAt: string;
+}
 
 interface ParticipantDetails {
   userId: string;
@@ -330,7 +352,12 @@ export default function PlayerProfile() {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'stats' | 'achievements'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'achievements' | 'ranked'>('stats');
+
+  // Seasonal Ranked States
+  const [seasonStats, setSeasonStats] = useState<SeasonStats | null>(null);
+  const [rewards, setRewards] = useState<SeasonRewardClaim[]>([]);
+  const [loadingRanked, setLoadingRanked] = useState(true);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -353,6 +380,34 @@ export default function PlayerProfile() {
       fetchProfile();
     }
   }, [username]);
+
+  // Fetch seasonal ranked stats and claimed rewards once profile is loaded
+  useEffect(() => {
+    if (!profile) return;
+    
+    const profileId = profile.id;
+    async function fetchRankedData() {
+      setLoadingRanked(true);
+      try {
+        const [statsRes, rewardsRes] = await Promise.all([
+          fetch(`http://localhost:5001/api/season/stats/${username}`),
+          fetch(`http://localhost:5001/api/season/rewards/my?userId=${profileId}`)
+        ]);
+        if (statsRes.ok) {
+          setSeasonStats(await statsRes.json());
+        }
+        if (rewardsRes.ok) {
+          setRewards(await rewardsRes.json());
+        }
+      } catch (e) {
+        console.error("Error fetching ranked data:", e);
+      } finally {
+        setLoadingRanked(false);
+      }
+    }
+    
+    fetchRankedData();
+  }, [profile, username]);
 
   if (loading) {
     return (
@@ -609,6 +664,24 @@ export default function PlayerProfile() {
           className={activeTab === 'achievements' ? '' : 'btn-ghost'}
         >
           Achievements
+        </button>
+        <button 
+          onClick={() => setActiveTab('ranked')}
+          style={{
+            background: activeTab === 'ranked' ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+            color: activeTab === 'ranked' ? '#fff' : 'var(--text-secondary)',
+            border: 'none',
+            outline: 'none',
+            padding: '8px 16px',
+            borderRadius: 'var(--radius-md)',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '14px',
+            transition: 'var(--transition)'
+          }}
+          className={activeTab === 'ranked' ? '' : 'btn-ghost'}
+        >
+          Ranked Season
         </button>
       </div>
 
@@ -874,7 +947,7 @@ export default function PlayerProfile() {
           </div>
 
         </div>
-      ) : (
+      ) : activeTab === 'achievements' ? (
         /* Achievements view */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
           {/* Overview cards */}
@@ -1166,8 +1239,223 @@ export default function PlayerProfile() {
             </div>
           )}
         </div>
-      )}
+      ) : (
+        /* Ranked Season View */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', animation: 'fadeIn 0.3s ease' }}>
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(8px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}</style>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '32px'
+          }}>
+            {/* Left side: current rank widget */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                Seasonal Rank Standing
+              </h3>
+              {loadingRanked ? (
+                <div className="skeleton-box" style={{ width: '100%', height: '120px', borderRadius: '16px' }} />
+              ) : (
+                <RankedProgressWidget 
+                  rank={seasonStats?.currentRank || "Bronze III"} 
+                  rp={seasonStats?.rankPoints || 0}
+                  showDetails={true}
+                />
+              )}
+            </div>
 
+            {/* Right side: Ranked stats overview */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                Season Performance
+              </h3>
+              
+              {loadingRanked ? (
+                <div className="card-base" style={{ height: '120px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div className="skeleton-box" style={{ width: '100%', height: '20px' }} />
+                  <div className="skeleton-box" style={{ width: '80%', height: '16px' }} />
+                </div>
+              ) : (
+                <div className="card-base" style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Season</span>
+                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--accent-purple)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                      {seasonStats?.seasonName || "Season 1"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peak Rank</span>
+                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--accent-amber)', marginTop: '4px' }}>
+                      {seasonStats?.peakRank || "Bronze III"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ranked Wins</span>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-green)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                      {seasonStats?.wins || 0} W
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ranked Losses</span>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-red)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                      {seasonStats?.losses || 0} L
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win Rate</span>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-blue)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                      {seasonStats?.winRate || 0}%
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Matchmaking MMR</span>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                      {seasonStats?.overallElo || 1000} ELO
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Prestige Rewards Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+            <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+              Prestige Rewards History
+            </h3>
+
+            {loadingRanked ? (
+              <div className="skeleton-box" style={{ width: '100%', height: '140px', borderRadius: '16px' }} />
+            ) : rewards.length === 0 ? (
+              <div className="card-base" style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)', borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)' }}>
+                <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border)', padding: '16px', borderRadius: '50%', display: 'inline-flex', marginBottom: '16px' }}>
+                  <Award size={32} style={{ color: 'var(--accent-purple)', opacity: 0.8 }} />
+                </div>
+                <h3 style={{ fontSize: '16px', color: '#fff', marginBottom: '6px' }}>No prestige rewards earned yet</h3>
+                <p style={{ fontSize: '13px', maxWidth: '380px', margin: '0 auto', lineHeight: '18px' }}>
+                  Prestige rewards like titles, special badges, and avatar frames are distributed at the end of each Ranked Season based on placement or rank. Climb high to claim yours!
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                {rewards.map((reward) => (
+                  <div 
+                    key={reward.claimId} 
+                    className="card-base"
+                    style={{
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      border: '1px solid var(--border)',
+                      background: 'rgba(26, 26, 36, 0.3)',
+                      boxShadow: reward.rewardType === 'TITLE' ? '0 0 16px rgba(245, 158, 11, 0.05)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="badge" style={{
+                        fontSize: '9px',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        padding: '3px 8px',
+                        background: reward.rewardType === 'TITLE' ? 'rgba(245, 158, 11, 0.1)' : reward.rewardType === 'BADGE' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                        border: `1px solid ${reward.rewardType === 'TITLE' ? 'rgba(245, 158, 11, 0.25)' : reward.rewardType === 'BADGE' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(59, 130, 246, 0.25)'}`,
+                        color: reward.rewardType === 'TITLE' ? 'var(--accent-amber)' : reward.rewardType === 'BADGE' ? 'var(--accent-purple)' : 'var(--accent-blue)'
+                      }}>
+                        {reward.rewardType}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        {reward.seasonName}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                      {reward.rewardType === 'BADGE' && (
+                        <div style={{
+                          background: 'rgba(168, 85, 247, 0.1)',
+                          border: '1.5px solid var(--accent-purple)',
+                          borderRadius: '8px',
+                          padding: '8px',
+                          color: 'var(--accent-purple)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Award size={20} />
+                        </div>
+                      )}
+
+                      {reward.rewardType === 'TITLE' && (
+                        <div style={{
+                          background: 'rgba(245, 158, 11, 0.1)',
+                          border: '1.5px solid var(--accent-amber)',
+                          borderRadius: '8px',
+                          padding: '8px',
+                          color: 'var(--accent-amber)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Crown size={20} />
+                        </div>
+                      )}
+
+                      {reward.rewardType === 'FRAME' && (
+                        <div style={{
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1.5px solid var(--accent-blue)',
+                          borderRadius: '8px',
+                          padding: '8px',
+                          color: 'var(--accent-blue)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Shield size={20} />
+                        </div>
+                      )}
+
+                      <div>
+                        {reward.rewardType === 'TITLE' ? (
+                          <div style={{ 
+                            fontSize: '15px', 
+                            fontWeight: '800', 
+                            fontFamily: 'Space Grotesk, sans-serif',
+                            color: 'var(--accent-amber)',
+                            textShadow: '0 0 10px rgba(245, 158, 11, 0.3)'
+                          }}>
+                            {reward.rewardName}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fff' }}>
+                            {reward.rewardName}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          Claimed {new Date(reward.claimedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

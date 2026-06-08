@@ -32,8 +32,8 @@ export default function Header() {
     <>
       <header className="nav-header">
       <Link href="/" style={{ textDecoration: 'none' }}>
-        <div className="logo" style={{ fontSize: '19px' }}>
-          ⚔️ DebugDuel
+        <div className="logo" style={{ fontSize: '19px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Swords size={20} color="var(--accent-blue)" /> DebugDuel
         </div>
       </Link>
 

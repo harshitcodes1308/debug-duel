@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import Link from 'next/link';
-import { ArrowLeft, Trophy, Medal, Award, Coins } from 'lucide-react';
+import { ArrowLeft, Trophy, Medal, Award, Coins, Clock } from 'lucide-react';
 import AnimatedCounter from '@/components/AnimatedCounter';
 
 interface LeaderboardEntry {
@@ -18,14 +18,35 @@ interface LeaderboardEntry {
   totalDuels: number;
 }
 
+interface SeasonalLeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  tier: string;
+  rp: number;
+  wins: number;
+  losses: number;
+  matchesPlayed: number;
+  winRate: number;
+}
+
 export default function LeaderboardPage() {
   const { user } = useStore();
+  const [leaderboardType, setLeaderboardType] = useState<'classic' | 'seasonal'>('classic');
   const [language, setLanguage] = useState<'javascript' | 'python' | 'java'>('javascript');
+  
+  // Data lists
   const [list, setList] = useState<LeaderboardEntry[]>([]);
+  const [seasonalList, setSeasonalList] = useState<SeasonalLeaderboardEntry[]>([]);
+  const [activeSeason, setActiveSeason] = useState<any>(null);
+  
   const [loading, setLoading] = useState(true);
 
+  // Fetch Classic ELO Leaderboard
   useEffect(() => {
-    async function fetchLeaderboard() {
+    if (leaderboardType !== 'classic') return;
+    
+    async function fetchClassicLeaderboard() {
       setLoading(true);
       try {
         const res = await fetch(`http://localhost:5001/api/leaderboard?language=${language}`);
@@ -40,10 +61,42 @@ export default function LeaderboardPage() {
       }
     }
 
-    fetchLeaderboard();
-  }, [language]);
+    fetchClassicLeaderboard();
+  }, [language, leaderboardType]);
+
+  // Fetch Seasonal Ranked Leaderboard & Active Season details
+  useEffect(() => {
+    if (leaderboardType !== 'seasonal') return;
+
+    async function fetchSeasonalData() {
+      setLoading(true);
+      try {
+        const [leaderboardRes, activeSeasonRes] = await Promise.all([
+          fetch('http://localhost:5001/api/season/leaderboard'),
+          fetch('http://localhost:5001/api/season/active')
+        ]);
+
+        if (leaderboardRes.ok) {
+          const data = await leaderboardRes.json();
+          setSeasonalList(data);
+        }
+        if (activeSeasonRes.ok) {
+          const data = await activeSeasonRes.json();
+          setActiveSeason(data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchSeasonalData();
+  }, [leaderboardType]);
 
   if (!user) return null;
+
+  const activeList = leaderboardType === 'classic' ? list : seasonalList;
 
   return (
     <div className="container" style={{ padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -64,60 +117,128 @@ export default function LeaderboardPage() {
       {/* Heading */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{
-          background: 'rgba(245, 166, 35, 0.1)',
-          border: '1px solid rgba(245, 166, 35, 0.2)',
+          background: leaderboardType === 'classic' ? 'rgba(245, 166, 35, 0.1)' : 'rgba(139, 92, 246, 0.1)',
+          border: `1px solid ${leaderboardType === 'classic' ? 'rgba(245, 166, 35, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`,
           padding: '12px',
           borderRadius: '10px'
         }}>
-          <Trophy size={28} color="var(--accent-amber)" />
+          <Trophy size={28} color={leaderboardType === 'classic' ? 'var(--accent-amber)' : 'var(--accent-purple)'} />
         </div>
         <div>
-          <h1 style={{ fontSize: '28px' }}>Global Leaderboards</h1>
+          <h1 style={{ fontSize: '28px' }}>
+            {leaderboardType === 'classic' ? 'Global Leaderboards' : 'Seasonal Ranked Leaderboard'}
+          </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
-            Climb the ELO rankings in JavaScript, Python, or Java and claim your crown as the Zero-Day God.
+            {leaderboardType === 'classic' 
+              ? 'Climb the ELO rankings in JavaScript, Python, or Java and claim your crown as the Zero-Day God.'
+              : 'Climb the divisions from Bronze to Grandmaster. Ranked points (RP) are at stake in the arena.'}
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Leaderboard Type Toggle Tabs */}
       <div style={{
         display: 'flex',
-        background: 'var(--bg-secondary)',
-        padding: '4px',
-        borderRadius: '8px',
-        maxWidth: '360px',
-        border: '1px solid var(--border)'
+        gap: '12px',
+        borderBottom: '1px solid var(--border)',
+        paddingBottom: '16px',
+        marginBottom: '4px'
       }}>
         <button 
-          onClick={() => setLanguage('javascript')} 
-          className={`btn ${language === 'javascript' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+          onClick={() => setLeaderboardType('classic')}
+          className={`btn ${leaderboardType === 'classic' ? 'btn-primary' : 'btn-ghost'}`}
+          style={{ height: '40px', padding: '0 20px', fontSize: '14px', fontWeight: 600, border: 'none' }}
         >
-          JavaScript
+          Classic ELO
         </button>
         <button 
-          onClick={() => setLanguage('python')} 
-          className={`btn ${language === 'python' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+          onClick={() => setLeaderboardType('seasonal')}
+          className={`btn ${leaderboardType === 'seasonal' ? 'btn-primary' : 'btn-ghost'}`}
+          style={{ height: '40px', padding: '0 20px', fontSize: '14px', fontWeight: 600, border: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          Python
-        </button>
-        <button 
-          onClick={() => setLanguage('java')} 
-          className={`btn ${language === 'java' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
-        >
-          Java
+          <Award size={16} /> Seasonal Ranked
         </button>
       </div>
+
+      {/* Conditional Sub-selectors: Language for Classic ELO, Active Season info for Seasonal */}
+      {leaderboardType === 'classic' ? (
+        <div style={{
+          display: 'flex',
+          background: 'var(--bg-secondary)',
+          padding: '4px',
+          borderRadius: '8px',
+          maxWidth: '360px',
+          border: '1px solid var(--border)'
+        }}>
+          <button 
+            onClick={() => setLanguage('javascript')} 
+            className={`btn ${language === 'javascript' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+          >
+            JavaScript
+          </button>
+          <button 
+            onClick={() => setLanguage('python')} 
+            className={`btn ${language === 'python' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+          >
+            Python
+          </button>
+          <button 
+            onClick={() => setLanguage('java')} 
+            className={`btn ${language === 'java' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+          >
+            Java
+          </button>
+        </div>
+      ) : (
+        activeSeason && (
+          <div style={{
+            background: 'rgba(139, 92, 246, 0.05)',
+            border: '1px solid rgba(139, 92, 246, 0.15)',
+            borderRadius: '10px',
+            padding: '12px 18px',
+            fontSize: '14px',
+            color: 'var(--text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+            maxWidth: '600px'
+          }}>
+            <span>Active Season: <strong style={{ color: 'var(--accent-purple)' }}>{activeSeason.name}</strong></span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 600 }}>
+              <Clock size={15} color="var(--accent-amber)" /> {activeSeason.countdown}
+            </span>
+          </div>
+        )
+      )}
 
       {/* Table */}
       <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-            Loading rankings...
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Header row skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: '80px 1.5fr 1fr 1fr 1fr 100px', gap: '12px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="skeleton-box" style={{ height: '14px' }} />
+              ))}
+            </div>
+            {/* 5 data row skeletons */}
+            {[...Array(5)].map((_, idx) => (
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '80px 1.5fr 1fr 1fr 1fr 100px', gap: '12px', alignItems: 'center' }}>
+                <div className="skeleton-circle" style={{ width: '28px', height: '28px' }} />
+                <div className="skeleton-box" style={{ height: '18px', width: '120px' }} />
+                <div className="skeleton-box" style={{ height: '18px', width: '80px' }} />
+                <div className="skeleton-box" style={{ height: '18px', width: '100px' }} />
+                <div className="skeleton-box" style={{ height: '18px', width: '60px' }} />
+                <div className="skeleton-box" style={{ height: '18px', width: '60px', justifySelf: 'end' }} />
+              </div>
+            ))}
           </div>
-        ) : list.length === 0 ? (
+        ) : activeList.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
             No rankings logged yet. Be the first to win a duel!
           </div>
@@ -128,22 +249,51 @@ export default function LeaderboardPage() {
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.01)', color: 'var(--text-secondary)' }}>
                   <th style={{ padding: '16px 24px', fontWeight: '600' }}>RANK</th>
                   <th style={{ padding: '16px 24px', fontWeight: '600' }}>PLAYER</th>
-                  <th className="hidden-mobile" style={{ padding: '16px 24px', fontWeight: '600' }}>TIER</th>
-                  <th className="hidden-mobile" style={{ padding: '16px 24px', fontWeight: '600' }}>DUELS (W/L)</th>
-                  <th className="hidden-tablet" style={{ padding: '16px 24px', fontWeight: '600' }}>TOKENS</th>
-                  <th style={{ padding: '16px 24px', fontWeight: '600', textAlign: 'right' }}>ELO RATING</th>
+                  <th className="hidden-mobile" style={{ padding: '16px 24px', fontWeight: '600' }}>
+                    {leaderboardType === 'classic' ? 'TIER' : 'RANK TIER'}
+                  </th>
+                  <th className="hidden-mobile" style={{ padding: '16px 24px', fontWeight: '600' }}>
+                    {leaderboardType === 'classic' ? 'DUELS (W/L)' : 'MATCHES (W/L)'}
+                  </th>
+                  <th className={leaderboardType === 'classic' ? "hidden-tablet" : "hidden-mobile"} style={{ padding: '16px 24px', fontWeight: '600' }}>
+                    {leaderboardType === 'classic' ? 'TOKENS' : 'WIN RATE'}
+                  </th>
+                  <th style={{ padding: '16px 24px', fontWeight: '600', textAlign: 'right' }}>
+                    {leaderboardType === 'classic' ? 'ELO RATING' : 'RANK POINTS (RP)'}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {list.map((entry, index) => {
-                  const elo = language === 'javascript' ? entry.eloJS : language === 'python' ? entry.eloPython : entry.eloJava;
+                {activeList.map((entry: any, index) => {
+                  const elo = leaderboardType === 'classic' 
+                    ? (language === 'javascript' ? entry.eloJS : language === 'python' ? entry.eloPython : entry.eloJava)
+                    : entry.rp;
+                  
                   const isCurrentUser = entry.username === user.username;
                   const isTopThree = index < 3;
 
+                  // Custom row background and left border accent for Top 3 Podium
+                  let rowBackground = isCurrentUser ? 'rgba(74, 158, 255, 0.04)' : 'transparent';
+                  let borderLeftStyle = '4px solid transparent';
+                  
+                  if (isTopThree) {
+                    if (index === 0) {
+                      rowBackground = 'linear-gradient(90deg, rgba(245, 158, 11, 0.06) 0%, rgba(20, 20, 25, 0.2) 100%)';
+                      borderLeftStyle = '4px solid var(--accent-amber)';
+                    } else if (index === 1) {
+                      rowBackground = 'linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(20, 20, 25, 0.2) 100%)';
+                      borderLeftStyle = '4px solid #94A3B8';
+                    } else if (index === 2) {
+                      rowBackground = 'linear-gradient(90deg, rgba(205, 127, 50, 0.03) 0%, rgba(20, 20, 25, 0.2) 100%)';
+                      borderLeftStyle = '4px solid #B45309';
+                    }
+                  }
+
                   return (
-                    <tr key={entry.id} style={{
+                    <tr key={entry.id || entry.userId} style={{
                       borderBottom: '1px solid var(--border)',
-                      background: isCurrentUser ? 'rgba(74, 158, 255, 0.04)' : 'transparent',
+                      background: rowBackground,
+                      borderLeft: borderLeftStyle,
                       transition: 'var(--transition)',
                       animationDelay: `${index * 40}ms`,
                       opacity: 0
@@ -181,34 +331,43 @@ export default function LeaderboardPage() {
                       {/* Tier badge */}
                       <td className="hidden-mobile" style={{ padding: '16px 24px' }}>
                         <span className="badge" style={{
-                          background: 'rgba(139, 92, 246, 0.06)',
-                          border: '1px solid rgba(139, 92, 246, 0.15)',
-                          color: 'var(--accent-purple)',
+                          background: leaderboardType === 'classic' ? 'rgba(139, 92, 246, 0.06)' : 'rgba(59, 130, 246, 0.06)',
+                          border: `1px solid ${leaderboardType === 'classic' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(59, 130, 246, 0.15)'}`,
+                          color: leaderboardType === 'classic' ? 'var(--accent-purple)' : 'var(--accent-blue)',
                           fontSize: '11px',
                           fontWeight: 'bold'
                         }}>
-                          {entry.rank}
+                          {leaderboardType === 'classic' ? entry.rank : entry.tier}
                         </span>
                       </td>
 
-                      {/* Duels (W/L) */}
+                      {/* Duels (W/L) or Matches (W/L) */}
                       <td className="hidden-mobile" style={{ padding: '16px 24px', color: 'var(--text-secondary)' }}>
-                        {entry.totalDuels} ({entry.totalWins}W / {entry.totalDuels - entry.totalWins}L)
+                        {leaderboardType === 'classic' 
+                          ? `${entry.totalDuels} (${entry.totalWins}W / ${entry.totalDuels - entry.totalWins}L)`
+                          : `${entry.matchesPlayed} (${entry.wins}W / ${entry.losses}L)`
+                        }
                       </td>
 
-                      {/* Tokens */}
-                      <td className="hidden-tablet" style={{ padding: '16px 24px' }}>
-                        <div className="flex-center" style={{ gap: '6px', justifyContent: 'flex-start' }}>
-                          <Coins size={14} color="var(--accent-amber)" />
-                          <span style={{ fontWeight: 'bold' }}>
-                            <AnimatedCounter value={entry.tokens} />
-                          </span>
-                        </div>
-                      </td>
+                      {/* Tokens or Win Rate */}
+                      {leaderboardType === 'classic' ? (
+                        <td className="hidden-tablet" style={{ padding: '16px 24px' }}>
+                          <div className="flex-center" style={{ gap: '6px', justifyContent: 'flex-start' }}>
+                            <Coins size={14} color="var(--accent-amber)" />
+                            <span style={{ fontWeight: 'bold' }}>
+                              <AnimatedCounter value={entry.tokens} />
+                            </span>
+                          </div>
+                        </td>
+                      ) : (
+                        <td className="hidden-mobile" style={{ padding: '16px 24px', color: 'var(--accent-green)', fontWeight: 'bold' }}>
+                          <AnimatedCounter value={entry.winRate} />%
+                        </td>
+                      )}
 
-                      {/* ELO Rating */}
-                      <td style={{ padding: '16px 24px', fontWeight: 'bold', color: 'var(--accent-blue)', textAlign: 'right', fontSize: '16px' }}>
-                        <AnimatedCounter value={elo} />
+                      {/* Rating score */}
+                      <td style={{ padding: '16px 24px', fontWeight: 'bold', color: leaderboardType === 'classic' ? 'var(--accent-blue)' : 'var(--accent-purple)', textAlign: 'right', fontSize: '16px' }}>
+                        <AnimatedCounter value={elo} /> {leaderboardType === 'seasonal' && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'normal' }}>RP</span>}
                       </td>
                     </tr>
                   );

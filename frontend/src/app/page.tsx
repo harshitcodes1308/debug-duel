@@ -12,6 +12,7 @@ import {
 import { io, Socket } from 'socket.io-client';
 import AnimatedCounter from '@/components/AnimatedCounter';
 import QuestPanel from '@/components/QuestPanel';
+import RankedProgressWidget from '@/components/RankedProgressWidget';
 
 interface LeaderboardEntry {
   id: string;
@@ -54,7 +55,27 @@ export default function Dashboard() {
   const [claimMessage, setClaimMessage] = useState('');
   const [gameCategory, setGameCategory] = useState<'coders' | 'uiux' | 'growth'>('coders');
   const [showLevelUpEffect, setShowLevelUpEffect] = useState(false);
+  const [loadingBattles, setLoadingBattles] = useState(true);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const prevLevelRef = useRef<number | null>(null);
+
+  // Seasonal stats & info states
+  const [activeSeason, setActiveSeason] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchSeason() {
+      try {
+        const res = await fetch('http://localhost:5001/api/season/active');
+        if (res.ok) {
+          const data = await res.json();
+          setActiveSeason(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch active season info", e);
+      }
+    }
+    fetchSeason();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -181,6 +202,7 @@ export default function Dashboard() {
   // Fetch Leaderboard
   useEffect(() => {
     async function fetchLeaderboard() {
+      setLoadingLeaderboard(true);
       try {
         const res = await fetch(`http://localhost:5001/api/leaderboard?language=${leaderboardLang}`);
         if (res.ok) {
@@ -189,6 +211,8 @@ export default function Dashboard() {
         }
       } catch (e) {
         console.error("Failed to load leaderboard", e);
+      } finally {
+        setLoadingLeaderboard(false);
       }
     }
     fetchLeaderboard();
@@ -211,6 +235,8 @@ export default function Dashboard() {
         }
       } catch (e) {
         console.error("Failed to fetch latest profile info", e);
+      } finally {
+        setLoadingBattles(false);
       }
     }
     fetchProfile();
@@ -338,24 +364,47 @@ export default function Dashboard() {
         {/* 1. HERO WELCOME BANNER */}
         <div className="dashboard-hero">
           <div className="glass-panel" style={{
-            background: 'linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%)',
-            borderColor: 'rgba(74, 158, 255, 0.2)',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.04) 50%, rgba(21, 21, 28, 0.5) 100%)',
+            borderColor: 'rgba(139, 92, 246, 0.2)',
+            boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 8px 32px rgba(139, 92, 246, 0.05)',
             padding: '36px',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <div>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-blue)', fontWeight: 'bold', letterSpacing: '0.1em' }}>WELCOME BACK TO THE ARENA</span>
-              <h1 style={{ fontSize: '36px', marginTop: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>
-                Ready to code, <span style={{ color: 'var(--accent-green)' }}>@{user.username}</span>?
+            {/* Ambient Background Glows */}
+            <div style={{
+              position: 'absolute',
+              top: '-20px',
+              right: '-20px',
+              width: '180px',
+              height: '180px',
+              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
+              pointerEvents: 'none'
+            }} />
+            <div style={{ zIndex: 1 }}>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 'bold', letterSpacing: '0.15em' }}>WELCOME BACK TO THE ARENA</span>
+              <h1 style={{ fontSize: '32px', marginTop: '8px', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, color: '#FFF' }}>
+                Ready to code, <span style={{ color: 'var(--accent-blue)' }}>@{user.username}</span>?
               </h1>
-              <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px', maxWidth: '500px' }}>
-                Choose Javascript, Python, or Java. Pick your bet size, invite a rival, and race to debug in real-time.
+              <p style={{ color: 'var(--text-secondary)', marginTop: '10px', fontSize: '14px', maxWidth: '520px', lineHeight: '22px' }}>
+                Select a language, set your wager, invite a rival, and race to resolve code defects in real-time.
               </p>
             </div>
-            <div className="float-anim" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', padding: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Swords size={48} color="var(--accent-blue)" />
+            <div className="float-anim" style={{
+              background: 'rgba(139, 92, 246, 0.03)',
+              border: '1px solid rgba(139, 92, 246, 0.15)',
+              padding: '20px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 24px rgba(139, 92, 246, 0.1)',
+              zIndex: 1
+            }}>
+              <Swords size={44} color="var(--accent-purple)" />
             </div>
           </div>
         </div>
@@ -645,17 +694,60 @@ export default function Dashboard() {
       {/* 3. PERFORMANCE STATS & RECENT BATTLES */}
       <div className="dashboard-stats" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
+        {/* Season Overview Card */}
+        {activeSeason && (
+          <div className="glass-panel glow-primary" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Competitive Season
+              </h3>
+              <span className="badge" style={{ borderColor: 'rgba(59, 130, 246, 0.3)', color: 'var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                {activeSeason.countdown}
+              </span>
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '800', fontFamily: 'Space Grotesk, sans-serif', color: '#fff', margin: 0 }}>
+              {activeSeason.name}
+            </h2>
+            <RankedProgressWidget 
+              rank={user.currentRank || "Bronze III"} 
+              rp={user.rankPoints || 0}
+              showDetails={true}
+            />
+            <Link href="/ranked" className="btn btn-primary interactive-lift" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', gap: '8px', fontSize: '13px', fontWeight: 'bold', marginTop: '4px' }}>
+              <TrendingUp size={16} /> Enter Ranked Hub
+            </Link>
+          </div>
+        )}
+
         {/* Recent Battles */}
         <div>
           <h2 style={{ fontSize: '20px', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>Recent Battles</h2>
-          {recentBattles.length === 0 ? (
-            <div className="glass-panel glow-primary" style={{ textAlign: 'center', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border)', padding: '16px', borderRadius: '50%' }}>
-                <History size={36} style={{ opacity: 0.5, color: 'var(--accent-blue)' }} />
+          {loadingBattles ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'rgba(255, 255, 255, 0.005)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '50%' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+                      <div className="skeleton-box" style={{ width: '60px', height: '10px' }} />
+                      <div className="skeleton-box" style={{ width: '120px', height: '14px' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', width: '30%' }}>
+                    <div className="skeleton-box" style={{ width: '80px', height: '10px' }} />
+                    <div className="skeleton-box" style={{ width: '60px', height: '10px' }} />
+                  </div>
+                  <div className="skeleton-box" style={{ width: '85px', height: '22px', borderRadius: '4px' }} />
+                </div>
+              ))}
+            </div>
+          ) : recentBattles.length === 0 ? (
+            <div className="glass-panel glow-primary" style={{ textAlign: 'center', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', borderStyle: 'dashed', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '16px', borderRadius: '50%', boxShadow: '0 0 16px rgba(59, 130, 246, 0.05)' }}>
+                <History size={36} style={{ color: 'var(--accent-blue)' }} />
               </div>
               <div>
-                <h3 style={{ fontSize: '16px', color: '#fff', marginBottom: '6px' }}>No duels recorded yet</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '300px', margin: '0 auto', lineHeight: '18px' }}>
+                <h3 style={{ fontSize: '18px', color: '#fff', marginBottom: '6px', fontFamily: 'Space Grotesk' }}>No duels recorded yet</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '320px', margin: '0 auto', lineHeight: '20px' }}>
                   Challenge an online friend from your list or generate a lobby to log your first match!
                 </p>
               </div>
@@ -1211,18 +1303,20 @@ export default function Dashboard() {
                 flexDirection: 'column',
                 gap: '12px',
                 textAlign: 'center', 
-                padding: '24px 16px', 
+                padding: '28px 16px', 
                 color: 'var(--text-secondary)', 
                 fontSize: '12px', 
-                border: '1px dashed rgba(255, 255, 255, 0.1)', 
+                border: '1px dashed rgba(139, 92, 246, 0.3)', 
                 borderRadius: 'var(--radius-lg)',
-                background: 'rgba(255, 255, 255, 0.005)',
+                background: 'rgba(139, 92, 246, 0.01)',
                 width: '100%'
               }}>
-                <Users size={24} style={{ opacity: 0.4, color: 'var(--accent-purple)' }} />
+                <div style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.15)', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={20} style={{ color: 'var(--accent-purple)' }} />
+                </div>
                 <div>
                   <p style={{ fontWeight: '600', color: 'var(--text-primary)' }}>No friends added yet</p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: '15px' }}>
+                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: '16px', maxWidth: '240px', margin: '4px auto 0' }}>
                     Share your friend key with a rival or paste theirs to start battling!
                   </p>
                 </div>
@@ -1377,9 +1471,21 @@ export default function Dashboard() {
           </div>
 
           {/* Leaderboard entries */}
-          {leaderboard.length === 0 ? (
+          {loadingLeaderboard ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '4px' }}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '32px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '60%' }}>
+                    <div className="skeleton-circle" style={{ width: '18px', height: '18px' }} />
+                    <div className="skeleton-box" style={{ width: '80px', height: '14px' }} />
+                  </div>
+                  <div className="skeleton-box" style={{ width: '50px', height: '14px' }} />
+                </div>
+              ))}
+            </div>
+          ) : leaderboard.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)', fontSize: '12px' }}>
-              Loading leaderboard...
+              No leaderboard entries found.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

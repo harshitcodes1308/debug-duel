@@ -6,7 +6,7 @@ import { useUser, useClerk } from '@clerk/nextjs';
 import { io } from 'socket.io-client';
 import { 
   Swords, Zap, Trophy, Award, Flame, 
-  Shield, Play, Calendar, Users, Lock, X
+  Shield, Play, Calendar, Users, Lock, X, Crown, AlertTriangle
 } from 'lucide-react';
 import { KbcAudio } from '../utils/kbc/audio';
 
@@ -276,7 +276,9 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
               to { transform: translateY(0) scale(1); opacity: 1; }
             }
           `}</style>
-          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#fff', marginBottom: '6px' }}>⚔️ CHALLENGE RECEIVED!</div>
+          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#fff', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Swords size={18} color="var(--accent-blue)" /> CHALLENGE RECEIVED!
+          </div>
           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '18px', marginBottom: '14px' }}>
             <strong style={{ color: 'var(--accent-blue)' }}>@{invite.hostUsername}</strong> has challenged you to a{' '}
             <span style={{ textTransform: 'capitalize', fontWeight: '600' }}>{invite.language}</span>{' '}
@@ -324,7 +326,9 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
               to { transform: translateY(0) scale(1); opacity: 1; }
             }
           `}</style>
-          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#fff', marginBottom: '6px' }}>👑 KBC INVITE RECEIVED!</div>
+          <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#fff', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Crown size={18} color="var(--accent-amber)" /> KBC INVITE RECEIVED!
+          </div>
           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '18px', marginBottom: '14px' }}>
             <strong style={{ color: 'var(--accent-amber)' }}>@{kbcInvite.hostUsername}</strong> has invited you to join a real-time **Code KBC** faceoff!
           </div>
@@ -1019,8 +1023,8 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
           
           {/* Logo & Header (No inheritance from .logo class to prevent SVG transparency) */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-            <div className="logo" style={{ fontSize: '32px' }}>
-              ⚔️ DebugDuel
+            <div className="logo" style={{ fontSize: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Swords size={32} color="var(--accent-blue)" /> DebugDuel
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'JetBrains Mono, monospace', marginTop: '4px' }}>
               Arena Client v1.0.0
@@ -1040,7 +1044,9 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
                   fontWeight: 500,
                   textAlign: 'center'
                 }}>
-                  ⚠️ {errorMsg}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <AlertTriangle size={14} /> {errorMsg}
+                  </div>
                 </div>
               )}
 
@@ -1141,7 +1147,9 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
                   fontWeight: 500,
                   textAlign: 'center'
                 }}>
-                  ⚠️ {errorMsg}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <AlertTriangle size={14} /> {errorMsg}
+                  </div>
                 </div>
               )}
 
@@ -1265,17 +1273,17 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
                         <div style={{ fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '2px', fontFamily: 'Space Grotesk, sans-serif' }}>
                           REQUIREMENTS:
                         </div>
-                        <div style={{ color: passLength ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <span>{passLength ? '🟢' : '⚪'}</span> 8+ Characters
+                        <div style={{ color: passLength ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: passLength ? 'var(--accent-green)' : 'rgba(255,255,255,0.15)', display: 'inline-block' }} /> 8+ Characters
                         </div>
-                        <div style={{ color: passCapital ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <span>{passCapital ? '🟢' : '⚪'}</span> Capital Letter (A-Z)
+                        <div style={{ color: passCapital ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: passCapital ? 'var(--accent-green)' : 'rgba(255,255,255,0.15)', display: 'inline-block' }} /> Capital Letter (A-Z)
                         </div>
-                        <div style={{ color: passNumber ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <span>{passNumber ? '🟢' : '⚪'}</span> Number (0-9)
+                        <div style={{ color: passNumber ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: passNumber ? 'var(--accent-green)' : 'rgba(255,255,255,0.15)', display: 'inline-block' }} /> Number (0-9)
                         </div>
-                        <div style={{ color: passSpecial ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <span>{passSpecial ? '🟢' : '⚪'}</span> Special Sign (@, $, !, etc.)
+                        <div style={{ color: passSpecial ? 'var(--success)' : 'var(--text-muted)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: passSpecial ? 'var(--accent-green)' : 'rgba(255,255,255,0.15)', display: 'inline-block' }} /> Special Sign (@, $, !, etc.)
                         </div>
                       </div>
                     )}
@@ -1359,8 +1367,8 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
               <div className="panel-tactical-bl"></div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif' }}>
-                  🛡️ GOOGLE AUTH SANDBOX
+                <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Shield size={18} color="var(--accent-blue)" /> GOOGLE AUTH SANDBOX
                 </h3>
                 <button
                   onClick={() => {
@@ -1475,8 +1483,8 @@ function LoadingScreen() {
       color: '#F0F0F0',
       fontFamily: 'Space Grotesk, sans-serif'
     }}>
-      <div className="logo pulse-glow" style={{ fontSize: '32px', marginBottom: '16px' }}>
-        ⚔️ DEBUGDUEL
+      <div className="logo pulse-glow" style={{ fontSize: '32px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <Swords size={32} color="var(--accent-blue)" /> DEBUGDUEL
       </div>
       <div style={{ color: '#8888A0', fontSize: '14px' }}>Loading session...</div>
     </div>

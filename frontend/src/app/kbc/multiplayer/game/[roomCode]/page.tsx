@@ -59,6 +59,10 @@ export default function KbcMultiplayerGame() {
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [hostRewards, setHostRewards] = useState<any>(null);
   const [guestRewards, setGuestRewards] = useState<any>(null);
+  const [isRanked, setIsRanked] = useState(false);
+  const [rpChanges, setRpChanges] = useState<any>(null);
+  const [eloChanges, setEloChanges] = useState<any>(null);
+  const [newRanks, setNewRanks] = useState<any>(null);
 
   // Disconnect Alert
   const [opponentOffline, setOpponentOffline] = useState(false);
@@ -220,11 +224,15 @@ export default function KbcMultiplayerGame() {
     });
 
     // End match trigger
-    socket.on('kbc_game_ended', ({ room: updatedRoom, winnerId: winId, hostRewards: hr, guestRewards: gr }) => {
+    socket.on('kbc_game_ended', ({ room: updatedRoom, winnerId: winId, hostRewards: hr, guestRewards: gr, isRanked: isR, rpChanges: rpc, eloChanges: eloc, newRanks: nr }) => {
       setRoom(updatedRoom);
       setWinnerId(winId);
       setHostRewards(hr);
       setGuestRewards(gr);
+      setIsRanked(!!isR);
+      setRpChanges(rpc);
+      setEloChanges(eloc);
+      setNewRanks(nr);
       setGameEnded(true);
 
       // Clean timer ticks
@@ -427,7 +435,7 @@ export default function KbcMultiplayerGame() {
           )}
 
           {/* Tokens / Rewards display */}
-          {rewards && (
+          {!isRanked && rewards && (
             <div style={{
               display: 'flex',
               gap: '12px',
@@ -445,6 +453,114 @@ export default function KbcMultiplayerGame() {
                 <Star size={18} color="var(--accent-blue)" />
                 <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{isWinner ? "+1 Win" : "+0 Win"}</span>
               </div>
+            </div>
+          )}
+
+          {/* Ranked Seasonal Progression Board */}
+          {isRanked && (
+            <div style={{
+              width: '100%',
+              background: 'rgba(139, 92, 246, 0.04)',
+              border: '1px solid rgba(139, 92, 246, 0.15)',
+              borderRadius: '12px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' }}>
+                Ranked Match Resolution
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', alignItems: 'center' }}>
+                <div>
+                  <div style={{
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: (rpChanges?.[user.id] || 0) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'
+                  }}>
+                    {(rpChanges?.[user.id] || 0) >= 0 ? `+${rpChanges?.[user.id] || 0}` : `${rpChanges?.[user.id] || 0}`} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>RP</span>
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>PROGRESS ADJUSTMENT</div>
+                </div>
+
+                <div style={{ width: '1px', height: '30px', background: 'rgba(255, 255, 255, 0.1)' }} />
+
+                <div>
+                  <div style={{
+                    fontSize: '24px',
+                    fontWeight: 'bold',
+                    color: 'var(--accent-blue)'
+                  }}>
+                    {(eloChanges?.[user.id] || 0) >= 0 ? `+${eloChanges?.[user.id] || 0}` : `${eloChanges?.[user.id] || 0}`} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>ELO</span>
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>MATCHMAKING MMR</div>
+                </div>
+              </div>
+
+              {newRanks?.[user.id] && (
+                <div style={{
+                  marginTop: '8px',
+                  background: 'rgba(255, 255, 255, 0.01)',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}>
+                  <Award size={16} color="var(--accent-purple)" />
+                  <span style={{ fontSize: '13px', fontWeight: '500' }}>
+                    New Rank Standing: <strong style={{ color: 'var(--accent-purple)' }}>{newRanks[user.id]}</strong>
+                  </span>
+                </div>
+              )}
+
+              {/* Promotion / Demotion alerts */}
+              {newRanks?.[user.id] && user.currentRank && newRanks[user.id] !== user.currentRank && (
+                <div style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  background: (rpChanges?.[user.id] || 0) > 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  color: (rpChanges?.[user.id] || 0) > 0 ? 'var(--accent-green)' : 'var(--accent-red)',
+                  border: `1px solid ${(rpChanges?.[user.id] || 0) > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                }}>
+                  {(rpChanges?.[user.id] || 0) > 0 ? "PROMOTED!" : "DEMOTED!"}
+                </div>
+              )}
+
+              {/* Demotion Warning panel */}
+              {(!rpChanges?.[user.id] || rpChanges[user.id] < 0) && (
+                (() => {
+                  const currentRP = user.rankPoints || 0;
+                  const newRP = Math.max(0, currentRP + (rpChanges?.[user.id] || 0));
+                  const isLowRP = newRP === 0 || (newRP % 100 < 15);
+                  if (isLowRP) {
+                    return (
+                      <div style={{
+                        padding: '10px 14px',
+                        background: 'rgba(245, 158, 11, 0.08)',
+                        border: '1px solid rgba(245, 158, 11, 0.15)',
+                        color: 'var(--accent-amber)',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}>
+                        <AlertCircle size={14} /> Warning: You are near division demotion! Win the next match to secure your tier.
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+
             </div>
           )}
 

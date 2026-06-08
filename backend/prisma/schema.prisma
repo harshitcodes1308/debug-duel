@@ -39,6 +39,16 @@ model User {
   friendKey     String   @unique @default(cuid())
   friends       Friendship[] @relation("UserFriends")
   friendOf      Friendship[] @relation("FriendUsers")
+
+  // Ranked & Seasonal stats
+  currentRank       String   @default("Bronze III")
+  rankPoints        Int      @default(0)
+  peakRank          String   @default("Bronze III")
+  rankedWins        Int      @default(0)
+  rankedLosses      Int      @default(0)
+  rankedMatches     Int      @default(0)
+  rankedElo         Int      @default(1000)
+  seasonParticipants SeasonParticipant[]
 }
 
 model Bug {
@@ -69,6 +79,10 @@ model Duel {
   endedAt      DateTime?
   createdAt    DateTime @default(now())
   participants DuelParticipant[]
+
+  isRanked     Boolean  @default(false)
+  seasonId     String?
+  season       Season?  @relation(fields: [seasonId], references: [id])
 }
 
 model DuelParticipant {
@@ -180,4 +194,58 @@ model UserQuest {
   quest         Quest     @relation(fields: [questId], references: [id])
 
   @@unique([userId, questId, expiresAt])
+}
+
+model Season {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  participants SeasonParticipant[]
+  rewards      SeasonReward[]
+  duels        Duel[]
+}
+
+model SeasonParticipant {
+  id            String   @id @default(cuid())
+  seasonId      String
+  season        Season   @relation(fields: [seasonId], references: [id])
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  currentRank   String   @default("Bronze III")
+  rankPoints    Int      @default(0)
+  peakRank      String   @default("Bronze III")
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  matchesPlayed Int      @default(0)
+  claims        SeasonRewardClaim[]
+
+  @@unique([seasonId, userId])
+}
+
+model SeasonReward {
+  id                String   @id @default(cuid())
+  seasonId          String
+  season            Season   @relation(fields: [seasonId], references: [id])
+  rewardType        String   // "BADGE" | "FRAME" | "TITLE"
+  rewardName        String   // e.g., "Season 1 Gold Badge"
+  rewardValue       String   // e.g., "s1_gold_badge"
+  minRankName       String?  // e.g. "Gold III"
+  minRankPoints     Int?
+  topPercentile     Float?   // e.g., 0.1 for Top 10%
+  specificPlacement Int?     // e.g., 1 for Rank #1
+  claims            SeasonRewardClaim[]
+}
+
+model SeasonRewardClaim {
+  id            String            @id @default(cuid())
+  participantId String
+  participant   SeasonParticipant @relation(fields: [participantId], references: [id])
+  rewardId      String
+  reward        SeasonReward      @relation(fields: [rewardId], references: [id])
+  claimedAt     DateTime          @default(now())
+
+  @@unique([participantId, rewardId])
 }

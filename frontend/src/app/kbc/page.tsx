@@ -187,21 +187,29 @@ export default function KbcLandingPage() {
             </div>
 
             {/* Daily Challenge Card */}
-            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '260px', opacity: 0.8 }}>
+            <div 
+              className="glass-panel card-shine glow-warning theme-color-match interactive-lift" 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'space-between', 
+                minHeight: '260px'
+              }}
+            >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div style={{ background: 'rgba(245, 166, 35, 0.1)', padding: '10px', borderRadius: '8px' }}>
                     <Calendar size={24} color="var(--accent-amber)" />
                   </div>
-                  <span className="badge" style={{ borderColor: 'rgba(245, 166, 35, 0.3)', color: 'var(--accent-amber)', background: 'rgba(245, 166, 35, 0.05)' }}>Coming Soon</span>
+                  <span className="badge" style={{ borderColor: 'rgba(245, 166, 35, 0.3)', color: 'var(--accent-amber)', background: 'rgba(245, 166, 35, 0.05)' }}>Active</span>
                 </div>
                 <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#FFF' }}>Daily Challenge</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '20px' }}>
                   One specific high-difficulty coding question curated daily. Earn double coins and unique badges.
                 </p>
               </div>
-              <Link href="/kbc/daily" className="btn btn-secondary" style={{ width: '100%', marginTop: '20px' }}>
-                Locked
+              <Link href="/kbc/daily" className="btn interactive-lift" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-amber)', color: '#000', borderColor: 'rgba(245, 158, 11, 0.5)' }}>
+                Play Daily
               </Link>
             </div>
 
