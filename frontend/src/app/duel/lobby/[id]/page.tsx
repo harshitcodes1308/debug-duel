@@ -100,6 +100,8 @@ export default function DuelLobby() {
   const [activeOpponent, setActiveOpponent] = useState<any>(null);
   const [receivedCountdown, setReceivedCountdown] = useState<number | null>(null);
   const [receivedAt, setReceivedAt] = useState<number | null>(null);
+  const [standbyCountdown, setStandbyCountdown] = useState<number | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -186,11 +188,29 @@ export default function DuelLobby() {
     }
   }, [participants, user?.id]);
 
-  // Local countdown starting after the reel finishes spinning and countdown is received
+  // Standby name reveal effect (glowing card banner countdown for 3 seconds)
   useEffect(() => {
-    if (!isSpinning && receivedCountdown !== null && receivedAt !== null && countdown === null) {
+    if (!isSpinning && realOpponent && standbyCountdown === null && !showOverlay) {
+      setStandbyCountdown(3);
+      const interval = setInterval(() => {
+        setStandbyCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(interval);
+            setShowOverlay(true);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isSpinning, realOpponent, standbyCountdown, showOverlay]);
+
+  // Local countdown starting after the overlay is triggered
+  useEffect(() => {
+    if (showOverlay && receivedCountdown !== null && receivedAt !== null && countdown === null) {
       const elapsed = (Date.now() - receivedAt) / 1000;
-      // Subtract 0.5s buffer so the user has time to see "FIGHT!" before redirection
+      // Calculate remaining time for the 12-second total duration
       const remaining = Math.max(1, Math.round(receivedCountdown - elapsed - 0.5));
 
       let localTimer = remaining;
@@ -210,7 +230,7 @@ export default function DuelLobby() {
 
       return () => clearInterval(interval);
     }
-  }, [isSpinning, receivedCountdown, receivedAt, countdown]);
+  }, [showOverlay, receivedCountdown, receivedAt, countdown]);
 
   // Fetch initial details
   const [duelDetails, setDuelDetails] = useState<any>(null);
@@ -244,7 +264,7 @@ export default function DuelLobby() {
   return (
     <div className="container" style={{ padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 'calc(100vh - 64px)', justifyContent: 'center' }}>
       
-      {countdown !== null && (
+      {showOverlay && countdown !== null && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -309,6 +329,24 @@ export default function DuelLobby() {
             <div style={{ marginTop: '8px' }}>
               <Link href="/" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>Back Home</Link>
             </div>
+          </div>
+        )}
+
+        {realOpponent && !isSpinning && standbyCountdown !== null && (
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.08)',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
+            borderRadius: '8px',
+            padding: '16px',
+            color: 'var(--accent-blue)',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            fontFamily: 'JetBrains Mono, monospace',
+            marginBottom: '16px',
+            boxShadow: '0 0 15px rgba(59, 130, 246, 0.1)'
+          }}>
+            ⚡ COMBATANTS LOCKED IN! DUEL BEGINS IN {standbyCountdown}...
           </div>
         )}
 

@@ -15,6 +15,10 @@ export default function DesignLobby() {
   const [participants, setParticipants] = useState<any[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [status, setStatus] = useState<string>('waiting');
+  const [standbyCountdown, setStandbyCountdown] = useState<number | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [receivedCountdown, setReceivedCountdown] = useState<number | null>(null);
+  const [receivedAt, setReceivedAt] = useState<number | null>(null);
   const [error, setError] = useState('');
   
   const socketRef = useRef<Socket | null>(null);
@@ -54,16 +58,8 @@ export default function DesignLobby() {
     });
 
     socket.on('countdown_started', ({ duration }) => {
-      setCountdown(duration);
-      const interval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev === null || prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      setReceivedCountdown(duration);
+      setReceivedAt(Date.now());
     });
 
     socket.on('duel_started', () => {
@@ -87,7 +83,50 @@ export default function DesignLobby() {
     return () => {
       socket.disconnect();
     };
-  }, [user, duelId, duelDetails?.betAmount]);
+  }, [user, duelId, duelDetails?.betAmount, participants]);
+
+  // Standby name reveal effect (glowing card banner countdown for 3 seconds)
+  useEffect(() => {
+    const opp = participants.find((p: any) => p.userId !== user?.id);
+    if (opp && receivedCountdown !== null && standbyCountdown === null && !showOverlay) {
+      setStandbyCountdown(3);
+      const interval = setInterval(() => {
+        setStandbyCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(interval);
+            setShowOverlay(true);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [participants, receivedCountdown, standbyCountdown, showOverlay, user?.id]);
+
+  // Local countdown starting after the overlay is triggered
+  useEffect(() => {
+    if (showOverlay && receivedCountdown !== null && receivedAt !== null && countdown === null) {
+      const elapsed = (Date.now() - receivedAt) / 1000;
+      // Calculate remaining time for the 12-second total duration
+      const remaining = Math.max(1, Math.round(receivedCountdown - elapsed - 0.5));
+
+      let localTimer = remaining;
+      setCountdown(localTimer);
+
+      const interval = setInterval(() => {
+        localTimer -= 1;
+        if (localTimer <= 0) {
+          clearInterval(interval);
+          setCountdown(0);
+        } else {
+          setCountdown(localTimer);
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [showOverlay, receivedCountdown, receivedAt, countdown]);
 
   const handleCopyLink = () => {
     const inviteLink = `${window.location.origin}/change-design/lobby/${duelId}`;
@@ -104,7 +143,7 @@ export default function DesignLobby() {
   return (
     <div className="container" style={{ padding: '60px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 'calc(100vh - 64px)', justifyContent: 'center', backgroundColor: '#0D0D12' }}>
       
-      {countdown !== null && (
+      {showOverlay && countdown !== null && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -125,9 +164,7 @@ export default function DesignLobby() {
             fontSize: '120px',
             color: countdown === 0 ? '#38bdf8' : '#fff',
             textShadow: countdown === 0 ? '0 0 40px rgba(56, 189, 248, 0.4)' : '0 0 20px rgba(255,255,255,0.1)',
-            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-            fontWeight: 'bold',
-            margin: 0
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
           }}>
             {countdown === 0 ? "START!" : countdown}
           </h1>
@@ -178,6 +215,24 @@ export default function DesignLobby() {
             <div style={{ marginTop: '8px' }}>
               <Link href="/" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }}>Back Home</Link>
             </div>
+          </div>
+        )}
+
+        {opponent && standbyCountdown !== null && (
+          <div style={{
+            background: 'rgba(56, 189, 248, 0.08)',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '8px',
+            padding: '16px',
+            color: '#38bdf8',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            fontFamily: 'JetBrains Mono, monospace',
+            marginBottom: '16px',
+            boxShadow: '0 0 15px rgba(56, 189, 248, 0.1)'
+          }}>
+            ⚡ COMBATANTS LOCKED IN! DUEL BEGINS IN {standbyCountdown}...
           </div>
         )}
 

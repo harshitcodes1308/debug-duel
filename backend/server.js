@@ -1687,7 +1687,7 @@ io.on('connection', (socket) => {
 
       // If lobby is full (2 players) and status is waiting, start countdown
       if (updatedDuel.participants.length === 2 && updatedDuel.status === 'waiting') {
-        io.to(`duel:${duelId}`).emit('countdown_started', { duration: 7 });
+        io.to(`duel:${duelId}`).emit('countdown_started', { duration: 12 });
 
         setTimeout(async () => {
           // Update status to active
@@ -1720,7 +1720,7 @@ io.on('connection', (socket) => {
 
           // Start FOMO Engine interval
           startFomoEngine(duelId, updatedDuel.participants, updatedDuel.gameType);
-        }, 7000);
+        }, 12000);
       }
     } catch (e) {
       console.error(e);
@@ -2705,6 +2705,11 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('disconnect', () => {
+    console.log(`Socket disconnected: ${socket.id}`);
+  });
+});
+
 async function resolveForfeit(duelId, loserId) {
   let eloChanges = {};
   let tokenChanges = {};
@@ -2880,11 +2885,6 @@ async function resolveForfeit(duelId, loserId) {
     updateQuestProgress(loserId, "gain_xp", 15, null, io).catch(console.error);
   }
 }
-
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
-});
 
 // FOMO loop helper
 function startFomoEngine(duelId, participants, gameType = "debug") {
