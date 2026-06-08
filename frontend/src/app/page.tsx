@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import AnimatedCounter from '@/components/AnimatedCounter';
+import QuestPanel from '@/components/QuestPanel';
 
 interface LeaderboardEntry {
   id: string;
@@ -1104,6 +1105,8 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      <QuestPanel />
 
       {/* 5. LEADERBOARD & FRIENDS LIST */}
       <div className="dashboard-leaderboard">

@@ -614,6 +614,25 @@ export default function PlayerProfile() {
                 <strong style={{ color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.bestStreak} /> wins</strong>
               </div>
 
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'var(--space-2)' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Quest Progress</span>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Daily Quests Completed</span>
+                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.dailyQuestsCompleted || 0} /></strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Weekly Quests Completed</span>
+                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.weeklyQuestsCompleted || 0} /></strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Lifetime Quests Completed</span>
+                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.lifetimeQuestsCompleted || 0} /></strong>
+                </div>
+              </div>
+
             </div>
 
             {!isOwnProfile && (
@@ -772,105 +791,206 @@ export default function PlayerProfile() {
             </div>
           </div>
 
+          {/* Unlocked Achievements Section */}
           <h2 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 'var(--space-2)' }}>
-            All Achievements
+            Unlocked Achievements ({ALL_ACHIEVEMENTS.filter(ach => unlockedIds.has(ach.id)).length})
           </h2>
 
-          {/* Grid of all achievements */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 'var(--space-4)',
-            width: '100%'
-          }}>
-            {ALL_ACHIEVEMENTS.map((ach) => {
-              const isUnlocked = unlockedIds.has(ach.id);
-              const userAch = unlockedAchievements.find(ua => ua.achievementId === ach.id);
-              const styles = getRarityStyles(ach.rarity, isUnlocked);
+          {ALL_ACHIEVEMENTS.filter(ach => unlockedIds.has(ach.id)).length === 0 ? (
+            <div className="card-base" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+              No achievements unlocked yet.
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 'var(--space-4)',
+              width: '100%'
+            }}>
+              {ALL_ACHIEVEMENTS.filter(ach => unlockedIds.has(ach.id)).map((ach) => {
+                const userAch = unlockedAchievements.find(ua => ua.achievementId === ach.id);
+                const styles = getRarityStyles(ach.rarity, true);
 
-              return (
-                <div 
-                  key={ach.id} 
-                  className="card-base"
-                  style={{
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: 'var(--space-5)',
-                    gap: 'var(--space-3)',
-                    borderColor: styles.borderColor,
-                    backgroundColor: styles.backgroundColor,
-                    boxShadow: styles.shadow,
-                    opacity: isUnlocked ? 1 : 0.45,
-                    transition: 'var(--transition)'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '10px',
-                      border: `1px solid ${styles.borderColor}`,
-                      background: 'rgba(0, 0, 0, 0.2)',
+                return (
+                  <div 
+                    key={ach.id} 
+                    className="card-base"
+                    style={{
+                      position: 'relative',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: styles.iconColor
-                    }}>
-                      {isUnlocked ? renderIcon(ach.icon, undefined, 20) : <Lock size={20} className="text-secondary" />}
-                    </div>
+                      flexDirection: 'column',
+                      padding: 'var(--space-5)',
+                      gap: 'var(--space-3)',
+                      borderColor: styles.borderColor,
+                      backgroundColor: styles.backgroundColor,
+                      boxShadow: styles.shadow,
+                      transition: 'var(--transition)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '10px',
+                        border: `1px solid ${styles.borderColor}`,
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: styles.iconColor
+                      }}>
+                        {renderIcon(ach.icon, undefined, 20)}
+                      </div>
 
-                    <span style={{
-                      fontSize: '9px',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      padding: '3px 8px',
-                      borderRadius: '100px',
-                      background: styles.badgeBg,
-                      border: `1px solid ${styles.badgeBorder}`,
-                      color: isUnlocked ? styles.textColor : 'var(--text-secondary)'
-                    }}>
-                      {ach.rarity}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: isUnlocked ? '#fff' : 'var(--text-secondary)' }}>
-                      {ach.title}
-                    </h3>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.4 }}>
-                      {ach.description}
-                    </p>
-                  </div>
-
-                  <div style={{
-                    marginTop: 'auto',
-                    paddingTop: 'var(--space-2)',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.03)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>
-                        +{ach.xpReward} XP
-                      </span>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-amber)' }}>
-                        +{ach.tokenReward} Tokens
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        padding: '3px 8px',
+                        borderRadius: '100px',
+                        background: styles.badgeBg,
+                        border: `1px solid ${styles.badgeBorder}`,
+                        color: styles.textColor
+                      }}>
+                        {ach.rarity}
                       </span>
                     </div>
 
-                    {isUnlocked && userAch && (
-                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                        {new Date(userAch.unlockedAt).toLocaleDateString()}
-                      </span>
-                    )}
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff' }}>
+                        {ach.title}
+                      </h3>
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.4 }}>
+                        {ach.description}
+                      </p>
+                    </div>
+
+                    <div style={{
+                      marginTop: 'auto',
+                      paddingTop: 'var(--space-2)',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>
+                          +{ach.xpReward} XP
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-amber)' }}>
+                          +{ach.tokenReward} Tokens
+                        </span>
+                      </div>
+
+                      {userAch && (
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                          {new Date(userAch.unlockedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Locked Achievements Section */}
+          <h2 style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 'var(--space-5)' }}>
+            Locked Achievements ({ALL_ACHIEVEMENTS.filter(ach => !unlockedIds.has(ach.id)).length})
+          </h2>
+
+          {ALL_ACHIEVEMENTS.filter(ach => !unlockedIds.has(ach.id)).length === 0 ? (
+            <div className="card-base" style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+              All achievements unlocked!
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 'var(--space-4)',
+              width: '100%'
+            }}>
+              {ALL_ACHIEVEMENTS.filter(ach => !unlockedIds.has(ach.id)).map((ach) => {
+                const styles = getRarityStyles(ach.rarity, false);
+
+                return (
+                  <div 
+                    key={ach.id} 
+                    className="card-base"
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: 'var(--space-5)',
+                      gap: 'var(--space-3)',
+                      borderColor: styles.borderColor,
+                      backgroundColor: styles.backgroundColor,
+                      opacity: 0.45,
+                      transition: 'var(--transition)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '10px',
+                        border: `1px solid ${styles.borderColor}`,
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: styles.iconColor
+                      }}>
+                        <Lock size={20} className="text-secondary" />
+                      </div>
+
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        padding: '3px 8px',
+                        borderRadius: '100px',
+                        background: styles.badgeBg,
+                        border: `1px solid ${styles.badgeBorder}`,
+                        color: 'var(--text-secondary)'
+                      }}>
+                        {ach.rarity}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        {ach.title}
+                      </h3>
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.4 }}>
+                        {ach.description}
+                      </p>
+                    </div>
+
+                    <div style={{
+                      marginTop: 'auto',
+                      paddingTop: 'var(--space-2)',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>
+                          +{ach.xpReward} XP
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-amber)' }}>
+                          +{ach.tokenReward} Tokens
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

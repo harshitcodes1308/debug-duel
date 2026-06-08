@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
  * @param {object} [tx] - Optional Prisma transaction delegate
  * @returns {Promise<object|null>} - The updated user object, or null if failed
  */
-async function awardXP(userId, amount, tx = null) {
+async function awardXP(userId, amount, tx = null, io = null) {
   try {
     const client = tx || prisma;
     
@@ -28,6 +28,7 @@ async function awardXP(userId, amount, tx = null) {
     }
     
     const currentXp = user.xp || 0;
+    const currentLevel = user.level || 1;
     const newXp = currentXp + amount;
     const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
     
@@ -39,6 +40,11 @@ async function awardXP(userId, amount, tx = null) {
         level: newLevel
       }
     });
+    
+    if (newLevel > currentLevel) {
+      const { checkAchievements } = require('../services/achievements');
+      checkAchievements(userId, client, io).catch(console.error);
+    }
     
     return updatedUser;
   } catch (error) {

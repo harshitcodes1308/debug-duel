@@ -372,7 +372,7 @@ async function checkAchievements(userId, tx = null, io = null) {
         });
 
         // 3. Payout rewards
-        await awardXP(userId, ach.xpReward, tx);
+        await awardXP(userId, ach.xpReward, tx, io);
         await updateQuestProgress(userId, "gain_xp", ach.xpReward, tx, io);
         await updateQuestProgress(userId, "earn_tokens", ach.tokenReward, tx, io);
         await client.user.update({
