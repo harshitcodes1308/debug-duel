@@ -1091,6 +1091,41 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Progression Hub Section */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginTop: '8px' }}>
+            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>PROGRESSION HUB</span>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '8px'
+            }}>
+              <div style={{ background: 'rgba(255,255,255,0.01)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Achievements</span>
+                <strong style={{ fontSize: '14px', color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}>
+                  {user.achievements?.length || 0} / 18
+                </strong>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.01)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Quests Completed</span>
+                <strong style={{ fontSize: '14px', color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}>
+                  {(user.dailyQuestsCompleted || 0) + (user.weeklyQuestsCompleted || 0)}
+                </strong>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.01)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Win Streak</span>
+                <strong style={{ fontSize: '14px', color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}>
+                  {user.currentStreak || 0}x
+                </strong>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.01)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Daily Claim Streak</span>
+                <strong style={{ fontSize: '14px', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>
+                  {user.dailyStreak || 0} day{(user.dailyStreak || 0) !== 1 ? 's' : ''}
+                </strong>
+              </div>
+            </div>
+          </div>
+
           {/* Daily login button */}
           <button 
             className="btn btn-success" 

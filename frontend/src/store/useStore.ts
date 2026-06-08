@@ -63,6 +63,7 @@ export interface UserProfile {
   dailyQuestsCompleted?: number;
   weeklyQuestsCompleted?: number;
   lifetimeQuestsCompleted?: number;
+  dailyStreak?: number;
 }
 
 export interface Bug {

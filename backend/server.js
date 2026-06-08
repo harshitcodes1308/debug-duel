@@ -1010,14 +1010,15 @@ app.post('/api/quests/claim/:id', async (req, res) => {
         userQuest: updatedUserQuest,
         xp: finalUser.xp,
         level: finalUser.level,
-        tokens: finalUser.tokens
+        tokens: finalUser.tokens,
+        rewardTokens: userQuest.quest.rewardTokens
       };
     });
 
     const io = req.app.get('io');
     // Audit achievements after claiming quest reward
     checkAchievements(userId, null, io).catch(console.error);
-    updateQuestProgress(userId, "earn_tokens", userQuest.quest.rewardTokens, null, io).catch(console.error);
+    updateQuestProgress(userId, "earn_tokens", result.rewardTokens, null, io).catch(console.error);
 
     res.json({
       success: true,
@@ -1142,12 +1143,89 @@ app.get('/api/profile/:username', async (req, res) => {
       kbcStats.bestRun = bestRun;
     }
 
+    // Most Played Game calculation
+    const debugDuelsCount = await prisma.duelParticipant.count({
+      where: { userId: user.id, duel: { gameType: 'debug' } }
+    });
+    const colorMatchCount = await prisma.duelParticipant.count({
+      where: { userId: user.id, duel: { gameType: 'color_match' } }
+    });
+    const kbcCount = kbcRuns.length;
+
+    let mostPlayedGame = "None";
+    const maxCount = Math.max(debugDuelsCount, colorMatchCount, kbcCount);
+    if (maxCount > 0) {
+      if (maxCount === debugDuelsCount) mostPlayedGame = "Debug Duel";
+      else if (maxCount === colorMatchCount) mostPlayedGame = "Color Match";
+      else mostPlayedGame = "Code KBC";
+    }
+
+    const winRate = user.totalDuels > 0 ? Math.round((user.totalWins / user.totalDuels) * 100) : 0;
+    const analytics = {
+      winRate,
+      kbcAccuracy: kbcStats.averageAccuracy,
+      averageAnswerSpeed: kbcStats.averageTime,
+      bestStreak: user.bestStreak,
+      mostPlayedGame,
+      totalXpEarned: user.xp
+    };
+
+    // Activity Heatmap calculation
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    oneYearAgo.setHours(0, 0, 0, 0);
+
+    const [duels, dailyRuns, questRuns, achievementRuns] = await Promise.all([
+      prisma.duelParticipant.findMany({
+        where: {
+          userId: user.id,
+          duel: {
+            endedAt: { gte: oneYearAgo }
+          }
+        },
+        include: { duel: { select: { endedAt: true } } }
+      }),
+      prisma.dailyChallengeRun.findMany({
+        where: { userId: user.id, createdAt: { gte: oneYearAgo } },
+        select: { createdAt: true }
+      }),
+      prisma.userQuest.findMany({
+        where: { userId: user.id, completed: true, completedAt: { not: null, gte: oneYearAgo } },
+        select: { completedAt: true }
+      }),
+      prisma.userAchievement.findMany({
+        where: { userId: user.id, unlockedAt: { gte: oneYearAgo } },
+        select: { unlockedAt: true }
+      })
+    ]);
+
+    const activityCounts = {};
+
+    const addDate = (dateObj) => {
+      if (!dateObj) return;
+      const dateStr = new Date(dateObj).toISOString().split('T')[0];
+      activityCounts[dateStr] = (activityCounts[dateStr] || 0) + 1;
+    };
+
+    duels.forEach(d => addDate(d.duel?.endedAt));
+    kbcRuns.forEach(r => addDate(r.createdAt));
+    dailyRuns.forEach(r => addDate(r.createdAt));
+    questRuns.forEach(q => addDate(q.completedAt));
+    achievementRuns.forEach(a => addDate(a.unlockedAt));
+
+    const activity = Object.entries(activityCounts).map(([date, count]) => ({
+      date,
+      count
+    }));
+
     res.json({
       ...user,
       dailyQuestsCompleted,
       weeklyQuestsCompleted,
       lifetimeQuestsCompleted,
-      kbcStats
+      kbcStats,
+      analytics,
+      activity
     });
   } catch (error) {
     res.status(500).json({ error: "Fetch failed" });

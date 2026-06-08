@@ -46,6 +46,18 @@ interface ProfileResponse extends UserProfile {
     maxPrize: number;
     bestRun: number;
   };
+  activity?: Array<{
+    date: string;
+    count: number;
+  }>;
+  analytics?: {
+    winRate: number;
+    kbcAccuracy: number;
+    averageAnswerSpeed: number;
+    bestStreak: number;
+    mostPlayedGame: string;
+    totalXpEarned: number;
+  };
 }
 
 const ALL_ACHIEVEMENTS = [
@@ -476,6 +488,84 @@ export default function PlayerProfile() {
         </div>
       </div>
 
+      {/* Activity Heatmap Section */}
+      <div className="card-base" style={{
+        background: 'var(--bg-secondary)',
+        borderColor: 'var(--border)',
+        padding: 'var(--space-6)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-3)',
+        boxShadow: 'var(--shadow-md)',
+        marginTop: 'var(--space-1)'
+      }}>
+        <h3 style={{ fontSize: '13px', color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 700 }}>
+          Activity Heatmap (Last 365 Days)
+        </h3>
+        
+        {/* Scrollable Heatmap grid */}
+        <div style={{
+          overflowX: 'auto',
+          paddingBottom: '8px',
+          width: '100%'
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateRows: 'repeat(7, 10px)',
+            gridAutoFlow: 'column',
+            gap: '3px',
+            width: 'max-content'
+          }}>
+            {(() => {
+              const days = [];
+              const today = new Date();
+              for (let i = 364; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(today.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const activityObj = profile.activity?.find((a: any) => a.date === dateStr);
+                const count = activityObj ? activityObj.count : 0;
+                days.push({ date: d, dateStr, count });
+              }
+              
+              return days.map((day) => {
+                let color = 'rgba(255, 255, 255, 0.03)'; // 0
+                if (day.count > 0) {
+                  if (day.count <= 2) color = 'rgba(139, 92, 246, 0.25)'; // low
+                  else if (day.count <= 4) color = 'rgba(139, 92, 246, 0.5)'; // med
+                  else if (day.count <= 7) color = 'rgba(139, 92, 246, 0.75)'; // high
+                  else color = 'var(--accent-purple)'; // ultra
+                }
+                return (
+                  <div 
+                    key={day.dateStr}
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      backgroundColor: color,
+                      borderRadius: '2px',
+                      transition: 'var(--transition)'
+                    }}
+                    title={`${day.count} activities on ${day.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                  />
+                );
+              });
+            })()}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '11px', color: 'var(--text-secondary)', alignSelf: 'flex-end', marginTop: '4px' }}>
+          <span>Less</span>
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(255, 255, 255, 0.03)' }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(139, 92, 246, 0.25)' }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(139, 92, 246, 0.5)' }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(139, 92, 246, 0.75)' }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'var(--accent-purple)' }} />
+          <span>More</span>
+        </div>
+      </div>
+
       {/* Tabs Selector */}
       <div style={{
         display: 'flex',
@@ -679,6 +769,41 @@ export default function PlayerProfile() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Max Token Prize Won</span>
                   <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.maxPrize || 0} /></strong>
+                </div>
+              </div>
+
+              {/* Player Analytics Block */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'var(--space-2)' }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Player Analytics</span>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Win Rate</span>
+                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}>{profile.analytics?.winRate || 0}%</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>KBC Accuracy</span>
+                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}>{profile.analytics?.kbcAccuracy || 0}%</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Average Answer Speed</span>
+                  <strong style={{ color: '#fff', fontFamily: 'Space Grotesk' }}>{profile.analytics?.averageAnswerSpeed || 0}s</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Best Streak</span>
+                  <strong style={{ color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}>{profile.analytics?.bestStreak || 0} wins</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Most Played Game</span>
+                  <strong style={{ color: 'var(--accent-blue)' }}>{profile.analytics?.mostPlayedGame || "None"}</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Total XP Earned</span>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>{(profile.analytics?.totalXpEarned || 0).toLocaleString()} XP</strong>
                 </div>
               </div>
 
