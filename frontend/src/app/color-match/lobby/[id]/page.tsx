@@ -87,6 +87,18 @@ export default function ColorMatchLobby() {
     };
   }, [user, duelId, duelDetails?.betAmount, participants]);
 
+  // Sync and reset states on opponent disconnect
+  useEffect(() => {
+    const opp = participants.find((p: any) => p.userId !== user?.id);
+    if (!opp) {
+      setStandbyCountdown(null);
+      setShowOverlay(false);
+      setCountdown(null);
+      setReceivedCountdown(null);
+      setReceivedAt(null);
+    }
+  }, [participants, user?.id]);
+
   // Standby name reveal effect (glowing card banner countdown for 3 seconds)
   useEffect(() => {
     const opp = participants.find((p: any) => p.userId !== user?.id);
@@ -104,7 +116,7 @@ export default function ColorMatchLobby() {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [participants, receivedCountdown, standbyCountdown, showOverlay, user?.id]);
+  }, [participants, receivedCountdown, showOverlay, user?.id]);
 
   // Local countdown starting after the overlay is triggered
   useEffect(() => {
@@ -128,7 +140,7 @@ export default function ColorMatchLobby() {
 
       return () => clearInterval(interval);
     }
-  }, [showOverlay, receivedCountdown, receivedAt, countdown]);
+  }, [showOverlay, receivedCountdown, receivedAt]);
 
   const handleCopyLink = () => {
     const inviteLink = `${window.location.origin}/color-match/lobby/${duelId}`;

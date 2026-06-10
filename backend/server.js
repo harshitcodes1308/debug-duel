@@ -1690,36 +1690,73 @@ io.on('connection', (socket) => {
         io.to(`duel:${duelId}`).emit('countdown_started', { duration: 12 });
 
         setTimeout(async () => {
-          // Update status to active
-          await prisma.duel.update({
-            where: { id: duelId },
-            data: {
-              status: "active",
-              startedAt: new Date()
-            }
-          });
-
-          if (updatedDuel.gameType === 'color_match') {
-            io.to(`duel:${duelId}`).emit('duel_started', {
-              targetColor: updatedDuel.targetColor,
-              startTime: Date.now()
+          try {
+            // Double check if duel still exists and is waiting
+            const latestDuel = await prisma.duel.findUnique({
+              where: { id: duelId },
+              include: { participants: true }
             });
-          } else {
-            // Fetch bug solution securely hidden in code
-            const secureBug = updatedDuel.bug ? { ...updatedDuel.bug } : null;
-            if (secureBug) {
-              secureBug.fixedCode = "";
-              secureBug.explanation = "";
+            if (!latestDuel || latestDuel.status !== 'waiting') return;
+
+            // Verify both players are still online
+            const allOnline = latestDuel.participants.every(p => onlineUsers.has(p.userId));
+            if (!allOnline) {
+              console.log(`Lobby countdown cancelled for duel ${duelId} because a player went offline.`);
+              
+              // Remove the offline participant
+              const offlineParticipants = latestDuel.participants.filter(p => !onlineUsers.has(p.userId));
+              for (const offP of offlineParticipants) {
+                await prisma.duelParticipant.deleteMany({
+                  where: { duelId, userId: offP.userId }
+                });
+              }
+
+              // Fetch updated participants and notify room
+              const updated = await prisma.duel.findUnique({
+                where: { id: duelId },
+                include: { participants: { include: { user: true } } }
+              });
+
+              io.to(`duel:${duelId}`).emit('lobby_update', {
+                participants: updated ? updated.participants : [],
+                status: 'waiting'
+              });
+              return;
             }
 
-            io.to(`duel:${duelId}`).emit('duel_started', {
-              bug: secureBug,
-              startTime: Date.now()
+            // Update status to active
+            await prisma.duel.update({
+              where: { id: duelId },
+              data: {
+                status: "active",
+                startedAt: new Date()
+              }
             });
+
+            if (updatedDuel.gameType === 'color_match') {
+              io.to(`duel:${duelId}`).emit('duel_started', {
+                targetColor: updatedDuel.targetColor,
+                startTime: Date.now()
+              });
+            } else {
+              // Fetch bug solution securely hidden in code
+              const secureBug = updatedDuel.bug ? { ...updatedDuel.bug } : null;
+              if (secureBug) {
+                secureBug.fixedCode = "";
+                secureBug.explanation = "";
+              }
+
+              io.to(`duel:${duelId}`).emit('duel_started', {
+                bug: secureBug,
+                startTime: Date.now()
+              });
+            }
+
+            // Start FOMO Engine interval
+            startFomoEngine(duelId, latestDuel.participants, updatedDuel.gameType);
+          } catch (err) {
+            console.error("Error starting duel after lobby countdown:", err);
           }
-
-          // Start FOMO Engine interval
-          startFomoEngine(duelId, updatedDuel.participants, updatedDuel.gameType);
         }, 12000);
       }
     } catch (e) {

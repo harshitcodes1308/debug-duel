@@ -185,6 +185,11 @@ export default function DuelLobby() {
       setRealOpponent(null);
       setIsSpinning(true);
       setActiveOpponent(null);
+      setStandbyCountdown(null);
+      setShowOverlay(false);
+      setCountdown(null);
+      setReceivedCountdown(null);
+      setReceivedAt(null);
     }
   }, [participants, user?.id]);
 
@@ -204,7 +209,7 @@ export default function DuelLobby() {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [isSpinning, realOpponent, standbyCountdown, showOverlay]);
+  }, [isSpinning, realOpponent, showOverlay]);
 
   // Local countdown starting after the overlay is triggered
   useEffect(() => {
@@ -230,7 +235,7 @@ export default function DuelLobby() {
 
       return () => clearInterval(interval);
     }
-  }, [showOverlay, receivedCountdown, receivedAt, countdown]);
+  }, [showOverlay, receivedCountdown, receivedAt]);
 
   // Fetch initial details
   const [duelDetails, setDuelDetails] = useState<any>(null);
