@@ -113,7 +113,9 @@ export default function DuelLobby() {
     const socket = io('http://localhost:5001');
     socketRef.current = socket;
 
-    socket.emit('join_duel', { duelId, userId: user.id });
+    socket.on('connect', () => {
+      socket.emit('join_duel', { duelId, userId: user.id });
+    });
 
     socket.on('lobby_update', ({ participants: newParticipants, status: newStatus }) => {
       setParticipants(newParticipants);

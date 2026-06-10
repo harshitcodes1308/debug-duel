@@ -1694,7 +1694,9 @@ io.on('connection', (socket) => {
             // Double check if duel still exists and is waiting
             const latestDuel = await prisma.duel.findUnique({
               where: { id: duelId },
-              include: { participants: true }
+              include: {
+                participants: { include: { user: true } }
+              }
             });
             if (!latestDuel || latestDuel.status !== 'waiting') return;
 

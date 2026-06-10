@@ -158,20 +158,28 @@ async function ensureActiveQuests(userId, tx = null) {
 
       const expiresAt = q.category === 'DAILY' ? endOfToday : endOfWeek;
 
-      const newUq = await client.userQuest.create({
-        data: {
-          userId,
-          questId: q.id,
-          expiresAt,
-          progress: 0,
-          completed: false,
-          claimed: false
-        },
-        include: {
-          quest: true
+      try {
+        const newUq = await client.userQuest.create({
+          data: {
+            userId,
+            questId: q.id,
+            expiresAt,
+            progress: 0,
+            completed: false,
+            claimed: false
+          },
+          include: {
+            quest: true
+          }
+        });
+        createdQuests.push(newUq);
+      } catch (err) {
+        if (err.code === 'P2002') {
+          console.log(`Quest ${q.id} was already assigned to user ${userId} in a parallel request.`);
+        } else {
+          throw err;
         }
-      });
-      createdQuests.push(newUq);
+      }
     }
 
     // Return current list of all active quests

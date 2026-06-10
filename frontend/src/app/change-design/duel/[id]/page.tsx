@@ -248,8 +248,10 @@ export default function DesignArena() {
     const socket = io('http://localhost:5001');
     socketRef.current = socket;
 
-    socket.emit('join_duel', { duelId, userId: user.id });
-    socket.emit('register_user', { userId: user.id });
+    socket.on('connect', () => {
+      socket.emit('join_duel', { duelId, userId: user.id });
+      socket.emit('register_user', { userId: user.id });
+    });
 
     socket.on('fomo_update', ({ message, opponentProgress: progress }) => {
       setFomo(message, progress);

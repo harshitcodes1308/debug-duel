@@ -189,7 +189,9 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
 
     const socket = io('http://localhost:5001');
 
-    socket.emit('register_user', { userId: user.id });
+    socket.on('connect', () => {
+      socket.emit('register_user', { userId: user.id });
+    });
 
     socket.on('duel_invite_received', (data) => {
       setInvite(data);
