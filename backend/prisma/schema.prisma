@@ -9,105 +9,105 @@ generator client {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  clerkId       String?  @unique
-  username      String   @unique
-  fullName      String?
-  email         String?  @unique
-  passwordHash  String?
-  tokens        Int      @default(500)
-  eloJS         Int      @default(1000)
-  eloPython     Int      @default(1000)
-  eloJava       Int      @default(1000)
-  eloUIUX       Int      @default(1000)
-  totalWins     Int      @default(0)
-  totalDuels    Int      @default(0)
-  currentStreak Int      @default(0)
-  bestStreak    Int      @default(0)
-  rank          String   @default("Bug Hunter")
-  xp            Int      @default(0)
-  level         Int      @default(1)
-  lastDailyClaim DateTime?
-  dailyStreak     Int      @default(0)
-  createdAt     DateTime @default(now())
-  duels         DuelParticipant[]
-  kbcSoloRuns   KbcSoloRun[]
+  id                 String              @id @default(cuid())
+  clerkId            String?             @unique
+  username           String              @unique
+  fullName           String?
+  email              String?             @unique
+  passwordHash       String?
+  tokens             Int                 @default(500)
+  eloDebugDuel       Int                 @default(1000)
+  eloUIUX            Int                 @default(1000)
+  eloKbc             Int                 @default(1000)
+  totalWins          Int                 @default(0)
+  totalDuels         Int                 @default(0)
+  currentStreak      Int                 @default(0)
+  bestStreak         Int                 @default(0)
+  rank               String              @default("Bug Hunter")
+  xp                 Int                 @default(0)
+  level              Int                 @default(1)
+  lastDailyClaim     DateTime?
+  dailyStreak        Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  duels              DuelParticipant[]
+  kbcSoloRuns        KbcSoloRun[]
   dailyChallengeRuns DailyChallengeRun[]
-  achievements  UserAchievement[]
-  quests        UserQuest[]
-  
-  friendKey     String   @unique @default(cuid())
-  friends       Friendship[] @relation("UserFriends")
-  friendOf      Friendship[] @relation("FriendUsers")
+  achievements       UserAchievement[]
+  quests             UserQuest[]
+
+  friendKey String       @unique @default(cuid())
+  friends   Friendship[] @relation("UserFriends")
+  friendOf  Friendship[] @relation("FriendUsers")
 
   // Ranked & Seasonal stats
-  currentRank       String   @default("Bronze III")
-  rankPoints        Int      @default(0)
-  peakRank          String   @default("Bronze III")
-  rankedWins        Int      @default(0)
-  rankedLosses      Int      @default(0)
-  rankedMatches     Int      @default(0)
-  rankedElo         Int      @default(1000)
+  currentRank        String              @default("Bronze III")
+  rankPoints         Int                 @default(0)
+  peakRank           String              @default("Bronze III")
+  rankedWins         Int                 @default(0)
+  rankedLosses       Int                 @default(0)
+  rankedMatches      Int                 @default(0)
+  rankedElo          Int                 @default(1000)
   seasonParticipants SeasonParticipant[]
 }
 
 model Bug {
   id          String   @id @default(cuid())
-  language    String   // "javascript" | "python" | "java"
-  difficulty  String   // "easy" | "medium" | "hard"
+  language    String // "javascript" | "python" | "java"
+  difficulty  String // "easy" | "medium" | "hard"
   title       String
   brokenCode  String
   fixedCode   String
   explanation String
-  category    String   // "logic" | "syntax" | "runtime" | "off-by-one" | "null-ref" | "async"
+  category    String // "logic" | "syntax" | "runtime" | "off-by-one" | "null-ref" | "async"
   createdAt   DateTime @default(now())
   duels       Duel[]
 }
 
 model Duel {
-  id           String   @id @default(cuid())
-  gameType     String   @default("debug") // "debug" | "color_match" | "change_design"
-  bugId        String?
-  bug          Bug?     @relation(fields: [bugId], references: [id])
+  id                String            @id @default(cuid())
+  gameType          String            @default("debug") // "debug" | "color_match" | "change_design"
+  bugId             String?
+  bug               Bug?              @relation(fields: [bugId], references: [id])
   designChallengeId String?
-  status       String   @default("waiting") // "waiting" | "active" | "completed"
-  betAmount    Int      @default(50)
-  winnerId     String?
-  language     String?
-  difficulty   String?
-  targetColor  String?  // for color matching game e.g., "rgb(120, 80, 200)"
-  startedAt    DateTime?
-  endedAt      DateTime?
-  createdAt    DateTime @default(now())
-  participants DuelParticipant[]
+  status            String            @default("waiting") // "waiting" | "active" | "completed"
+  betAmount         Int               @default(50)
+  winnerId          String?
+  language          String?
+  difficulty        String?
+  targetColor       String? // for color matching game e.g., "rgb(120, 80, 200)"
+  startedAt         DateTime?
+  endedAt           DateTime?
+  createdAt         DateTime          @default(now())
+  participants      DuelParticipant[]
 
-  isRanked     Boolean  @default(false)
-  seasonId     String?
-  season       Season?  @relation(fields: [seasonId], references: [id])
+  isRanked Boolean @default(false)
+  seasonId String?
+  season   Season? @relation(fields: [seasonId], references: [id])
 }
 
 model DuelParticipant {
-  id              String   @id @default(cuid())
-  duelId          String
-  duel            Duel     @relation(fields: [duelId], references: [id])
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  submittedCode   String?
-  explanation     String?
-  submittedColor  String?  // for color matching game e.g., "rgb(120, 85, 195)"
-  colorScore      Int?     // score out of 1000
-  submittedDesign String?  // for Change That Design mode (JSON string representing modified node tree)
-  designScore     Int?     // score out of 100
-  submitTime      Int?     // seconds from duel start
-  explanationScore Int?    // 0-20, AI judged
-  isWinner        Boolean  @default(false)
-  progressPercent Int      @default(0) // for FOMO signals
+  id               String  @id @default(cuid())
+  duelId           String
+  duel             Duel    @relation(fields: [duelId], references: [id])
+  userId           String
+  user             User    @relation(fields: [userId], references: [id])
+  submittedCode    String?
+  explanation      String?
+  submittedColor   String? // for color matching game e.g., "rgb(120, 85, 195)"
+  colorScore       Int? // score out of 1000
+  submittedDesign  String? // for Change That Design mode (JSON string representing modified node tree)
+  designScore      Int? // score out of 100
+  submitTime       Int? // seconds from duel start
+  explanationScore Int? // 0-20, AI judged
+  isWinner         Boolean @default(false)
+  progressPercent  Int     @default(0) // for FOMO signals
 }
 
 model Friendship {
   id        String   @id @default(cuid())
   userId    String
   friendId  String
+  status    String   @default("ACCEPTED") // "PENDING" or "ACCEPTED"
   user      User     @relation("UserFriends", fields: [userId], references: [id])
   friend    User     @relation("FriendUsers", fields: [friendId], references: [id])
   createdAt DateTime @default(now())
@@ -131,7 +131,7 @@ model KbcSoloRun {
 model DailyChallenge {
   id        String   @id @default(cuid())
   date      String   @unique // "YYYY-MM-DD"
-  questions String   // JSON array of 15 questions
+  questions String // JSON array of 15 questions
   createdAt DateTime @default(now())
 }
 
@@ -139,7 +139,7 @@ model DailyChallengeRun {
   id               String   @id @default(cuid())
   userId           String
   user             User     @relation(fields: [userId], references: [id])
-  date             String   // "YYYY-MM-DD"
+  date             String // "YYYY-MM-DD"
   questionsCleared Int
   timeTaken        Float
   prizeEarned      Int
@@ -149,15 +149,15 @@ model DailyChallengeRun {
 }
 
 model Achievement {
-  id           String            @id
-  title        String
-  description  String
-  icon         String
-  rarity       String            // "Common" | "Rare" | "Epic" | "Legendary"
-  category     String            // "Combat" | "Streak" | "Progression" | "KBC" | "Consistency" | "Social" | "Special"
-  xpReward     Int
-  tokenReward  Int
-  users        UserAchievement[]
+  id          String            @id
+  title       String
+  description String
+  icon        String
+  rarity      String // "Common" | "Rare" | "Epic" | "Legendary"
+  category    String // "Combat" | "Streak" | "Progression" | "KBC" | "Consistency" | "Social" | "Special"
+  xpReward    Int
+  tokenReward Int
+  users       UserAchievement[]
 }
 
 model UserAchievement {
@@ -172,57 +172,57 @@ model UserAchievement {
 }
 
 model Quest {
-  id            String      @id
-  title         String
-  description   String
-  type          String      // e.g. "win_duel", "play_duel", "play_kbc", "win_kbc", "earn_tokens", "claim_daily_reward", "gain_xp", "add_friend"
-  target        Int
-  rewardXP      Int
-  rewardTokens  Int
-  category      String      // "DAILY" | "WEEKLY"
-  userQuests    UserQuest[]
+  id           String      @id
+  title        String
+  description  String
+  type         String // e.g. "win_duel", "play_duel", "play_kbc", "win_kbc", "earn_tokens", "claim_daily_reward", "gain_xp", "add_friend"
+  target       Int
+  rewardXP     Int
+  rewardTokens Int
+  category     String // "DAILY" | "WEEKLY"
+  userQuests   UserQuest[]
 }
 
 model UserQuest {
-  id            String    @id @default(cuid())
-  userId        String
-  questId       String
-  progress      Int       @default(0)
-  completed     Boolean   @default(false)
-  claimed       Boolean   @default(false)
-  completedAt   DateTime?
-  expiresAt     DateTime
-  createdAt     DateTime  @default(now())
-  user          User      @relation(fields: [userId], references: [id])
-  quest         Quest     @relation(fields: [questId], references: [id])
+  id          String    @id @default(cuid())
+  userId      String
+  questId     String
+  progress    Int       @default(0)
+  completed   Boolean   @default(false)
+  claimed     Boolean   @default(false)
+  completedAt DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  quest       Quest     @relation(fields: [questId], references: [id])
 
   @@unique([userId, questId, expiresAt])
 }
 
 model Season {
-  id           String   @id @default(cuid())
-  name         String   @unique
+  id           String              @id @default(cuid())
+  name         String              @unique
   startDate    DateTime
   endDate      DateTime
-  isActive     Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  isActive     Boolean             @default(false)
+  createdAt    DateTime            @default(now())
   participants SeasonParticipant[]
   rewards      SeasonReward[]
   duels        Duel[]
 }
 
 model SeasonParticipant {
-  id            String   @id @default(cuid())
+  id            String              @id @default(cuid())
   seasonId      String
-  season        Season   @relation(fields: [seasonId], references: [id])
+  season        Season              @relation(fields: [seasonId], references: [id])
   userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  currentRank   String   @default("Bronze III")
-  rankPoints    Int      @default(0)
-  peakRank      String   @default("Bronze III")
-  wins          Int      @default(0)
-  losses        Int      @default(0)
-  matchesPlayed Int      @default(0)
+  user          User                @relation(fields: [userId], references: [id])
+  currentRank   String              @default("Bronze III")
+  rankPoints    Int                 @default(0)
+  peakRank      String              @default("Bronze III")
+  wins          Int                 @default(0)
+  losses        Int                 @default(0)
+  matchesPlayed Int                 @default(0)
   placement     Int?
   claims        SeasonRewardClaim[]
 
@@ -230,16 +230,16 @@ model SeasonParticipant {
 }
 
 model SeasonReward {
-  id                String   @id @default(cuid())
+  id                String              @id @default(cuid())
   seasonId          String
-  season            Season   @relation(fields: [seasonId], references: [id])
-  rewardType        String   // "BADGE" | "FRAME" | "TITLE"
-  rewardName        String   // e.g., "Season 1 Gold Badge"
-  rewardValue       String   // e.g., "s1_gold_badge"
-  minRankName       String?  // e.g. "Gold III"
+  season            Season              @relation(fields: [seasonId], references: [id])
+  rewardType        String // "BADGE" | "FRAME" | "TITLE"
+  rewardName        String // e.g., "Season 1 Gold Badge"
+  rewardValue       String // e.g., "s1_gold_badge"
+  minRankName       String? // e.g. "Gold III"
   minRankPoints     Int?
-  topPercentile     Float?   // e.g., 0.1 for Top 10%
-  specificPlacement Int?     // e.g., 1 for Rank #1
+  topPercentile     Float? // e.g., 0.1 for Top 10%
+  specificPlacement Int? // e.g., 1 for Rank #1
   claims            SeasonRewardClaim[]
 }
 

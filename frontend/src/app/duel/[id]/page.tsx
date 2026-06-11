@@ -152,7 +152,7 @@ export default function DuelArena() {
       if (user && payload.tokenChanges?.[user.id]) {
         const myEloChange = payload.eloChanges?.[user.id] || 0;
         const myRpChange = payload.rpChanges?.[user.id] || 0;
-        const langKey = currentDuel?.language === 'javascript' ? 'eloJS' : currentDuel?.language === 'python' ? 'eloPython' : 'eloJava';
+        const langKey = 'eloDebugDuel';
         
         setUser({
           ...user,
@@ -178,7 +178,7 @@ export default function DuelArena() {
       const outcome = payload.winnerId === user.id ? 'won' : payload.winnerId ? 'lost' : 'draw';
       
       if (user) {
-        const langKey = currentDuel?.language === 'javascript' ? 'eloJS' : currentDuel?.language === 'python' ? 'eloPython' : 'eloJava';
+        const langKey = 'eloDebugDuel';
         setUser({
           ...user,
           tokens: payload.tokenChanges?.[user.id] ? Math.max(0, user.tokens + payload.tokenChanges[user.id]) : user.tokens,
@@ -207,7 +207,7 @@ export default function DuelArena() {
       if (user) {
         const myEloChange = payload.eloChanges?.[user.id] || 0;
         const myRpChange = payload.rpChanges?.[user.id] || 0;
-        const langKey = currentDuel?.language === 'javascript' ? 'eloJS' : currentDuel?.language === 'python' ? 'eloPython' : 'eloJava';
+        const langKey = 'eloDebugDuel';
         setUser({
           ...user,
           tokens: payload.tokenChanges?.[user.id] ? Math.max(0, user.tokens + payload.tokenChanges[user.id]) : user.tokens,

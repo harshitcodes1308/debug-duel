@@ -17,11 +17,13 @@ interface SeasonStats {
   currentRank: string;
   rankPoints: number;
   peakRank: string;
+  eloDebugDuel: number;
+  eloUIUX: number;
+  eloKbc: number;
+  overallElo: number;
   wins: number;
   losses: number;
-  matchesPlayed: number;
   winRate: number;
-  overallElo: number;
 }
 
 interface SeasonRewardClaim {
@@ -439,7 +441,7 @@ export default function PlayerProfile() {
   }
 
   const isOwnProfile = currentUser?.username === profile.username;
-  const highestElo = Math.max(profile.eloJS, profile.eloPython, profile.eloJava, profile.eloUIUX || 1000);
+  const highestElo = Math.max(profile.eloDebugDuel || 1000, profile.eloUIUX || 1000, profile.eloKbc || 1000);
 
   // Compute stats
   const winRate = profile.totalDuels > 0 
@@ -771,23 +773,18 @@ export default function PlayerProfile() {
                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Skill & Language Ratings</span>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>UI/UX Rating</span>
-                  <strong style={{ color: '#38bdf8', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloUIUX || 1000} /> ELO</strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>Debug Duel</span>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloDebugDuel || 1000} /> ELO</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>JavaScript Rating</span>
-                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloJS} /> ELO</strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>UI/UX Arena</span>
+                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloUIUX || 1000} /> ELO</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Python Rating</span>
-                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloPython} /> ELO</strong>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Java Rating</span>
-                  <strong style={{ color: 'var(--accent-red)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloJava} /> ELO</strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>Code KBC</span>
+                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloKbc || 1000} /> ELO</strong>
                 </div>
               </div>
 

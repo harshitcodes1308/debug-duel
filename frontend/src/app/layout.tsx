@@ -7,6 +7,9 @@ import Header from "@/components/Header";
 export const metadata: Metadata = {
   title: "DebugDuel — 1v1 Real-time Debugging Arena",
   description: "Two developers, one broken codebase. First to find, fix, and explain the bug wins the token pot.",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

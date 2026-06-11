@@ -47,10 +47,9 @@ export interface UserProfile {
   clerkId: string;
   username: string;
   tokens: number;
-  eloJS: number;
-  eloPython: number;
-  eloJava: number;
+  eloDebugDuel: number;
   eloUIUX: number;
+  eloKbc: number;
   rankedElo?: number;
   totalWins: number;
   totalDuels: number;

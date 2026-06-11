@@ -183,10 +183,9 @@ app.post('/api/auth/register', async (req, res) => {
         passwordHash,
         clerkId: `local-${cleanUsername}`,
         tokens: 500,
-        eloJS: 1000,
-        eloPython: 1000,
-        eloJava: 1000,
+        eloDebugDuel: 1000,
         eloUIUX: 1000,
+        eloKbc: 1000,
         rank: "Bug Hunter",
         friendKey: generateFriendKey()
       }
@@ -333,10 +332,9 @@ app.post('/api/auth/google', async (req, res) => {
         email: verifiedEmail,
         clerkId: `google-${verifiedGoogleId}`,
         tokens: 500,
-        eloJS: 1000,
-        eloPython: 1000,
-        eloJava: 1000,
+        eloDebugDuel: 1000,
         eloUIUX: 1000,
+        eloKbc: 1000,
         rank: "Bug Hunter",
         friendKey: generateFriendKey()
       }
@@ -708,10 +706,9 @@ app.post('/api/user/sync', async (req, res) => {
           clerkId,
           username,
           tokens: 500,
-          eloJS: 1000,
-          eloPython: 1000,
-          eloJava: 1000,
+          eloDebugDuel: 1000,
           eloUIUX: 1000,
+          eloKbc: 1000,
           rank: "Bug Hunter",
           friendKey: generateFriendKey()
         }
@@ -729,24 +726,25 @@ app.post('/api/user/sync', async (req, res) => {
   }
 });
 
-// Friends list with live statuses
+// Friends list with live statuses and requests
 app.get('/api/friends', async (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
     const friendships = await prisma.friendship.findMany({
-      where: { userId },
+      where: { userId, status: "ACCEPTED" },
       include: {
         friend: {
-          select: {
-            id: true,
-            username: true,
-            eloJS: true,
-            eloPython: true,
-            eloJava: true,
-            rank: true,
-            tokens: true
-          }
+          select: { id: true, username: true, eloDebugDuel: true, eloUIUX: true, eloKbc: true, rank: true, tokens: true }
+        }
+      }
+    });
+
+    const friendRequestsData = await prisma.friendship.findMany({
+      where: { friendId: userId, status: "PENDING" },
+      include: {
+        user: {
+          select: { id: true, username: true, eloDebugDuel: true, eloUIUX: true, eloKbc: true, rank: true }
         }
       }
     });
@@ -774,15 +772,24 @@ app.get('/api/friends', async (req, res) => {
       return {
         id: friend.id,
         username: friend.username,
-        eloJS: friend.eloJS,
-        eloPython: friend.eloPython,
-        eloJava: friend.eloJava,
+        eloDebugDuel: friend.eloDebugDuel,
+        eloUIUX: friend.eloUIUX,
+        eloKbc: friend.eloKbc,
         rank: friend.rank,
         status
       };
     }));
 
-    res.json(friendsList);
+    const requestsList = friendRequestsData.map(req => ({
+      id: req.user.id,
+      username: req.user.username,
+      eloDebugDuel: req.user.eloDebugDuel,
+      eloUIUX: req.user.eloUIUX,
+      eloKbc: req.user.eloKbc,
+      rank: req.user.rank
+    }));
+
+    res.json({ friends: friendsList, requests: requestsList });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch friends" });
@@ -811,34 +818,91 @@ app.post('/api/friends/add', async (req, res) => {
 
     const existing = await prisma.friendship.findFirst({
       where: {
-        userId,
-        friendId: friend.id
+        OR: [
+          { userId, friendId: friend.id },
+          { userId: friend.id, friendId: userId }
+        ]
       }
     });
 
     if (existing) {
-      return res.status(400).json({ error: "You are already friends with this user." });
+      if (existing.status === "ACCEPTED") {
+        return res.status(400).json({ error: "You are already friends with this user." });
+      } else {
+        if (existing.userId === userId) {
+          return res.status(400).json({ error: "Friend request already sent." });
+        } else {
+          // Auto-accept if they sent a request to us
+          await prisma.$transaction([
+            prisma.friendship.update({
+              where: { id: existing.id },
+              data: { status: "ACCEPTED" }
+            }),
+            prisma.friendship.create({
+              data: { userId, friendId: friend.id, status: "ACCEPTED" }
+            })
+          ]);
+          return res.json({ success: true, message: "Friend request accepted!" });
+        }
+      }
     }
 
+    await prisma.friendship.create({
+      data: { userId, friendId: friend.id, status: "PENDING" }
+    });
+
+    const io = req.app.get('io');
+    updateQuestProgress(userId, "add_friend", 1, null, io).catch(console.error);
+
+    res.json({ success: true, message: `Friend request sent to @${friend.username}!` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to add friend." });
+  }
+});
+
+// Accept Friend Request
+app.post('/api/friends/accept', async (req, res) => {
+  const { userId, friendId } = req.body;
+  try {
+    const existingReq = await prisma.friendship.findFirst({
+      where: { userId: friendId, friendId: userId, status: "PENDING" }
+    });
+    if (!existingReq) return res.status(404).json({ error: "Request not found." });
+
     await prisma.$transaction([
-      prisma.friendship.create({
-        data: { userId, friendId: friend.id }
+      prisma.friendship.update({
+        where: { id: existingReq.id },
+        data: { status: "ACCEPTED" }
       }),
       prisma.friendship.create({
-        data: { userId: friend.id, friendId: userId }
+        data: { userId, friendId, status: "ACCEPTED" }
       })
     ]);
 
     const io = req.app.get('io');
     await checkAchievements(userId, null, io);
-    await checkAchievements(friend.id, null, io);
+    await checkAchievements(friendId, null, io);
     updateQuestProgress(userId, "add_friend", 1, null, io).catch(console.error);
-    updateQuestProgress(friend.id, "add_friend", 1, null, io).catch(console.error);
 
-    res.json({ success: true, friend: { id: friend.id, username: friend.username } });
+    res.json({ success: true });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Failed to add friend." });
+    res.status(500).json({ error: "Failed to accept request." });
+  }
+});
+
+// Deny Friend Request
+app.post('/api/friends/deny', async (req, res) => {
+  const { userId, friendId } = req.body;
+  try {
+    await prisma.friendship.deleteMany({
+      where: { userId: friendId, friendId: userId, status: "PENDING" }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to deny request." });
   }
 });
 
@@ -1240,10 +1304,12 @@ app.get('/api/profile/:username', async (req, res) => {
 // Leaderboard Top 50
 app.get('/api/leaderboard', async (req, res) => {
   const { language } = req.query; // "javascript" | "python" | "java" | "uiux"
-  let orderByField = "eloJS";
-  if (language === "python") orderByField = "eloPython";
-  if (language === "java") orderByField = "eloJava";
-  if (language === "uiux") orderByField = "eloUIUX";
+  let orderByField = "eloDebugDuel";
+  if (language === 'uiux') orderByField = "eloUIUX";
+  if (language === 'kbc') orderByField = "eloKbc";
+  if (language && language !== 'all' && language !== 'uiux' && language !== 'kbc') {
+    orderByField = "eloDebugDuel";
+  }
 
   try {
     const topPlayers = await prisma.user.findMany({
@@ -1512,7 +1578,7 @@ io.on('connection', (socket) => {
   });
 
   // Send duel invite
-  socket.on('send_duel_invite', async ({ hostId, hostUsername, friendId, language, difficulty, betAmount }) => {
+  socket.on('send_duel_invite', async ({ hostId, hostUsername, friendId, gameType = 'debug', language, difficulty, betAmount }) => {
     try {
       const host = await prisma.user.findUnique({ where: { id: hostId } });
       const friend = await prisma.user.findUnique({ where: { id: friendId } });
@@ -1537,32 +1603,54 @@ io.on('connection', (socket) => {
         return;
       }
 
-      const bugs = await prisma.bug.findMany({ where: { language, difficulty } });
-      if (bugs.length === 0) {
-        socket.emit('invite_failed', { error: "No bugs found for this language and difficulty." });
-        return;
+      let newDuelData = {
+        gameType,
+        status: "waiting",
+        betAmount: Number(betAmount),
+        participants: {
+          create: { userId: hostId }
+        }
+      };
+
+      if (gameType === "color_match") {
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        newDuelData.targetColor = `rgb(${r}, ${g}, ${b})`;
+        newDuelData.difficulty = "medium";
+      } else if (gameType === "change_design") {
+        // Change design needs no extra payload upfront
+        newDuelData.difficulty = "medium";
+      } else {
+        // Debug Duel
+        try {
+          const uniqueBug = await generateUniqueBug(language, difficulty);
+          newDuelData.bugId = uniqueBug.id;
+          newDuelData.language = language;
+          newDuelData.difficulty = difficulty;
+        } catch (err) {
+          console.error("Failed to generate unique bug with LLM, falling back to random seed bug.", err);
+          const bugsMatching = await prisma.bug.findMany({ where: { language, difficulty } });
+          if (bugsMatching.length === 0) {
+            socket.emit('invite_failed', { error: `No bugs found for language ${language} and difficulty ${difficulty}.` });
+            return;
+          }
+          const randomBug = bugsMatching[Math.floor(Math.random() * bugsMatching.length)];
+          newDuelData.bugId = randomBug.id;
+          newDuelData.language = language;
+          newDuelData.difficulty = difficulty;
+        }
       }
-      const bug = bugs[Math.floor(Math.random() * bugs.length)];
 
       const duel = await prisma.duel.create({
-        data: {
-          bugId: bug.id,
-          status: "waiting",
-          betAmount,
-          language,
-          difficulty,
-          participants: {
-            create: {
-              userId: hostId
-            }
-          }
-        }
+        data: newDuelData
       });
 
       io.to(`user:${friendId}`).emit('duel_invite_received', {
         duelId: duel.id,
         hostId,
         hostUsername,
+        gameType,
         language,
         difficulty,
         betAmount
@@ -1578,13 +1666,21 @@ io.on('connection', (socket) => {
   // Decline duel invite
   socket.on('decline_duel_invite', async ({ duelId }) => {
     try {
-      const duel = await prisma.duel.findUnique({ where: { id: duelId } });
+      const duel = await prisma.duel.findUnique({ 
+        where: { id: duelId },
+        include: { participants: true }
+      });
       if (duel && duel.status === 'waiting') {
         await prisma.duel.update({
           where: { id: duelId },
           data: { status: 'completed' }
         });
-        io.to(`duel:${duelId}`).emit('duel_invite_declined', { message: "Invitation declined." });
+        
+        // Notify both the host and the person who declined
+        if (duel.participants.length > 0) {
+          const hostId = duel.participants[0].userId;
+          io.to(`user:${hostId}`).emit('invite_declined', { message: "Your challenge was declined.", duelId });
+        }
       }
     } catch (e) {
       console.error(e);
@@ -1630,8 +1726,12 @@ io.on('connection', (socket) => {
         }
       }
 
-      socket.emit('invite_accepted_confirm', { duelId });
-      io.to(`duel:${duelId}`).emit('duel_invite_accepted', { duelId });
+      socket.emit('invite_accepted_confirm', { duelId, gameType: duel.gameType });
+      io.to(`duel:${duelId}`).emit('duel_invite_accepted', { duelId, gameType: duel.gameType });
+      const hostParticipant = duel.participants.find(p => p.userId !== friendId);
+      if (hostParticipant) {
+        io.to(`user:${hostParticipant.userId}`).emit('duel_invite_accepted', { duelId, gameType: duel.gameType });
+      }
     } catch (e) {
       console.error(e);
       socket.emit('error_message', { message: "Internal error accepting invite." });
@@ -1804,6 +1904,10 @@ io.on('connection', (socket) => {
             if (updatedDuel.gameType === 'color_match') {
               io.to(`duel:${duelId}`).emit('duel_started', {
                 targetColor: updatedDuel.targetColor,
+                startTime: Date.now()
+              });
+            } else if (updatedDuel.gameType === 'change_design') {
+              io.to(`duel:${duelId}`).emit('duel_started', {
                 startTime: Date.now()
               });
             } else {
@@ -2512,7 +2616,7 @@ io.on('connection', (socket) => {
           loserId ? tx.user.findUnique({ where: { id: loserId } }) : null
         ]);
 
-        const languageKey = dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava';
+        const languageKey = 'eloDebugDuel';
 
         if (dbDuel.isRanked) {
           const rankedRes = await resolveRankedMatch(dbDuel.seasonId, winnerId, loserId, winnerId, false, tx);
@@ -2755,7 +2859,7 @@ io.on('connection', (socket) => {
           for (const p of dbParticipants) {
             const userId = p.userId;
             const user = p.user;
-            const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
+            const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : 'eloDebugDuel';
             const rating = user[languageKey] || 1000;
             const change = calculateElo(rating, 1000, 0); // Lose against base rating
 
@@ -2769,9 +2873,7 @@ io.on('connection', (socket) => {
               where: { id: userId },
               data: {
                 eloUIUX: languageKey === 'eloUIUX' ? { increment: change } : undefined,
-                eloJS: languageKey === 'eloJS' ? { increment: change } : undefined,
-                eloPython: languageKey === 'eloPython' ? { increment: change } : undefined,
-                eloJava: languageKey === 'eloJava' ? { increment: change } : undefined,
+                eloDebugDuel: languageKey === 'eloDebugDuel' ? { increment: change } : undefined,
                 tokens: { decrement: bet },
                 totalDuels: { increment: 1 },
                 currentStreak: 0,
@@ -2911,7 +3013,7 @@ async function resolveForfeit(duelId, loserId) {
         winnerId ? tx.user.findUnique({ where: { id: winnerId } }) : null
       ]);
 
-      const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : (dbDuel.language === 'javascript' ? 'eloJS' : dbDuel.language === 'python' ? 'eloPython' : 'eloJava');
+      const languageKey = (dbDuel.gameType === 'color_match' || dbDuel.gameType === 'change_design') ? 'eloUIUX' : 'eloDebugDuel';
 
       if (loserUser) {
         const ratingL = loserUser[languageKey] || 1000;
@@ -2944,9 +3046,7 @@ async function resolveForfeit(duelId, loserId) {
             where: { id: loserId },
             data: {
               eloUIUX: languageKey === 'eloUIUX' ? { increment: changeL } : undefined,
-              eloJS: languageKey === 'eloJS' ? { increment: changeL } : undefined,
-              eloPython: languageKey === 'eloPython' ? { increment: changeL } : undefined,
-              eloJava: languageKey === 'eloJava' ? { increment: changeL } : undefined,
+              eloDebugDuel: languageKey === 'eloDebugDuel' ? { increment: changeL } : undefined,
               tokens: { decrement: bet },
               totalDuels: { increment: 1 },
               currentStreak: 0,
@@ -2959,9 +3059,7 @@ async function resolveForfeit(duelId, loserId) {
             where: { id: winnerId },
             data: {
               eloUIUX: languageKey === 'eloUIUX' ? { increment: changeW } : undefined,
-              eloJS: languageKey === 'eloJS' ? { increment: changeW } : undefined,
-              eloPython: languageKey === 'eloPython' ? { increment: changeW } : undefined,
-              eloJava: languageKey === 'eloJava' ? { increment: changeW } : undefined,
+              eloDebugDuel: languageKey === 'eloDebugDuel' ? { increment: changeW } : undefined,
               tokens: { increment: totalBonus },
               totalWins: { increment: 1 },
               totalDuels: { increment: 1 },

@@ -208,8 +208,18 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
       playInviteSound();
     });
 
-    socket.on('duel_invite_accepted', ({ duelId }) => {
-      window.location.href = `/duel/lobby/${duelId}`;
+    socket.on('duel_invite_accepted', ({ duelId, gameType }) => {
+      if (gameType === 'color_match') {
+        window.location.href = `/color-match/lobby/${duelId}`;
+      } else if (gameType === 'change_design') {
+        window.location.href = `/change-design/lobby/${duelId}`;
+      } else {
+        window.location.href = `/duel/lobby/${duelId}`;
+      }
+    });
+
+    socket.on('invite_declined', ({ message }) => {
+      addToast({ title: 'Challenge Declined', message, icon: 'shield', xp: 0, tokens: 0, toastType: 'achievement' });
     });
 
     socket.on('achievement_unlocked', (data) => {
@@ -232,9 +242,15 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
     const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
     socket.emit('accept_duel_invite', { duelId: invite.duelId, friendId: user.id });
     
-    socket.once('invite_accepted_confirm', ({ duelId }) => {
+    socket.once('invite_accepted_confirm', ({ duelId, gameType }) => {
       socket.disconnect();
-      window.location.href = `/duel/lobby/${duelId}`;
+      if (gameType === 'color_match') {
+        window.location.href = `/color-match/lobby/${duelId}`;
+      } else if (gameType === 'change_design') {
+        window.location.href = `/change-design/lobby/${duelId}`;
+      } else {
+        window.location.href = `/duel/lobby/${duelId}`;
+      }
     });
     
     setInvite(null);

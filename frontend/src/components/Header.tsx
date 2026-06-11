@@ -26,7 +26,7 @@ export default function Header() {
   if (!user) return null;
 
   // Compute highest ELO or JS ELO as representative
-  const highestElo = Math.max(user.eloJS, user.eloPython, user.eloJava);
+  const highestElo = user ? Math.max(user.eloDebugDuel || 1000, user.eloUIUX || 1000, user.eloKbc || 1000) : 1000;
 
   return (
     <>
@@ -117,7 +117,7 @@ export default function Header() {
           >
             <Award size={15} color="var(--rating)" />
             <span className="header-username" style={{ fontWeight: 700, fontSize: '13px', fontFamily: 'Geist, sans-serif' }}>
-              @{user.username}
+              Overall ELO
             </span>
             <span className="badge-tactical" style={{
               fontSize: '10px',
@@ -129,7 +129,7 @@ export default function Header() {
               fontWeight: 'bold',
               fontFamily: 'Geist Mono, monospace'
             }}>
-              {highestElo} ELO
+              {highestElo}
             </span>
           </Link>
 

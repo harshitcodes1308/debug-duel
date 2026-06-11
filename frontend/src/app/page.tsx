@@ -17,10 +17,9 @@ import RankedProgressWidget from '@/components/RankedProgressWidget';
 interface LeaderboardEntry {
   id: string;
   username: string;
-  eloJS: number;
-  eloPython: number;
-  eloJava: number;
+  eloDebugDuel: number;
   eloUIUX: number;
+  eloKbc: number;
   tokens: number;
   rank: string;
 }
@@ -48,11 +47,12 @@ interface RecentBattle {
 
 export default function Dashboard() {
   const { user, setUser } = useStore();
-  const [leaderboardLang, setLeaderboardLang] = useState<'javascript' | 'python' | 'java' | 'uiux'>('javascript');
+  const [leaderboardLang, setLeaderboardLang] = useState<'debugduel' | 'uiux' | 'kbc'>('debugduel');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [recentBattles, setRecentBattles] = useState<RecentBattle[]>([]);
   const [claiming, setClaiming] = useState(false);
   const [claimMessage, setClaimMessage] = useState('');
+  const [hasClaimed, setHasClaimed] = useState(false);
   const [gameCategory, setGameCategory] = useState<'coders' | 'uiux' | 'growth'>('coders');
   const [showLevelUpEffect, setShowLevelUpEffect] = useState(false);
   const [loadingBattles, setLoadingBattles] = useState(true);
@@ -93,6 +93,9 @@ export default function Dashboard() {
 
   // Friends System states
   const [friends, setFriends] = useState<any[]>([]);
+  const [friendRequests, setFriendRequests] = useState<any[]>([]);
+  const [friendTab, setFriendTab] = useState<'friends' | 'requests'>('friends');
+  const [challengeCooldowns, setChallengeCooldowns] = useState<Record<string, number>>({});
   const [friendKeyInput, setFriendKeyInput] = useState('');
   const [addingFriend, setAddingFriend] = useState(false);
   const [addFriendError, setAddFriendError] = useState('');
@@ -102,6 +105,7 @@ export default function Dashboard() {
   // Challenge Modal states
   const [challengeFriend, setChallengeFriend] = useState<any | null>(null);
   const [challengeLang, setChallengeLang] = useState<'javascript' | 'python' | 'java'>('javascript');
+  const [challengeMode, setChallengeMode] = useState<'debug' | 'color_match' | 'change_design'>('debug');
   const [challengeDifficulty, setChallengeDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [challengeBet, setChallengeBet] = useState(50);
   const [challengeError, setChallengeError] = useState('');
@@ -118,7 +122,11 @@ export default function Dashboard() {
     socket.emit('register_user', { userId: user.id });
 
     socket.on('invite_sent', ({ duelId }) => {
-      window.location.href = `/duel/lobby/${duelId}`;
+      setChallengeLoading(false);
+      if (challengeFriend) {
+        setChallengeCooldowns(prev => ({ ...prev, [challengeFriend.id]: Date.now() + 30000 }));
+      }
+      setChallengeFriend(null);
     });
 
     socket.on('invite_failed', ({ error }) => {
@@ -137,7 +145,8 @@ export default function Dashboard() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/friends?userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
-        setFriends(data);
+        setFriends(data.friends || []);
+        setFriendRequests(data.requests || []);
       }
     } catch (e) {
       console.error("Failed to fetch friends list", e);
@@ -177,6 +186,34 @@ export default function Dashboard() {
     }
   };
 
+  const handleAcceptRequest = async (friendId: string) => {
+    if (!user) return;
+    try {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/friends/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, friendId })
+      });
+      if (res.ok) fetchFriends();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDenyRequest = async (friendId: string) => {
+    if (!user) return;
+    try {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/friends/deny', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, friendId })
+      });
+      if (res.ok) fetchFriends();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleCopyFriendKey = () => {
     if (!user?.friendKey) return;
     navigator.clipboard.writeText(user.friendKey);
@@ -193,6 +230,7 @@ export default function Dashboard() {
       hostId: user.id,
       hostUsername: user.username,
       friendId: challengeFriend.id,
+      gameType: challengeMode,
       language: challengeLang,
       difficulty: challengeDifficulty,
       betAmount: challengeBet
@@ -255,12 +293,17 @@ export default function Dashboard() {
         const data = await res.json();
         setUser({ ...user, tokens: data.tokens, xp: data.xp, level: data.level });
         setClaimMessage(`Daily Bonus claimed! +${data.added || 50} Tokens (Streak: ${data.streak || 1} day${(data.streak || 1) > 1 ? 's' : ''})`);
+        setHasClaimed(true);
       } else {
         try {
           const data = await res.json();
           setClaimMessage(data.error || 'Already claimed today!');
+          if (data.error === "ALREADY_CLAIMED" || data.error === "Already claimed today!") {
+            setHasClaimed(true);
+          }
         } catch {
           setClaimMessage('Already claimed today!');
+          setHasClaimed(true);
         }
       }
     } catch (e) {
@@ -294,7 +337,7 @@ export default function Dashboard() {
     : 0;
 
   const getEloTrendPoints = () => {
-    const currentElo = user.eloJS;
+    const currentElo = Math.max(user.eloDebugDuel || 1000, user.eloUIUX || 1000, user.eloKbc || 1000);
     const points = [currentElo];
     let tempElo = currentElo;
     
@@ -549,7 +592,10 @@ export default function Dashboard() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Zap size={24} color="var(--accent-blue)" />
-                      <span className="badge badge-active">Active</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 'bold', fontFamily: 'Geist Mono, monospace' }}>ELO {user.eloDebugDuel || 1000}</span>
+                        <span className="badge badge-active">Active</span>
+                      </div>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>DebugDuel</h3>
                     <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
@@ -566,7 +612,10 @@ export default function Dashboard() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Trophy size={24} color="var(--accent-purple)" />
-                      <span className="badge badge-active">Active</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 'bold', fontFamily: 'Geist Mono, monospace' }}>ELO {user.eloKbc || 1000}</span>
+                        <span className="badge badge-active">Active</span>
+                      </div>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>Code KBC</h3>
                     <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
@@ -604,7 +653,10 @@ export default function Dashboard() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Zap size={24} color="var(--accent-amber)" />
-                      <span className="badge badge-active">Active</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 'bold', fontFamily: 'Geist Mono, monospace' }}>ELO {user.eloUIUX || 1000}</span>
+                        <span className="badge badge-active">Active</span>
+                      </div>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>ColorMatch</h3>
                     <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
@@ -626,7 +678,10 @@ export default function Dashboard() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Palette size={24} color="#38bdf8" />
-                      <span className="badge badge-active">Active</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 'bold', fontFamily: 'Geist Mono, monospace' }}>ELO {user.eloUIUX || 1000}</span>
+                        <span className="badge badge-active">Active</span>
+                      </div>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>Change That Design</h3>
                     <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
@@ -648,7 +703,7 @@ export default function Dashboard() {
                   <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>UI/UX Arena Status</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <p style={{ fontSize: '14px', color: '#94A3B8' }}>
-                      Your ELO Rating: <strong style={{ color: 'var(--accent-purple)', fontSize: '16px', fontFamily: 'Geist Mono, monospace' }}>{user.eloUIUX || 1000}</strong>
+                      UI UX Arena ELO: <strong style={{ color: 'var(--accent-purple)', fontSize: '16px', fontFamily: 'Geist Mono, monospace' }}>{user.eloUIUX || 1000}</strong>
                     </p>
                     <p style={{ fontSize: '12px', color: '#94A3B8', lineHeight: '1.6' }}>
                       Train your visual aesthetics, relative spacing, and accessibility requirements. Climb the ELO rankings in the styling arena!
@@ -1183,27 +1238,21 @@ export default function Dashboard() {
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginTop: '8px' }}>
             <span style={{ fontSize: '10px', fontFamily: 'Geist, sans-serif', fontWeight: 600, color: '#CBD5E1', letterSpacing: '0.08em' }}>ELO BREAKDOWN</span>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
-              <span style={{ fontFamily: 'Geist, sans-serif' }}>Javascript</span>
+              <span style={{ fontFamily: 'Geist, sans-serif' }}>Debug Duel</span>
               <span style={{ fontWeight: 600, color: 'var(--accent-amber)', fontFamily: 'Geist Mono, monospace' }}>
-                <AnimatedCounter value={user.eloJS} />
+                <AnimatedCounter value={user.eloDebugDuel || 1000} />
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
-              <span style={{ fontFamily: 'Geist, sans-serif' }}>Python</span>
-              <span style={{ fontWeight: 600, color: 'var(--accent-blue)', fontFamily: 'Geist Mono, monospace' }}>
-                <AnimatedCounter value={user.eloPython} />
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
-              <span style={{ fontFamily: 'Geist, sans-serif' }}>Java</span>
-              <span style={{ fontWeight: 600, color: 'var(--accent-red)', fontFamily: 'Geist Mono, monospace' }}>
-                <AnimatedCounter value={user.eloJava} />
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
-              <span style={{ fontFamily: 'Geist, sans-serif' }}>UI/UX (ColorMatch)</span>
+              <span style={{ fontFamily: 'Geist, sans-serif' }}>UI/UX Arena</span>
               <span style={{ fontWeight: 600, color: 'var(--accent-purple)', fontFamily: 'Geist Mono, monospace' }}>
-                <AnimatedCounter value={user.eloUIUX} />
+                <AnimatedCounter value={user.eloUIUX || 1000} />
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
+              <span style={{ fontFamily: 'Geist, sans-serif' }}>Code KBC</span>
+              <span style={{ fontWeight: 600, color: 'var(--accent-blue)', fontFamily: 'Geist Mono, monospace' }}>
+                <AnimatedCounter value={user.eloKbc || 1000} />
               </span>
             </div>
           </div>
@@ -1245,20 +1294,27 @@ export default function Dashboard() {
 
           {/* Daily login button */}
           <button 
-            className="btn btn-success" 
-            style={{ width: '100%', marginTop: '8px', gap: '8px' }}
+            className={`btn ${hasClaimed ? 'btn-secondary' : 'btn-primary'} interactive-lift`} 
+            style={{ 
+              width: '100%', 
+              marginTop: '8px',
+              gap: '8px', 
+              background: hasClaimed ? '#3f3f46' : undefined,
+              color: hasClaimed ? '#a1a1aa' : undefined,
+              borderColor: hasClaimed ? '#3f3f46' : undefined,
+              cursor: hasClaimed ? 'not-allowed' : 'pointer'
+            }}
             onClick={handleDailyClaim}
-            disabled={claiming}
+            disabled={claiming || hasClaimed}
           >
-            <Sparkles size={16} /> Claim Daily Reward (+10)
+            <Sparkles size={16} /> {hasClaimed ? "Comeback Tomorrow!" : "Claim Daily Reward (+50)"}
           </button>
+          
           {claimMessage && (
             <div style={{ fontSize: '12px', color: 'var(--accent-green)', fontWeight: 'bold' }}>{claimMessage}</div>
           )}
         </div>
       </div>
-
-      <QuestPanel />
 
       {/* 5. LEADERBOARD & FRIENDS LIST */}
       <div className="dashboard-leaderboard">
@@ -1268,9 +1324,43 @@ export default function Dashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div className="flex-center" style={{ gap: '8px' }}>
               <Users size={18} color="var(--accent-purple)" />
-              <h2 style={{ fontSize: '18px' }}>Friends List</h2>
+              <h2 style={{ fontSize: '18px' }}>Friends</h2>
             </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{friends.length} Friends</span>
+            <div style={{ display: 'flex', gap: '8px', background: '#141419', padding: '2px', borderRadius: '6px' }}>
+              <button
+                onClick={() => setFriendTab('friends')}
+                style={{
+                  background: friendTab === 'friends' ? '#27272a' : 'transparent',
+                  color: friendTab === 'friends' ? '#fff' : 'var(--text-secondary)',
+                  border: 'none',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  fontWeight: friendTab === 'friends' ? 'bold' : 'normal'
+                }}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFriendTab('requests')}
+                style={{
+                  background: friendTab === 'requests' ? '#27272a' : 'transparent',
+                  color: friendTab === 'requests' ? '#fff' : 'var(--text-secondary)',
+                  border: 'none',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  fontWeight: friendTab === 'requests' ? 'bold' : 'normal',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                Requests {friendRequests.length > 0 && <span style={{ background: 'var(--accent-red)', color: 'white', padding: '0 4px', borderRadius: '4px', fontSize: '9px' }}>{friendRequests.length}</span>}
+              </button>
+            </div>
           </div>
 
           {/* Copy Key */}
@@ -1321,102 +1411,128 @@ export default function Dashboard() {
             {addFriendSuccess && <span style={{ fontSize: '11px', color: 'var(--accent-green)' }}>{addFriendSuccess}</span>}
           </div>
 
-          {/* Friends List */}
+          {/* Friends List or Requests */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
-            {friends.length === 0 ? (
-              <div className="flex-center" style={{ 
-                flexDirection: 'column',
-                gap: '12px',
-                textAlign: 'center', 
-                padding: '28px 16px', 
-                color: 'var(--text-secondary)', 
-                fontSize: '12px', 
-                border: '1px dashed rgba(123, 147, 219, 0.3)', 
-                borderRadius: 'var(--radius-lg)',
-                background: 'rgba(123, 147, 219, 0.01)',
-                width: '100%'
-              }}>
-                <div style={{ background: 'rgba(123, 147, 219, 0.05)', border: '1px solid rgba(123, 147, 219, 0.15)', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Users size={20} style={{ color: 'var(--accent-purple)' }} />
+            {friendTab === 'friends' ? (
+              friends.length === 0 ? (
+                <div className="flex-center" style={{ 
+                  flexDirection: 'column',
+                  gap: '12px',
+                  textAlign: 'center', 
+                  padding: '28px 16px', 
+                  color: 'var(--text-secondary)', 
+                  fontSize: '12px', 
+                  border: '1px dashed rgba(123, 147, 219, 0.3)', 
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'rgba(123, 147, 219, 0.01)',
+                  width: '100%'
+                }}>
+                  <div style={{ background: 'rgba(123, 147, 219, 0.05)', border: '1px solid rgba(123, 147, 219, 0.15)', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={20} style={{ color: 'var(--accent-purple)' }} />
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: '600', color: 'var(--text-primary)' }}>No friends added yet</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: '16px', maxWidth: '240px', margin: '4px auto 0' }}>
+                      Share your friend key with a rival or paste theirs to start battling!
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p style={{ fontWeight: '600', color: 'var(--text-primary)' }}>No friends added yet</p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: '16px', maxWidth: '240px', margin: '4px auto 0' }}>
-                    Share your friend key with a rival or paste theirs to start battling!
-                  </p>
-                </div>
-              </div>
-            ) : (
-              friends.map((friend) => {
-                const maxElo = Math.max(friend.eloJS, friend.eloPython, friend.eloJava);
-                const statusColors = {
-                  online: 'var(--accent-green)',
-                  ingame: 'var(--accent-amber)',
-                  offline: 'var(--text-secondary)'
-                };
-                const statusLabel = {
-                  online: 'Online',
-                  ingame: 'In Game',
-                  offline: 'Offline'
-                };
-                
-                return (
-                  <div key={friend.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
-                        border: `1px solid ${statusColors[friend.status as 'online'|'ingame'|'offline']}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        position: 'relative'
-                      }}>
-                        {friend.username[0].toUpperCase()}
+              ) : (
+                friends.map((friend) => {
+                  const maxElo = Math.max(friend.eloDebugDuel || 1000, friend.eloUIUX || 1000, friend.eloKbc || 1000);
+                  const statusColors = {
+                    online: '#ffffff',
+                    ingame: 'var(--accent-amber)',
+                    offline: 'var(--text-secondary)'
+                  };
+                  const statusLabel = {
+                    online: 'Online',
+                    ingame: 'In Game',
+                    offline: 'Offline'
+                  };
+                  
+                  const cooldownEnd = challengeCooldowns[friend.id] || 0;
+                  const inCooldown = Date.now() < cooldownEnd;
+                  const cooldownSecs = Math.ceil((cooldownEnd - Date.now()) / 1000);
+
+                  return (
+                    <div key={friend.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
-                          position: 'absolute',
-                          bottom: '-1px',
-                          right: '-1px',
-                          width: '8px',
-                          height: '8px',
+                          width: '32px',
+                          height: '32px',
                           borderRadius: '50%',
-                          background: statusColors[friend.status as 'online'|'ingame'|'offline'],
-                          border: '1px solid var(--bg-primary)'
-                        }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 'bold' }}>@{friend.username}</div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                          {friend.rank} • {maxElo} ELO
+                          background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
+                          border: `1px solid ${statusColors[friend.status as 'online'|'ingame'|'offline']}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          position: 'relative'
+                        }}>
+                          {friend.username[0].toUpperCase()}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '-1px',
+                            right: '-1px',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: friend.status === 'online' ? '#ffffff' : statusColors[friend.status as 'online'|'ingame'|'offline'],
+                            border: '1px solid var(--bg-primary)'
+                          }} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 'bold' }}>@{friend.username}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                            {friend.rank} • {maxElo} ELO
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div>
-                      {friend.status === 'online' ? (
-                        <button
-                          onClick={() => setChallengeFriend(friend)}
-                          className="btn btn-primary"
-                          style={{ padding: '6px 10px', fontSize: '11px', height: '28px', borderRadius: '4px' }}
-                        >
-                          <Swords size={12} /> Challenge
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
-                          {statusLabel[friend.status as 'online'|'ingame'|'offline']}
-                        </span>
-                      )}
+                      <div>
+                        {friend.status === 'online' ? (
+                          <button
+                            onClick={() => !inCooldown && setChallengeFriend(friend)}
+                            disabled={inCooldown}
+                            className={`btn ${inCooldown ? 'btn-secondary' : 'btn-primary'}`}
+                            style={{ padding: '6px 10px', fontSize: '11px', height: '28px', borderRadius: '4px', opacity: inCooldown ? 0.6 : 1, cursor: inCooldown ? 'not-allowed' : 'pointer' }}
+                          >
+                            <Swords size={12} /> {inCooldown ? `Wait ${cooldownSecs}s` : 'Challenge'}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                            {statusLabel[friend.status as 'online'|'ingame'|'offline']}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )
+            ) : (
+              // Requests Tab
+              friendRequests.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                  No pending requests
+                </div>
+              ) : (
+                friendRequests.map((req) => (
+                  <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 'bold' }}>@{req.username}</div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => handleAcceptRequest(req.id)} className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Accept</button>
+                      <button onClick={() => handleDenyRequest(req.id)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>Deny</button>
                     </div>
                   </div>
-                );
-              })
+                ))
+              )
             )}
           </div>
         </div>
+
+        <QuestPanel />
 
         {/* Leaderboard panel */}
         <div className="glass-panel" style={{ padding: '20px' }}>
@@ -1430,10 +1546,10 @@ export default function Dashboard() {
           {/* Tabs */}
           <div style={{ display: 'flex', background: '#141419', padding: '2px', borderRadius: '6px', marginBottom: '12px' }}>
             <button 
-              onClick={() => setLeaderboardLang('javascript')} 
+              onClick={() => setLeaderboardLang('debugduel')} 
               style={{
                 flex: 1,
-                background: leaderboardLang === 'javascript' ? 'var(--bg-card)' : 'transparent',
+                background: leaderboardLang === 'debugduel' ? 'var(--bg-card)' : 'transparent',
                 border: 'none',
                 color: '#fff',
                 padding: '6px',
@@ -1443,39 +1559,7 @@ export default function Dashboard() {
                 cursor: 'pointer'
               }}
             >
-              JS
-            </button>
-            <button 
-              onClick={() => setLeaderboardLang('python')} 
-              style={{
-                flex: 1,
-                background: leaderboardLang === 'python' ? 'var(--bg-card)' : 'transparent',
-                border: 'none',
-                color: '#fff',
-                padding: '6px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              PY
-            </button>
-            <button 
-              onClick={() => setLeaderboardLang('java')} 
-              style={{
-                flex: 1,
-                background: leaderboardLang === 'java' ? 'var(--bg-card)' : 'transparent',
-                border: 'none',
-                color: '#fff',
-                padding: '6px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              JV
+              Debug Duel
             </button>
             <button 
               onClick={() => setLeaderboardLang('uiux')} 
@@ -1491,7 +1575,23 @@ export default function Dashboard() {
                 cursor: 'pointer'
               }}
             >
-              UX
+              UI/UX
+            </button>
+            <button 
+              onClick={() => setLeaderboardLang('kbc')} 
+              style={{
+                flex: 1,
+                background: leaderboardLang === 'kbc' ? 'var(--bg-card)' : 'transparent',
+                border: 'none',
+                color: '#fff',
+                padding: '6px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              Code KBC
             </button>
           </div>
 
@@ -1515,10 +1615,8 @@ export default function Dashboard() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {leaderboard.slice(0, 5).map((entry, index) => {
-                const elo = leaderboardLang === 'javascript' ? entry.eloJS : 
-                            leaderboardLang === 'python' ? entry.eloPython : 
-                            leaderboardLang === 'java' ? entry.eloJava : 
-                            entry.eloUIUX;
+                const elo = leaderboardLang === 'uiux' ? entry.eloUIUX :
+                            leaderboardLang === 'kbc' ? entry.eloKbc : entry.eloDebugDuel;
                 const isCurrentUser = entry.username === user.username;
                 return (
                   <div key={entry.id} style={{
@@ -1581,52 +1679,78 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Language */}
+            {/* Mode Selection */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>LANGUAGE</label>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>GAME MODE</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                {['javascript', 'python', 'java'].map((lang) => (
+                {[
+                  { id: 'debug', label: 'Debug Duel' },
+                  { id: 'color_match', label: 'Color Match' },
+                  { id: 'change_design', label: 'Change Design' }
+                ].map((mode) => (
                   <button
-                    key={lang}
+                    key={mode.id}
                     type="button"
-                    onClick={() => setChallengeLang(lang as any)}
-                    className={`btn ${challengeLang === lang ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ height: '36px', fontSize: '12px', textTransform: 'capitalize' }}
+                    onClick={() => setChallengeMode(mode.id as any)}
+                    className={`btn ${challengeMode === mode.id ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ height: '36px', fontSize: '12px' }}
                   >
-                    {lang}
+                    {mode.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Difficulty */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>DIFFICULTY</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                {['easy', 'medium', 'hard'].map((diff) => (
-                  <button
-                    key={diff}
-                    type="button"
-                    onClick={() => setChallengeDifficulty(diff as any)}
-                    className={`btn ${
-                      challengeDifficulty === diff 
-                        ? (diff === 'easy' ? 'btn-success' : diff === 'medium' ? 'btn-primary' : 'btn-danger') 
-                        : 'btn-secondary'
-                    }`}
-                    style={{
-                      height: '36px',
-                      fontSize: '12px',
-                      textTransform: 'capitalize',
-                      background: challengeDifficulty === diff && diff === 'medium' ? 'var(--accent-amber)' : undefined,
-                      borderColor: challengeDifficulty === diff && diff === 'medium' ? 'var(--accent-amber)' : undefined,
-                      color: challengeDifficulty === diff && diff !== 'hard' ? 'black' : 'white'
-                    }}
-                  >
-                    {diff}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {challengeMode === 'debug' && (
+              <>
+                {/* Language */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>LANGUAGE</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    {['javascript', 'python', 'java'].map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => setChallengeLang(lang as any)}
+                        className={`btn ${challengeLang === lang ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ height: '36px', fontSize: '12px', textTransform: 'capitalize' }}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Difficulty */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>DIFFICULTY</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    {['easy', 'medium', 'hard'].map((diff) => (
+                      <button
+                        key={diff}
+                        type="button"
+                        onClick={() => setChallengeDifficulty(diff as any)}
+                        className={`btn ${
+                          challengeDifficulty === diff 
+                            ? (diff === 'easy' ? 'btn-success' : diff === 'medium' ? 'btn-primary' : 'btn-danger') 
+                            : 'btn-secondary'
+                        }`}
+                        style={{
+                          height: '36px',
+                          fontSize: '12px',
+                          textTransform: 'capitalize',
+                          background: challengeDifficulty === diff && diff === 'medium' ? 'var(--accent-amber)' : undefined,
+                          borderColor: challengeDifficulty === diff && diff === 'medium' ? 'var(--accent-amber)' : undefined,
+                          color: challengeDifficulty === diff && diff !== 'hard' ? 'black' : 'white'
+                        }}
+                      >
+                        {diff}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Bet Amount */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

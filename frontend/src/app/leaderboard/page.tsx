@@ -9,10 +9,9 @@ import AnimatedCounter from '@/components/AnimatedCounter';
 interface LeaderboardEntry {
   id: string;
   username: string;
-  eloJS: number;
-  eloPython: number;
-  eloJava: number;
+  eloDebugDuel: number;
   eloUIUX: number;
+  eloKbc: number;
   tokens: number;
   rank: string;
   totalWins: number;
@@ -34,7 +33,7 @@ interface SeasonalLeaderboardEntry {
 export default function LeaderboardPage() {
   const { user } = useStore();
   const [leaderboardType, setLeaderboardType] = useState<'classic' | 'seasonal'>('classic');
-  const [language, setLanguage] = useState<'javascript' | 'python' | 'java' | 'uiux'>('javascript');
+  const [language, setLanguage] = useState<'debugduel' | 'uiux' | 'kbc'>('debugduel');
   
   // Data lists
   const [list, setList] = useState<LeaderboardEntry[]>([]);
@@ -131,7 +130,7 @@ export default function LeaderboardPage() {
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
             {leaderboardType === 'classic' 
-              ? 'Climb the ELO rankings in JavaScript, Python, or Java and claim your crown as the Zero-Day God.'
+              ? 'Climb the ELO rankings in Debug Duel, UI/UX, or Code KBC and claim your crown as the Zero-Day God.'
               : 'Climb the divisions from Bronze to Grandmaster. Ranked points (RP) are at stake in the arena.'}
           </p>
         </div>
@@ -172,32 +171,25 @@ export default function LeaderboardPage() {
           border: '1px solid var(--border)'
         }}>
           <button 
-            onClick={() => setLanguage('javascript')} 
-            className={`btn ${language === 'javascript' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setLanguage('debugduel')} 
+            className={`btn ${language === 'debugduel' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
           >
-            JavaScript
-          </button>
-          <button 
-            onClick={() => setLanguage('python')} 
-            className={`btn ${language === 'python' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
-          >
-            Python
-          </button>
-          <button 
-            onClick={() => setLanguage('java')} 
-            className={`btn ${language === 'java' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
-          >
-            Java
+            Debug Duel
           </button>
           <button 
             onClick={() => setLanguage('uiux')} 
             className={`btn ${language === 'uiux' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
           >
-            UI/UX
+            UI/UX Arena
+          </button>
+          <button 
+            onClick={() => setLanguage('kbc')} 
+            className={`btn ${language === 'kbc' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ flex: 1, border: 'none', height: '40px', fontSize: '13px' }}
+          >
+            Code KBC
           </button>
         </div>
       ) : (
@@ -274,7 +266,7 @@ export default function LeaderboardPage() {
               <tbody>
                 {activeList.map((entry: any, index) => {
                   const elo = leaderboardType === 'classic' 
-                    ? (language === 'javascript' ? entry.eloJS : language === 'python' ? entry.eloPython : language === 'java' ? entry.eloJava : entry.eloUIUX)
+                    ? (language === 'uiux' ? entry.eloUIUX : language === 'kbc' ? entry.eloKbc : entry.eloDebugDuel)
                     : entry.rp;
                   
                   const isCurrentUser = entry.username === user.username;
