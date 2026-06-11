@@ -72,6 +72,16 @@ debug-duel/
   │   └── .env              # Environment configurations
 ```
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=harshitcodes1308%2Fdebug-duel&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=harshitcodes1308/debug-duel&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=harshitcodes1308/debug-duel&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=harshitcodes1308/debug-duel&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## Local Development
 
 To run the platform locally, you will need Node.js and a PostgreSQL instance.
