@@ -51,6 +51,7 @@ export interface UserProfile {
   eloPython: number;
   eloJava: number;
   eloUIUX: number;
+  rankedElo?: number;
   totalWins: number;
   totalDuels: number;
   currentStreak: number;
