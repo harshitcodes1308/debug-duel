@@ -245,13 +245,18 @@ export default function DesignArena() {
   useEffect(() => {
     if (!user || !duelId || loading) return;
 
-    const socket = io('http://localhost:5001');
+    const socket = io('http://localhost:5001', { forceNew: true });
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    const handleConnect = () => {
       socket.emit('join_duel', { duelId, userId: user.id });
       socket.emit('register_user', { userId: user.id });
-    });
+    };
+
+    if (socket.connected) {
+      handleConnect();
+    }
+    socket.on('connect', handleConnect);
 
     socket.on('fomo_update', ({ message, opponentProgress: progress }) => {
       setFomo(message, progress);

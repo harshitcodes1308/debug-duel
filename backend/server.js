@@ -1593,12 +1593,17 @@ io.on('connection', (socket) => {
 
       const isParticipant = duel.participants.some(p => p.userId === friendId);
       if (!isParticipant) {
-        await prisma.duelParticipant.create({
-          data: {
-            duelId: duel.id,
-            userId: friendId
-          }
+        const existingDP = await prisma.duelParticipant.findFirst({
+          where: { duelId: duel.id, userId: friendId }
         });
+        if (!existingDP) {
+          await prisma.duelParticipant.create({
+            data: {
+              duelId: duel.id,
+              userId: friendId
+            }
+          });
+        }
       }
 
       socket.emit('invite_accepted_confirm', { duelId });
@@ -1652,19 +1657,28 @@ io.on('connection', (socket) => {
       // Check if user is already a participant, if not, add them
       let isParticipant = duel.participants.some(p => p.userId === userId);
       if (!isParticipant && duel.participants.length < 2 && duel.status === 'waiting') {
-        // Double check token balance for entering bet
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (user.tokens < duel.betAmount) {
-          socket.emit('error_message', { message: "Insufficient tokens to join bet." });
-          return;
-        }
-
-        await prisma.duelParticipant.create({
-          data: {
-            duelId: duel.id,
-            userId: userId
-          }
+        const existingDP = await prisma.duelParticipant.findFirst({
+          where: { duelId: duel.id, userId: userId }
         });
+        if (!existingDP) {
+          // Double check token balance for entering bet
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (user.tokens < duel.betAmount) {
+            socket.emit('error_message', { message: "Insufficient tokens to join bet." });
+            return;
+          }
+
+          try {
+            await prisma.duelParticipant.create({
+              data: {
+                duelId: duel.id,
+                userId: userId
+              }
+            });
+          } catch (createErr) {
+            console.error("Failed to create participant, might already exist:", createErr);
+          }
+        }
         isParticipant = true;
       }
 

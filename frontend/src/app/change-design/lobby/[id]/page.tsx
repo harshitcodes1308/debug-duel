@@ -47,12 +47,17 @@ export default function DesignLobby() {
     resetDuelState();
 
     // Connect to WebSocket server
-    const socket = io('http://localhost:5001');
+    const socket = io('http://localhost:5001', { forceNew: true });
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    const handleConnect = () => {
       socket.emit('join_duel', { duelId, userId: user.id });
-    });
+    };
+
+    if (socket.connected) {
+      handleConnect();
+    }
+    socket.on('connect', handleConnect);
 
     socket.on('lobby_update', ({ participants: newParticipants, status: newStatus }) => {
       setParticipants(newParticipants);
