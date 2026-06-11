@@ -50,7 +50,7 @@ export default function LeaderboardPage() {
     async function fetchClassicLeaderboard() {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:5001/api/leaderboard?language=${language}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/leaderboard?language=${language}`);
         if (res.ok) {
           const data = await res.json();
           setList(data);
@@ -73,8 +73,8 @@ export default function LeaderboardPage() {
       setLoading(true);
       try {
         const [leaderboardRes, activeSeasonRes] = await Promise.all([
-          fetch('http://localhost:5001/api/season/leaderboard'),
-          fetch('http://localhost:5001/api/season/active')
+          fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/season/leaderboard'),
+          fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/season/active')
         ]);
 
         if (leaderboardRes.ok) {

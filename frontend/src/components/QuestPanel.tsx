@@ -41,7 +41,7 @@ export default function QuestPanel() {
   const fetchQuests = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/quests?userId=${user.id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/quests?userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setQuests(data);
@@ -64,7 +64,7 @@ export default function QuestPanel() {
     if (!user || claimingId) return;
     setClaimingId(userQuestId);
     try {
-      const res = await fetch(`http://localhost:5001/api/quests/claim/${userQuestId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/quests/claim/${userQuestId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id })

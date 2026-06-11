@@ -61,7 +61,7 @@ export default function DuelResult() {
           if (attempt > 0) {
             await new Promise(r => setTimeout(r, delayMs));
           }
-          const res = await fetch(`http://localhost:5001/api/duel/${duelId}?t=${Date.now()}`);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/duel/${duelId}?t=${Date.now()}`);
           if (res.ok) {
             const data: DuelResultData = await res.json();
             setDuel(data);
@@ -107,7 +107,7 @@ export default function DuelResult() {
     if (!duel || !user || rematching) return;
     setRematching(true);
     try {
-      const res = await fetch('http://localhost:5001/api/duel/create', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/duel/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

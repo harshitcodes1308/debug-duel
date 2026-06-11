@@ -187,7 +187,7 @@ export default function DesignArena() {
   useEffect(() => {
     async function fetchChallengeAndDuel() {
       try {
-        const duelRes = await fetch(`http://localhost:5001/api/duel/${duelId}`);
+        const duelRes = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/duel/${duelId}`);
         if (!duelRes.ok) {
           router.push('/');
           return;
@@ -196,7 +196,7 @@ export default function DesignArena() {
         setCurrentDuel(duelData);
 
         const challengeId = duelData.designChallengeId || 'senior_login';
-        const challengeRes = await fetch(`http://localhost:5001/api/design-challenge/${challengeId}`);
+        const challengeRes = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/design-challenge/${challengeId}`);
         if (!challengeRes.ok) {
           router.push('/');
           return;
@@ -246,7 +246,7 @@ export default function DesignArena() {
   useEffect(() => {
     if (!user || !duelId || loading) return;
 
-    const socket = io('http://localhost:5001', { forceNew: true });
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'), { forceNew: true });
     socketRef.current = socket;
 
     const handleConnect = () => {

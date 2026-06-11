@@ -28,7 +28,7 @@ export const useAuth = () => {
 // Common sync profile function
 const syncUserWithBackend = async (username: string, clerkId: string, setUser: (u: UserProfile) => void) => {
   try {
-    const response = await fetch('http://localhost:5001/api/user/sync', {
+    const response = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/user/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ clerkId, username })
@@ -187,7 +187,7 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!user) return;
 
-    const socket = io('http://localhost:5001');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
 
     const handleConnect = () => {
       socket.emit('register_user', { userId: user.id });
@@ -229,7 +229,7 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
 
   const handleAccept = () => {
     if (!invite || !user) return;
-    const socket = io('http://localhost:5001');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
     socket.emit('accept_duel_invite', { duelId: invite.duelId, friendId: user.id });
     
     socket.once('invite_accepted_confirm', ({ duelId }) => {
@@ -242,7 +242,7 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
 
   const handleDecline = () => {
     if (!invite) return;
-    const socket = io('http://localhost:5001');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
     socket.emit('decline_duel_invite', { duelId: invite.duelId });
     socket.disconnect();
     setInvite(null);
@@ -553,7 +553,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
       const cachedId = localStorage.getItem('dd_user_id');
       if (cachedId) {
         try {
-          const res = await fetch(`http://localhost:5001/api/auth/me/${cachedId}`);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/auth/me/${cachedId}`);
           if (res.ok) {
             const data = await res.json();
             setUser(data);
@@ -607,7 +607,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
 
               setLoading(true);
               try {
-                const res = await fetch('http://localhost:5001/api/auth/google', {
+                const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/google', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -665,7 +665,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
     setShowGoogleSandboxModal(false);
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/auth/google', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -731,7 +731,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
     const delayDebounceFn = setTimeout(async () => {
       setCheckingUsername(true);
       try {
-        const res = await fetch('http://localhost:5001/api/auth/check-username', {
+        const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/check-username', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: username.trim() })
@@ -767,7 +767,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
     const delayDebounceFn = setTimeout(async () => {
       setCheckingGoogleUsername(true);
       try {
-        const res = await fetch('http://localhost:5001/api/auth/check-username', {
+        const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/check-username', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: googleUsername.trim() })
@@ -803,7 +803,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/auth/google', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -882,7 +882,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/auth/register', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -924,7 +924,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/auth/login', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -967,7 +967,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
   const loginAsDev = async (usr: string) => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/api/auth/login', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usernameOrEmail: usr, password: 'DevUserPassword123!' })
@@ -977,7 +977,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('dd_user_id', userProfile.id);
         setUser(userProfile);
       } else {
-        const regRes = await fetch('http://localhost:5001/api/auth/register', {
+        const regRes = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

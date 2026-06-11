@@ -186,7 +186,7 @@ export default function ColorMatchArena() {
   useEffect(() => {
     async function loadDuel() {
       try {
-        const res = await fetch(`http://localhost:5001/api/duel/${duelId}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/duel/${duelId}`);
         if (!res.ok) {
           router.push('/');
           return;
@@ -237,7 +237,7 @@ export default function ColorMatchArena() {
   useEffect(() => {
     if (!user || !duelId || loading) return;
 
-    const socket = io('http://localhost:5001', { forceNew: true });
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'), { forceNew: true });
     socketRef.current = socket;
 
     const handleConnect = () => {

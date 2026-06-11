@@ -65,7 +65,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchSeason() {
       try {
-        const res = await fetch('http://localhost:5001/api/season/active');
+        const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/season/active');
         if (res.ok) {
           const data = await res.json();
           setActiveSeason(data);
@@ -112,7 +112,7 @@ export default function Dashboard() {
   // Initialize socket for invites
   useEffect(() => {
     if (!user) return;
-    const socket = io('http://localhost:5001');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
     socketRef.current = socket;
 
     socket.emit('register_user', { userId: user.id });
@@ -134,7 +134,7 @@ export default function Dashboard() {
   const fetchFriends = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/friends?userId=${user.id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/friends?userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setFriends(data);
@@ -157,7 +157,7 @@ export default function Dashboard() {
     setAddFriendError('');
     setAddFriendSuccess('');
     try {
-      const res = await fetch('http://localhost:5001/api/friends/add', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/friends/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, friendKey: friendKeyInput.trim() })
@@ -204,7 +204,7 @@ export default function Dashboard() {
     async function fetchLeaderboard() {
       setLoadingLeaderboard(true);
       try {
-        const res = await fetch(`http://localhost:5001/api/leaderboard?language=${leaderboardLang}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/leaderboard?language=${leaderboardLang}`);
         if (res.ok) {
           const data = await res.json();
           setLeaderboard(data);
@@ -223,7 +223,7 @@ export default function Dashboard() {
     if (!user) return;
     async function fetchProfile() {
       try {
-        const res = await fetch(`http://localhost:5001/api/profile/${user?.username}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/profile/${user?.username}`);
         if (res.ok) {
           const data = await res.json();
           // Update store user state
@@ -246,7 +246,7 @@ export default function Dashboard() {
     if (!user || claiming) return;
     setClaiming(true);
     try {
-      const res = await fetch('http://localhost:5001/api/user/dailylogin', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/user/dailylogin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id })

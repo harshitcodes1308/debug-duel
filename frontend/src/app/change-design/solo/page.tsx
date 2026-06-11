@@ -176,7 +176,7 @@ export default function SoloDesignSandbox() {
   useEffect(() => {
     async function loadChallenges() {
       try {
-        const res = await fetch('http://localhost:5001/api/design-challenge');
+        const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/design-challenge');
         if (res.ok) {
           const data = await res.json();
           setChallenges(data);
@@ -281,7 +281,7 @@ export default function SoloDesignSandbox() {
     setGradeResult(null);
 
     try {
-      const res = await fetch('http://localhost:5001/api/design-challenge/solo/grade', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/design-challenge/solo/grade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

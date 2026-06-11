@@ -90,7 +90,7 @@ export default function KbcLobbyRoom() {
   useEffect(() => {
     if (!user || !roomCode) return;
 
-    const socket = io('http://localhost:5001');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
     socketRef.current = socket;
 
     socket.emit('kbc_join_lobby', { roomCode, userId: user.id });

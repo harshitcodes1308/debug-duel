@@ -49,7 +49,7 @@ export default function KbcMultiplayerHub() {
   // Initialize socket for sending invites
   useEffect(() => {
     if (!user) return;
-    const socket = io('http://localhost:5001');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
     socketRef.current = socket;
     socket.emit('register_user', { userId: user.id });
 
@@ -62,7 +62,7 @@ export default function KbcMultiplayerHub() {
   const fetchFriends = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/friends?userId=${user.id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/friends?userId=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setFriends(data);
@@ -93,7 +93,7 @@ export default function KbcMultiplayerHub() {
     }
 
     try {
-      const res = await fetch('http://localhost:5001/api/kbc/room/create', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/kbc/room/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, category, wager })
@@ -121,7 +121,7 @@ export default function KbcMultiplayerHub() {
     const code = roomCodeInput.trim().toUpperCase();
 
     try {
-      const res = await fetch(`http://localhost:5001/api/kbc/room/verify/${code}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/kbc/room/verify/${code}`);
       const data = await res.json();
       if (res.ok && data.valid) {
         if (user.tokens < data.wager) {
@@ -147,7 +147,7 @@ export default function KbcMultiplayerHub() {
 
     try {
       // 1. Create KBC Room first
-      const res = await fetch('http://localhost:5001/api/kbc/room/create', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/kbc/room/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, category: selectedCategory, wager: selectedWager })

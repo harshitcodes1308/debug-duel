@@ -67,7 +67,7 @@ export default function DuelArena() {
   useEffect(() => {
     async function loadDuel() {
       try {
-        const res = await fetch(`http://localhost:5001/api/duel/${duelId}?t=${Date.now()}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/duel/${duelId}?t=${Date.now()}`);
         if (!res.ok) {
           router.push('/');
           return;
@@ -118,7 +118,7 @@ export default function DuelArena() {
   useEffect(() => {
     if (!user || !duelId || loading) return;
 
-    const socket = io('http://localhost:5001', { forceNew: true });
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'), { forceNew: true });
     socketRef.current = socket;
 
     const handleConnect = () => {

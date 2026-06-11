@@ -71,14 +71,14 @@ export default function DesignDuelResult() {
   useEffect(() => {
     async function fetchResult() {
       try {
-        const res = await fetch(`http://localhost:5001/api/duel/${duelId}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/duel/${duelId}`);
         if (res.ok) {
           const data: DuelResultData = await res.json();
           setDuel(data);
 
           // Fetch challenge info
           const challengeId = data.designChallengeId || 'senior_login';
-          const challengeRes = await fetch(`http://localhost:5001/api/design-challenge/${challengeId}`);
+          const challengeRes = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/design-challenge/${challengeId}`);
           if (challengeRes.ok) {
             const challengeData = await challengeRes.json();
             setChallenge(challengeData);
@@ -103,7 +103,7 @@ export default function DesignDuelResult() {
           if (pUser && pUser.submittedDesign) {
             // Request a grade evaluation details report
             try {
-              const gradingRes = await fetch('http://localhost:5001/api/design-challenge/solo/grade', {
+              const gradingRes = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/design-challenge/solo/grade', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -122,7 +122,7 @@ export default function DesignDuelResult() {
 
           if (pOpponent && pOpponent.submittedDesign) {
             try {
-              const gradingRes = await fetch('http://localhost:5001/api/design-challenge/solo/grade', {
+              const gradingRes = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/design-challenge/solo/grade', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -188,7 +188,7 @@ export default function DesignDuelResult() {
     if (!duel || !user || rematching) return;
     setRematching(true);
     try {
-      const res = await fetch('http://localhost:5001/api/duel/create', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/duel/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

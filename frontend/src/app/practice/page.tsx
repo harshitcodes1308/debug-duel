@@ -37,7 +37,7 @@ export default function PracticeArena() {
     setErrorMsg('');
     setShowSolution(false);
     try {
-      const res = await fetch(`http://localhost:5001/api/bugs/random?language=${selectedLang}&difficulty=${selectedDiff}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/bugs/random?language=${selectedLang}&difficulty=${selectedDiff}`);
       if (res.ok) {
         const data: PracticeBug = await res.json();
         setBug(data);

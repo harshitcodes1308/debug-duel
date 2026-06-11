@@ -363,7 +363,7 @@ export default function PlayerProfile() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const res = await fetch(`http://localhost:5001/api/profile/${username}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/profile/${username}`);
         if (res.ok) {
           const data: ProfileResponse = await res.json();
           setProfile(data);
@@ -391,9 +391,9 @@ export default function PlayerProfile() {
       setLoadingRanked(true);
       try {
         const [statsRes, rewardsRes, historyRes] = await Promise.all([
-          fetch(`http://localhost:5001/api/season/stats/${username}`),
-          fetch(`http://localhost:5001/api/season/rewards/my?userId=${profileId}`),
-          fetch(`http://localhost:5001/api/season/history/${username}`)
+          fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/season/stats/${username}`),
+          fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/season/rewards/my?userId=${profileId}`),
+          fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/season/history/${username}`)
         ]);
         if (statsRes.ok) {
           setSeasonStats(await statsRes.json());

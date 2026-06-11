@@ -129,7 +129,7 @@ function SoloChallengeGame() {
       const category = searchParams.get('category') || 'general_tech';
       
       try {
-        const res = await fetch(`http://localhost:5001/api/kbc/questions?category=${category}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/kbc/questions?category=${category}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.length === 15) {
@@ -164,7 +164,7 @@ function SoloChallengeGame() {
     );
 
     try {
-      const res = await fetch('http://localhost:5001/api/kbc/solo/end', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/kbc/solo/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -393,7 +393,7 @@ function SoloChallengeGame() {
     } else if (type === 'skip') {
       try {
         const category = searchParams.get('category') || 'general_tech';
-        const res = await fetch(`http://localhost:5001/api/kbc/questions?category=${category}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/kbc/questions?category=${category}`);
         if (res.ok) {
           const data: Question[] = await res.json();
           const replacement = data.find(q => 

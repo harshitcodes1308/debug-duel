@@ -29,7 +29,7 @@ export default function CreateColorMatch() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:5001/api/duel/create', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/duel/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

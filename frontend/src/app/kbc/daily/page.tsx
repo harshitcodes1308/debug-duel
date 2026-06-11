@@ -106,7 +106,7 @@ function DailyChallengeGame() {
       setError(null);
       
       try {
-        const res = await fetch(`http://localhost:5001/api/kbc/daily/questions?userId=${user.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/kbc/daily/questions?userId=${user.id}`);
         if (!res.ok) {
           const data = await res.json();
           if (data.hasAttempted) {
@@ -139,7 +139,7 @@ function DailyChallengeGame() {
   const fetchLeaderboard = async () => {
     setLoadingLeaderboard(true);
     try {
-      const res = await fetch('http://localhost:5001/api/kbc/daily/leaderboard');
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/kbc/daily/leaderboard');
       if (res.ok) {
         const data = await res.json();
         setLeaderboard(data);
@@ -157,7 +157,7 @@ function DailyChallengeGame() {
     KbcAudio.stopSuspense();
 
     try {
-      const res = await fetch('http://localhost:5001/api/kbc/daily/end', {
+      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/kbc/daily/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -355,7 +355,7 @@ function DailyChallengeGame() {
       }
     } else if (type === 'skip') {
       try {
-        const res = await fetch(`http://localhost:5001/api/kbc/questions?category=general_tech`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/kbc/questions?category=general_tech`);
         if (res.ok) {
           const data: Question[] = await res.json();
           const replacement = data.find(q => 

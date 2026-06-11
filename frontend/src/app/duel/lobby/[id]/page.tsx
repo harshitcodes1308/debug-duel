@@ -110,7 +110,7 @@ export default function DuelLobby() {
 
     resetDuelState();
 
-    const socket = io('http://localhost:5001', { forceNew: true });
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'), { forceNew: true });
     socketRef.current = socket;
 
     const handleConnect = () => {
@@ -249,7 +249,7 @@ export default function DuelLobby() {
   useEffect(() => {
     async function fetchDetails() {
       try {
-        const res = await fetch(`http://localhost:5001/api/duel/${duelId}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/duel/${duelId}`);
         if (res.ok) {
           const data = await res.json();
           setDuelDetails(data);
