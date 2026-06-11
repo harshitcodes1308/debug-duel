@@ -1731,6 +1731,24 @@ io.on('connection', (socket) => {
           const isOffline = !onlineUsers.has(otherParticipant.userId);
           socket.emit('opponent_offline', { userId: otherParticipant.userId, offline: isOffline });
         }
+
+        // Send duel_started to the reconnecting participant so they don't get stuck in the lobby
+        if (updatedDuel.gameType === 'color_match') {
+          socket.emit('duel_started', {
+            targetColor: updatedDuel.targetColor,
+            startTime: updatedDuel.startedAt ? updatedDuel.startedAt.getTime() : Date.now()
+          });
+        } else {
+          const secureBug = updatedDuel.bug ? { ...updatedDuel.bug } : null;
+          if (secureBug) {
+            secureBug.fixedCode = "";
+            secureBug.explanation = "";
+          }
+          socket.emit('duel_started', {
+            bug: secureBug,
+            startTime: updatedDuel.startedAt ? updatedDuel.startedAt.getTime() : Date.now()
+          });
+        }
       }
 
       // If lobby is full (2 players) and status is waiting, start countdown

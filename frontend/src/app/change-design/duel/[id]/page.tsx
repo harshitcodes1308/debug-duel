@@ -272,10 +272,15 @@ export default function DesignArena() {
       if (resultHandledRef.current) return;
       resultHandledRef.current = true;
       alert("Your opponent has forfeited! You win!");
-      if (user && payload.tokenChanges?.[user.id]) {
+      if (user) {
+        const myEloChange = payload.eloChanges?.[user.id] || 0;
+        const myRpChange = payload.rpChanges?.[user.id] || 0;
         setUser({
           ...user,
-          tokens: user.tokens + payload.tokenChanges[user.id]
+          tokens: payload.tokenChanges?.[user.id] ? Math.max(0, user.tokens + payload.tokenChanges[user.id]) : user.tokens,
+          [payload.isRanked ? 'rankedElo' : 'eloUIUX']: (user[payload.isRanked ? 'rankedElo' : 'eloUIUX'] || 1000) + myEloChange,
+          rankPoints: Math.max(0, (user.rankPoints || 0) + myRpChange),
+          currentRank: payload.newRanks?.[user.id] || user.currentRank
         });
       }
       const myRpChange = payload.rpChanges?.[user.id] || 0;
@@ -290,6 +295,17 @@ export default function DesignArena() {
       const myRpChange = payload.rpChanges?.[user.id] || 0;
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
+
+      if (user) {
+        setUser({
+          ...user,
+          tokens: payload.tokenChanges?.[user.id] ? Math.max(0, user.tokens + payload.tokenChanges[user.id]) : user.tokens,
+          [payload.isRanked ? 'rankedElo' : 'eloUIUX']: (user[payload.isRanked ? 'rankedElo' : 'eloUIUX'] || 1000) + myEloChange,
+          rankPoints: Math.max(0, (user.rankPoints || 0) + myRpChange),
+          currentRank: myNewRank || user.currentRank
+        });
+      }
+
       router.push(`/change-design/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
     });
 

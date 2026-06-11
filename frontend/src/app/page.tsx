@@ -7,7 +7,7 @@ import {
   Play, Users, Award, Trophy, Zap, 
   Calendar, History, ShieldAlert, Sparkles, Flame,
   Swords, UserPlus, Copy, Check, Code, Palette, TrendingUp,
-  Clock, Coins, Activity
+  Clock, Coins, Activity, Lock
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import AnimatedCounter from '@/components/AnimatedCounter';
@@ -737,9 +737,9 @@ export default function Dashboard() {
               rp={user.rankPoints || 0}
               showDetails={true}
             />
-            <Link href="/ranked" className="btn btn-primary interactive-lift" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', gap: '8px', fontSize: '13px', fontWeight: 'bold', marginTop: '4px' }}>
-              <TrendingUp size={16} /> Enter Ranked Hub
-            </Link>
+            <button disabled className="btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', gap: '8px', fontSize: '13px', fontWeight: 'bold', marginTop: '4px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', cursor: 'not-allowed', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Lock size={16} /> Ranked Coming Soon
+            </button>
           </div>
         )}
 

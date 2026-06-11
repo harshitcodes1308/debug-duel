@@ -150,9 +150,16 @@ export default function DuelArena() {
       KbcAudio.playWin(); // Win fanfare
       alert("Your opponent has forfeited! You win!");
       if (user && payload.tokenChanges?.[user.id]) {
+        const myEloChange = payload.eloChanges?.[user.id] || 0;
+        const myRpChange = payload.rpChanges?.[user.id] || 0;
+        const langKey = currentDuel?.language === 'javascript' ? 'eloJS' : currentDuel?.language === 'python' ? 'eloPython' : 'eloJava';
+        
         setUser({
           ...user,
-          tokens: user.tokens + payload.tokenChanges[user.id]
+          tokens: user.tokens + payload.tokenChanges[user.id],
+          [payload.isRanked ? 'rankedElo' : langKey]: (user[payload.isRanked ? 'rankedElo' : langKey] || 1000) + myEloChange,
+          rankPoints: Math.max(0, (user.rankPoints || 0) + myRpChange),
+          currentRank: payload.newRanks?.[user.id] || user.currentRank
         });
       }
       const myRpChange = payload.rpChanges?.[user.id] || 0;
@@ -169,6 +176,18 @@ export default function DuelArena() {
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
       const outcome = payload.winnerId === user.id ? 'won' : payload.winnerId ? 'lost' : 'draw';
+      
+      if (user) {
+        const langKey = currentDuel?.language === 'javascript' ? 'eloJS' : currentDuel?.language === 'python' ? 'eloPython' : 'eloJava';
+        setUser({
+          ...user,
+          tokens: payload.tokenChanges?.[user.id] ? Math.max(0, user.tokens + payload.tokenChanges[user.id]) : user.tokens,
+          [payload.isRanked ? 'rankedElo' : langKey]: (user[payload.isRanked ? 'rankedElo' : langKey] || 1000) + myEloChange,
+          rankPoints: Math.max(0, (user.rankPoints || 0) + myRpChange),
+          currentRank: myNewRank || user.currentRank
+        });
+      }
+      
       router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}&outcome=${outcome}`);
     });
 
@@ -185,10 +204,16 @@ export default function DuelArena() {
       resultHandledRef.current = true;
       KbcAudio.playWrong(); // error buzzer sound
       alert("Time expired! Both players failed to resolve the bug in time and suffered ELO/Token deductions.");
-      if (user && payload.tokenChanges?.[user.id]) {
+      if (user) {
+        const myEloChange = payload.eloChanges?.[user.id] || 0;
+        const myRpChange = payload.rpChanges?.[user.id] || 0;
+        const langKey = currentDuel?.language === 'javascript' ? 'eloJS' : currentDuel?.language === 'python' ? 'eloPython' : 'eloJava';
         setUser({
           ...user,
-          tokens: Math.max(0, user.tokens + payload.tokenChanges[user.id])
+          tokens: payload.tokenChanges?.[user.id] ? Math.max(0, user.tokens + payload.tokenChanges[user.id]) : user.tokens,
+          [payload.isRanked ? 'rankedElo' : langKey]: (user[payload.isRanked ? 'rankedElo' : langKey] || 1000) + myEloChange,
+          rankPoints: Math.max(0, (user.rankPoints || 0) + myRpChange),
+          currentRank: payload.newRanks?.[user.id] || user.currentRank
         });
       }
       const myRpChange = payload.rpChanges?.[user.id] || 0;
