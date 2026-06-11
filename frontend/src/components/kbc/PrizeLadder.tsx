@@ -143,7 +143,7 @@ export default function PrizeLadder({ currentStepIndex }: PrizeLadderProps) {
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   {step.isMilestone ? (
                     <>
-                      <Shield size={12} color="var(--accent-purple)" fill="rgba(139, 92, 246, 0.2)" />
+                      <Shield size={12} color="var(--accent-purple)" fill="rgba(123, 147, 219, 0.2)" />
                       <span style={{ color: 'var(--accent-purple)' }}>Safety Milestone</span>
                     </>
                   ) : (

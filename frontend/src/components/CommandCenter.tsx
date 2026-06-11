@@ -259,13 +259,13 @@ export default function CommandCenter({ isOpen, onClose }: CommandCenterProps) {
                         gap: '12px',
                         padding: '10px 12px',
                         borderRadius: 'var(--radius-md)',
-                        background: isAct ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                        background: isAct ? 'rgba(123, 147, 219, 0.08)' : 'transparent',
                         cursor: 'pointer',
                         transition: 'background 0.15s ease'
                       }}
                     >
                       <div style={{
-                        background: isAct ? 'rgba(59, 130, 246, 0.12)' : 'rgba(255,255,255,0.02)',
+                        background: isAct ? 'rgba(123, 147, 219, 0.12)' : 'rgba(255,255,255,0.02)',
                         padding: '6px',
                         borderRadius: '6px',
                         display: 'flex',

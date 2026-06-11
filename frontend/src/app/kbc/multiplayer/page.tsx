@@ -195,7 +195,7 @@ export default function KbcMultiplayerHub() {
           </Link>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontFamily: 'Space Grotesk, sans-serif', color: '#FFF' }}>
+              <h1 style={{ fontSize: '32px', fontFamily: 'Rajdhani, sans-serif', color: '#FFF' }}>
                 Play With Friend
               </h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
@@ -225,7 +225,7 @@ export default function KbcMultiplayerHub() {
             {/* Create Lobby Panel */}
             <div className="glass-panel" style={{ background: 'rgba(20, 16, 40, 0.35)', display: 'flex', flexDirection: 'column', gap: '24px', padding: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '8px', color: 'var(--accent-purple)' }}>
+                <div style={{ background: 'rgba(123, 147, 219, 0.1)', padding: '10px', borderRadius: '8px', color: 'var(--accent-purple)' }}>
                   <Plus size={24} />
                 </div>
                 <div>
@@ -299,7 +299,7 @@ export default function KbcMultiplayerHub() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 4px 15px rgba(139, 92, 246, 0.25)'
+                  boxShadow: '0 4px 15px rgba(123, 147, 219, 0.25)'
                 }}
               >
                 <Sparkles size={18} />
@@ -446,8 +446,8 @@ export default function KbcMultiplayerHub() {
                           onClick={() => handleInviteFriend(friend.id, friend.username)}
                           style={{
                             padding: '6px 12px',
-                            background: isSuccess ? 'var(--accent-green)' : 'rgba(139, 92, 246, 0.1)',
-                            border: isSuccess ? 'none' : '1px solid rgba(139, 92, 246, 0.2)',
+                            background: isSuccess ? 'var(--accent-green)' : 'rgba(123, 147, 219, 0.1)',
+                            border: isSuccess ? 'none' : '1px solid rgba(123, 147, 219, 0.2)',
                             borderRadius: '6px',
                             color: isSuccess ? '#000' : 'var(--accent-purple)',
                             fontSize: '11px',

@@ -180,6 +180,7 @@ export default function ColorMatchArena() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
+  const resultHandledRef = useRef(false);
 
   // 1. Initial Load & Sync
   useEffect(() => {
@@ -262,6 +263,8 @@ export default function ColorMatchArena() {
 
     // Opponent forfeited
     socket.on('opponent_forfeited', (payload) => {
+      if (resultHandledRef.current) return;
+      resultHandledRef.current = true;
       alert("Your opponent has forfeited! You win!");
       if (user && payload.tokenChanges?.[user.id]) {
         setUser({
@@ -277,6 +280,8 @@ export default function ColorMatchArena() {
 
     // Final result broadcast
     socket.on('duel_result', (payload) => {
+      if (resultHandledRef.current) return;
+      resultHandledRef.current = true;
       const myRpChange = payload.rpChanges?.[user.id] || 0;
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
@@ -511,7 +516,7 @@ export default function ColorMatchArena() {
                   <div style={{
                     fontSize: '28px',
                     fontWeight: 'bold',
-                    fontFamily: 'Space Grotesk, sans-serif',
+                    fontFamily: 'Rajdhani, sans-serif',
                     color: phaseTimer <= 2 ? 'var(--accent-red)' : '#fff',
                     transition: 'color 0.3s',
                     zIndex: 1
@@ -779,7 +784,7 @@ export default function ColorMatchArena() {
                 ) : opponentSubmitted ? (
                   <span className="badge badge-js" style={{ fontSize: '9px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber)', borderColor: 'rgba(245, 158, 11, 0.2)' }}>SUBMITTED</span>
                 ) : (
-                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>ONLINE</span>
+                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(123, 147, 219, 0.15)', color: 'var(--accent-blue)', borderColor: 'rgba(123, 147, 219, 0.2)' }}>ONLINE</span>
                 )}
               </div>
 

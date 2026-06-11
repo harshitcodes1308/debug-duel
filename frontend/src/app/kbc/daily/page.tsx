@@ -427,7 +427,7 @@ function DailyChallengeGame() {
         alignItems: 'center',
         justifyContent: 'center',
         color: '#FFF',
-        fontFamily: 'Space Grotesk, sans-serif'
+        fontFamily: 'Rajdhani, sans-serif'
       }}>
         <Brain size={48} color="var(--accent-purple)" className="pulse-glow" style={{ marginBottom: '16px' }} />
         <div>Verifying Daily hot seat keys...</div>
@@ -447,7 +447,7 @@ function DailyChallengeGame() {
         padding: '24px',
         color: '#FFF',
         textAlign: 'center',
-        fontFamily: 'Space Grotesk, sans-serif'
+        fontFamily: 'Rajdhani, sans-serif'
       }}>
         <AlertCircle size={48} color="var(--accent-red)" style={{ marginBottom: '16px' }} />
         <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Daily Challenge</h2>
@@ -486,18 +486,18 @@ function DailyChallengeGame() {
           alignItems: 'center',
           gap: '24px',
           background: 'rgba(20, 16, 45, 0.5)',
-          borderColor: 'rgba(139, 92, 246, 0.15)'
+          borderColor: 'rgba(123, 147, 219, 0.15)'
         }}>
           <div style={{
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            background: 'rgba(139, 92, 246, 0.1)',
-            border: '1px solid rgba(139, 92, 246, 0.3)',
+            background: 'rgba(123, 147, 219, 0.1)',
+            border: '1px solid rgba(123, 147, 219, 0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(139, 92, 246, 0.2)'
+            boxShadow: '0 0 20px rgba(123, 147, 219, 0.2)'
           }}>
             <Trophy size={32} color="var(--accent-amber)" />
           </div>
@@ -506,7 +506,7 @@ function DailyChallengeGame() {
             <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--accent-purple)' }}>
               TODAY&apos;S SPECIAL
             </span>
-            <h1 style={{ fontSize: '32px', color: '#FFF', marginTop: '8px', fontFamily: 'Space Grotesk, sans-serif' }}>
+            <h1 style={{ fontSize: '32px', color: '#FFF', marginTop: '8px', fontFamily: 'Rajdhani, sans-serif' }}>
               Daily KBC Challenge
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '22px', marginTop: '12px', maxWidth: '480px', margin: '12px auto 0' }}>
@@ -614,8 +614,8 @@ function DailyChallengeGame() {
 
             {/* Virtual Host Box */}
             <div style={{
-              background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.06) 0%, rgba(59, 130, 246, 0.03) 100%)',
-              border: '1px solid rgba(139, 92, 246, 0.15)',
+              background: 'linear-gradient(90deg, rgba(123, 147, 219, 0.06) 0%, rgba(123, 147, 219, 0.03) 100%)',
+              border: '1px solid rgba(123, 147, 219, 0.15)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-4) var(--space-5)',
               display: 'flex',
@@ -626,8 +626,8 @@ function DailyChallengeGame() {
                 width: '42px',
                 height: '42px',
                 borderRadius: '50%',
-                background: 'rgba(139, 92, 246, 0.1)',
-                border: '1px solid rgba(139, 92, 246, 0.2)',
+                background: 'rgba(123, 147, 219, 0.1)',
+                border: '1px solid rgba(123, 147, 219, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -681,7 +681,7 @@ function DailyChallengeGame() {
                   zIndex: 10,
                   color: getTimerColor(),
                   fontWeight: 'bold',
-                  fontFamily: 'Space Grotesk, sans-serif',
+                  fontFamily: 'Rajdhani, sans-serif',
                   transition: 'color 0.2s'
                 }}>
                   <Clock size={14} />
@@ -834,7 +834,7 @@ function DailyChallengeGame() {
             {isLoss ? 'Challenge Complete' : isQuit ? 'Walked Away' : 'Jackpot Conquered'}
           </span>
 
-          <h1 style={{ fontSize: '32px', color: '#FFF', marginTop: '20px', fontFamily: 'Space Grotesk, sans-serif' }}>
+          <h1 style={{ fontSize: '32px', color: '#FFF', marginTop: '20px', fontFamily: 'Rajdhani, sans-serif' }}>
             {isLoss ? 'Good Try!' : isQuit ? 'Secure Play!' : 'Jackpot Victory!'}
           </h1>
 
@@ -853,7 +853,7 @@ function DailyChallengeGame() {
             gap: '16px'
           }}>
             <div>
-              <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>
+              <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}>
                 +{runStats?.tokensEarned || 0}
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '4px' }}>
@@ -861,7 +861,7 @@ function DailyChallengeGame() {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#FFF', fontFamily: 'Space Grotesk' }}>
+              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#FFF', fontFamily: 'Rajdhani, sans-serif' }}>
                 {finalCleared} / 15
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: '4px' }}>
@@ -909,7 +909,7 @@ function DailyChallengeGame() {
               <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.15em', color: 'var(--accent-purple)', textTransform: 'uppercase' }}>
                 Today&apos;s Standings
               </span>
-              <h1 style={{ fontSize: '36px', fontFamily: 'Space Grotesk, sans-serif', marginTop: '4px' }}>
+              <h1 style={{ fontSize: '36px', fontFamily: 'Rajdhani, sans-serif', marginTop: '4px' }}>
                 Daily Leaderboard
               </h1>
             </div>
@@ -922,8 +922,8 @@ function DailyChallengeGame() {
           {/* Attempt Warning Banner */}
           {hasAttempted && (
             <div style={{
-              background: 'rgba(59, 130, 246, 0.06)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
+              background: 'rgba(123, 147, 219, 0.06)',
+              border: '1px solid rgba(123, 147, 219, 0.2)',
               borderRadius: '8px',
               padding: '16px 20px',
               display: 'flex',
@@ -990,15 +990,15 @@ function DailyChallengeGame() {
                         padding: '14px 16px',
                         borderRadius: '6px',
                         fontSize: '13px',
-                        background: isUser ? 'rgba(139, 92, 246, 0.06)' : 'rgba(255, 255, 255, 0.005)',
-                        border: isUser ? '1px solid rgba(139, 92, 246, 0.2)' : '1px solid transparent',
+                        background: isUser ? 'rgba(123, 147, 219, 0.06)' : 'rgba(255, 255, 255, 0.005)',
+                        border: isUser ? '1px solid rgba(123, 147, 219, 0.2)' : '1px solid transparent',
                         alignItems: 'center',
                         transition: 'var(--transition)'
                       }}
                     >
                       {/* Rank */}
                       <span style={{
-                        fontFamily: 'Space Grotesk',
+                        fontFamily: 'Rajdhani, sans-serif',
                         fontWeight: 'bold',
                         color: isTop3 ? rankColors[idx] : 'var(--text-secondary)'
                       }}>
@@ -1014,17 +1014,17 @@ function DailyChallengeGame() {
                       </span>
 
                       {/* Levels Cleared */}
-                      <span style={{ textAlign: 'center', fontFamily: 'Space Grotesk', fontWeight: 'bold' }}>
+                      <span style={{ textAlign: 'center', fontFamily: 'Rajdhani, sans-serif', fontWeight: 'bold' }}>
                         {entry.questionsCleared} / 15
                       </span>
 
                       {/* Time Taken */}
-                      <span style={{ textAlign: 'center', fontFamily: 'Space Grotesk', color: 'var(--text-secondary)' }}>
+                      <span style={{ textAlign: 'center', fontFamily: 'Rajdhani, sans-serif', color: 'var(--text-secondary)' }}>
                         {entry.timeTaken.toFixed(1)}s
                       </span>
 
                       {/* Prize */}
-                      <span style={{ textAlign: 'right', fontFamily: 'Space Grotesk', fontWeight: 'bold', color: 'var(--accent-amber)' }}>
+                      <span style={{ textAlign: 'right', fontFamily: 'Rajdhani, sans-serif', fontWeight: 'bold', color: 'var(--accent-amber)' }}>
                         {entry.prizeEarned}
                       </span>
                     </div>
@@ -1051,7 +1051,7 @@ export default function DailyChallengePage() {
         alignItems: 'center',
         justifyContent: 'center',
         color: '#FFF',
-        fontFamily: 'Space Grotesk, sans-serif'
+        fontFamily: 'Rajdhani, sans-serif'
       }}>
         <div>Loading Daily Challenge...</div>
       </div>

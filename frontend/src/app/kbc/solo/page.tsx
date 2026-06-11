@@ -236,7 +236,7 @@ function SoloChallengeGame() {
         alignItems: 'center',
         justifyContent: 'center',
         color: '#FFF',
-        fontFamily: 'Space Grotesk, sans-serif'
+        fontFamily: 'Rajdhani, sans-serif'
       }}>
         <Brain size={48} color="var(--accent-amber)" className="pulse-glow" style={{ marginBottom: '16px' }} />
         <div>Preparing the Hot Seat...</div>
@@ -256,7 +256,7 @@ function SoloChallengeGame() {
         padding: '24px',
         color: '#FFF',
         textAlign: 'center',
-        fontFamily: 'Space Grotesk, sans-serif'
+        fontFamily: 'Rajdhani, sans-serif'
       }}>
         <AlertCircle size={48} color="var(--accent-red)" style={{ marginBottom: '16px' }} />
         <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Setup Error</h2>
@@ -520,8 +520,8 @@ function SoloChallengeGame() {
 
           {/* Virtual Host Box */}
           <div style={{
-            background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.06) 0%, rgba(59, 130, 246, 0.03) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.15)',
+            background: 'linear-gradient(90deg, rgba(123, 147, 219, 0.06) 0%, rgba(123, 147, 219, 0.03) 100%)',
+            border: '1px solid rgba(123, 147, 219, 0.15)',
             borderRadius: 'var(--radius-md)',
             padding: 'var(--space-4) var(--space-5)',
             display: 'flex',
@@ -533,12 +533,12 @@ function SoloChallengeGame() {
               width: '42px',
               height: '42px',
               borderRadius: '50%',
-              background: 'rgba(139, 92, 246, 0.1)',
-              border: '1px solid rgba(139, 92, 246, 0.2)',
+              background: 'rgba(123, 147, 219, 0.1)',
+              border: '1px solid rgba(123, 147, 219, 0.2)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 10px rgba(139, 92, 246, 0.05)'
+              boxShadow: '0 0 10px rgba(123, 147, 219, 0.05)'
             }}>
               <MessageSquare size={18} color="var(--accent-purple)" />
             </div>
@@ -590,7 +590,7 @@ function SoloChallengeGame() {
                 zIndex: 10,
                 color: getTimerColor(),
                 fontWeight: 'bold',
-                fontFamily: 'Space Grotesk, sans-serif',
+                fontFamily: 'Rajdhani, sans-serif',
                 transition: 'color 0.2s'
               }}>
                 <Clock size={14} />
@@ -708,7 +708,7 @@ export default function SoloChallengePage() {
         alignItems: 'center',
         justifyContent: 'center',
         color: '#FFF',
-        fontFamily: 'Space Grotesk, sans-serif'
+        fontFamily: 'Rajdhani, sans-serif'
       }}>
         <div>Loading arena resources...</div>
       </div>

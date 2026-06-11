@@ -51,34 +51,55 @@ export default function DuelResult() {
   const rpChange = searchParams.get('rpChange') ? parseInt(searchParams.get('rpChange')!) : null;
   const newRank = searchParams.get('newRank') || null;
   const eloChange = searchParams.get('eloChange') ? parseInt(searchParams.get('eloChange')!) : null;
+  // outcome is the authoritative source of truth passed from the socket handler
+  const outcomeParam = searchParams.get('outcome'); // 'won' | 'lost' | 'draw' | null
 
   useEffect(() => {
-    async function fetchResult() {
-      try {
-        const res = await fetch(`http://localhost:5001/api/duel/${duelId}`);
-        if (res.ok) {
-          const data: DuelResultData = await res.json();
-          setDuel(data);
-
-          // If current user is winner, trigger confetti
-          const userParticipant = data.participants.find(p => p.userId === user?.id);
-          if (userParticipant?.isWinner) {
-            confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 }
-            });
+    async function fetchResultWithRetry(retries = 3, delayMs = 1500) {
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise(r => setTimeout(r, delayMs));
           }
+          const res = await fetch(`http://localhost:5001/api/duel/${duelId}?t=${Date.now()}`);
+          if (res.ok) {
+            const data: DuelResultData = await res.json();
+            setDuel(data);
+
+            // Determine if we should trigger confetti
+            const userParticipant = data.participants.find(p => p.userId === user?.id);
+            const isWin = outcomeParam === 'won' || userParticipant?.isWinner;
+            if (isWin) {
+              confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+              });
+            }
+
+            // If outcome says 'won' but DB hasn't caught up, retry
+            if (outcomeParam === 'won' && !data.winnerId && attempt < retries - 1) {
+              continue;
+            }
+            break;
+          }
+        } catch (e) {
+          console.error(e);
         }
-        setLoading(false);
-      } catch (e) {
-        console.error(e);
-        setLoading(false);
       }
+      setLoading(false);
     }
 
     if (duelId && user) {
-      fetchResult();
+      // Fire confetti immediately if we know we won
+      if (outcomeParam === 'won') {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+      fetchResultWithRetry();
     }
   }, [duelId, user]);
 
@@ -136,8 +157,12 @@ export default function DuelResult() {
 
   const pUser = duel.participants.find(p => p.userId === user.id);
   const pOpponent = duel.participants.find(p => p.userId !== user.id);
-  const isWinner = pUser?.isWinner;
-  const isDraw = !duel.winnerId;
+  
+  // Use the outcome URL param as the authoritative source of truth.
+  // The DB fetch may return stale data due to read-replica lag, but the
+  // outcome param comes directly from the socket event that resolved the match.
+  const isWinner = outcomeParam === 'won' || (outcomeParam === null && pUser?.isWinner);
+  const isDraw = outcomeParam === 'draw' || (outcomeParam === null && !duel.winnerId);
 
   return (
     <div className="container" style={{ padding: '60px 24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -175,7 +200,7 @@ export default function DuelResult() {
             fontSize: '36px',
             color: isDraw ? 'var(--accent-red)' : isWinner ? 'var(--accent-green)' : 'var(--accent-red)',
             textShadow: isWinner ? '0 0 25px rgba(0, 255, 148, 0.2)' : 'none',
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: 'Rajdhani, sans-serif',
             textTransform: 'uppercase'
           }}>
             {isDraw ? "TIME EXPIRED - BOTH DEFEATED." : isWinner ? "VICTORY!" : "DEFEAT."}
@@ -214,8 +239,8 @@ export default function DuelResult() {
 
             {newRank && (
               <div style={{
-                background: 'rgba(139, 92, 246, 0.05)',
-                border: '1px solid rgba(139, 92, 246, 0.15)',
+                background: 'rgba(123, 147, 219, 0.05)',
+                border: '1px solid rgba(123, 147, 219, 0.15)',
                 padding: '8px 16px',
                 borderRadius: '8px',
                 fontSize: '13px',

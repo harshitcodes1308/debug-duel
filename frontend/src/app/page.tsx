@@ -364,9 +364,9 @@ export default function Dashboard() {
         {/* 1. HERO WELCOME BANNER */}
         <div className="dashboard-hero">
           <div className="glass-panel" style={{
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.04) 50%, rgba(21, 21, 28, 0.5) 100%)',
-            borderColor: 'rgba(139, 92, 246, 0.2)',
-            boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 8px 32px rgba(139, 92, 246, 0.05)',
+            background: 'linear-gradient(135deg, rgba(123, 147, 219, 0.08) 0%, rgba(123, 147, 219, 0.04) 50%, rgba(21, 21, 28, 0.5) 100%)',
+            borderColor: 'rgba(123, 147, 219, 0.2)',
+            boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 8px 32px rgba(123, 147, 219, 0.05)',
             padding: '36px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -381,27 +381,27 @@ export default function Dashboard() {
               right: '-20px',
               width: '180px',
               height: '180px',
-              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(123, 147, 219, 0.15) 0%, transparent 70%)',
               pointerEvents: 'none'
             }} />
             <div style={{ zIndex: 1 }}>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 'bold', letterSpacing: '0.15em' }}>WELCOME BACK TO THE ARENA</span>
-              <h1 style={{ fontSize: '32px', marginTop: '8px', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, color: '#FFF' }}>
-                Ready to code, <span style={{ color: 'var(--accent-blue)' }}>@{user.username}</span>?
+              <span style={{ fontSize: '11px', fontFamily: 'Geist, sans-serif', textTransform: 'uppercase', color: '#CBD5E1', fontWeight: 600, letterSpacing: '0.08em' }}>WELCOME BACK TO THE ARENA</span>
+              <h1 style={{ fontSize: '32px', marginTop: '8px', fontFamily: 'Geist, sans-serif', fontWeight: 700, color: '#FFF' }}>
+                Ready to code, <span style={{ color: 'var(--accent-blue)', fontFamily: 'Geist, sans-serif', fontWeight: 700 }}>@{user.username}</span>?
               </h1>
-              <p style={{ color: 'var(--text-secondary)', marginTop: '10px', fontSize: '14px', maxWidth: '520px', lineHeight: '22px' }}>
+              <p style={{ color: '#94A3B8', marginTop: '10px', fontSize: '14px', maxWidth: '520px', lineHeight: '22px' }}>
                 Select a language, set your wager, invite a rival, and race to resolve code defects in real-time.
               </p>
             </div>
             <div className="float-anim" style={{
-              background: 'rgba(139, 92, 246, 0.03)',
-              border: '1px solid rgba(139, 92, 246, 0.15)',
+              background: 'rgba(123, 147, 219, 0.03)',
+              border: '1px solid rgba(123, 147, 219, 0.15)',
               padding: '20px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 24px rgba(139, 92, 246, 0.1)',
+              boxShadow: '0 0 24px rgba(123, 147, 219, 0.1)',
               zIndex: 1
             }}>
               <Swords size={44} color="var(--accent-purple)" />
@@ -421,15 +421,16 @@ export default function Dashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{
               fontSize: '12px',
-              fontWeight: 'bold',
-              color: 'var(--text-secondary)',
+              fontFamily: 'Geist, sans-serif',
+              fontWeight: 600,
+              color: '#CBD5E1',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.08em',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
             }}>
-              <Activity size={14} color="var(--accent-blue)" /> Performance Overview
+              <Activity size={14} color="var(--accent-blue)" /> PERFORMANCE OVERVIEW
             </h3>
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
               Recent ELO Trend
@@ -446,52 +447,52 @@ export default function Dashboard() {
               flex: 1
             }}>
               {/* Stat 1: Win Rate */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
                 <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   <Award size={18} color="var(--accent-green)" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Win Rate</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-green)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <span style={{ fontSize: '11px', color: '#94A3B8', fontFamily: 'Geist, sans-serif', fontWeight: 400 }}>Win Rate</span>
+                  <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--accent-green)', fontFamily: 'Geist Mono, monospace' }}>
                     <AnimatedCounter value={user.totalDuels > 0 ? Math.round((user.totalWins / user.totalDuels) * 100) : 0} />%
                   </span>
                 </div>
               </div>
 
               {/* Stat 2: Current Streak */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
                 <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                   <Flame size={18} color="var(--accent-red)" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Current Streak</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-red)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <span style={{ fontSize: '11px', color: '#94A3B8', fontFamily: 'Geist, sans-serif', fontWeight: 400 }}>Current Streak</span>
+                  <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--accent-red)', fontFamily: 'Geist Mono, monospace' }}>
                     <AnimatedCounter value={user.currentStreak} />
                   </span>
                 </div>
               </div>
 
               {/* Stat 3: Total Tokens Won */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
                 <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
                   <Coins size={18} color="var(--accent-amber)" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Recent Winnings</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <span style={{ fontSize: '11px', color: '#94A3B8', fontFamily: 'Geist, sans-serif', fontWeight: 400 }}>Recent Winnings</span>
+                  <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--accent-amber)', fontFamily: 'Geist Mono, monospace' }}>
                     <AnimatedCounter value={totalTokensWon} />
                   </span>
                 </div>
               </div>
 
               {/* Stat 4: Average Solve Time */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
+                <div style={{ background: 'rgba(123, 147, 219, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(123, 147, 219, 0.2)' }}>
                   <Clock size={18} color="var(--accent-blue)" />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Avg Solve Time</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <span style={{ fontSize: '11px', color: '#94A3B8', fontFamily: 'Geist, sans-serif', fontWeight: 400 }}>Avg Solve Time</span>
+                  <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'Geist Mono, monospace' }}>
                     {averageSolveTime > 0 ? `${averageSolveTime}s` : '--'}
                   </span>
                 </div>
@@ -511,7 +512,7 @@ export default function Dashboard() {
 
         {/* Game Arenas categories */}
         <div>
-          <h2 style={{ fontSize: '20px', marginBottom: '16px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>Battle Arenas</h2>
+          <h2 style={{ fontSize: '20px', marginBottom: '16px', fontFamily: 'Geist, sans-serif', fontWeight: 600, textTransform: 'uppercase', color: '#CBD5E1', letterSpacing: '0.08em' }}>BATTLE ARENAS</h2>
           
           {/* Category Tabs */}
           <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', marginBottom: '20px', maxWidth: '400px', border: '1px solid var(--border)' }}>
@@ -543,14 +544,14 @@ export default function Dashboard() {
             {gameCategory === 'coders' && (
               <>
                 {/* DebugDuel Card */}
-                <div className="glass-panel card-shine glow-primary theme-debug-duel interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
+                <div className="valorant-card interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Zap size={24} color="var(--accent-blue)" />
-                      <span className="badge" style={{ borderColor: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent-blue)', background: 'rgba(59, 130, 246, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
+                      <span className="badge badge-active">Active</span>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>DebugDuel</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
                       1v1 real-time debugging battle. Two developers enter a shared broken codebase — first to find, fix, and explain the bug wins the wager.
                     </p>
                   </div>
@@ -560,31 +561,31 @@ export default function Dashboard() {
                 </div>
 
                 {/* Code KBC Card */}
-                <div className="glass-panel card-shine glow-purple theme-kbc interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
+                <div className="valorant-card interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Trophy size={24} color="var(--accent-purple)" />
-                      <span className="badge" style={{ borderColor: 'rgba(139, 92, 246, 0.2)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
+                      <span className="badge badge-active">Active</span>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>Code KBC</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
                       Test your coding knowledge. Climb the ladder. Beat your friends.
                     </p>
                   </div>
-                  <Link href="/kbc" className="btn" style={{ alignSelf: 'flex-start', marginTop: '20px', gap: '8px', background: 'var(--accent-purple)', color: '#FFF', borderColor: 'rgba(139, 92, 246, 0.4)' }}>
+                  <Link href="/kbc" className="btn" style={{ alignSelf: 'flex-start', marginTop: '20px', gap: '8px', background: 'var(--accent-purple)', color: '#FFF', borderColor: 'rgba(123, 147, 219, 0.4)' }}>
                     <Play size={14} fill="currentColor" /> Play Now
                   </Link>
                 </div>
 
                 {/* QueryWar Card */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px', opacity: 0.65 }}>
+                <div className="valorant-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px', opacity: 0.65 }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Users size={24} color="var(--text-secondary)" />
-                      <span className="badge" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '10px', fontWeight: 'bold' }}>Coming Soon</span>
+                      <span className="badge" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)' }}>Coming Soon</span>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>QueryWar</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
                       SQL query optimization battle. Optimize queries on massive datasets. Lowest execution time and cleanest cost metrics wins.
                     </p>
                   </div>
@@ -598,14 +599,14 @@ export default function Dashboard() {
             {gameCategory === 'uiux' && (
               <>
                 {/* ColorMatch Card */}
-                <div className="glass-panel card-shine glow-warning theme-color-match interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
+                <div className="valorant-card interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Zap size={24} color="var(--accent-amber)" />
-                      <span className="badge" style={{ borderColor: 'rgba(245, 158, 11, 0.2)', color: 'var(--accent-amber)', background: 'rgba(245, 158, 11, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
+                      <span className="badge badge-active">Active</span>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>ColorMatch</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
                       Vibrant memorization and color matching battle. Memorize the color card for 6 seconds, then adjust RGB sliders to guess it exactly. Closeness determines the score!
                     </p>
                   </div>
@@ -620,14 +621,14 @@ export default function Dashboard() {
                 </div>
 
                 {/* Change That Design Card */}
-                <div className="glass-panel card-shine glow-primary theme-change-design interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
+                <div className="valorant-card interactive-lift" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '230px', padding: '24px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <Palette size={24} color="#38bdf8" />
-                      <span className="badge" style={{ borderColor: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.04)', fontSize: '10px', fontWeight: 'bold' }}>Active</span>
+                      <span className="badge badge-active">Active</span>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>Change That Design</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
                       Interactive UI/UX design battle. Tweak style properties of a poorly designed component on a live resizable canvas, satisfy accessibility requirements, and submit for AI judging!
                     </p>
                   </div>
@@ -645,10 +646,10 @@ export default function Dashboard() {
                 <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', minHeight: '230px', padding: '24px' }}>
                   <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>UI/UX Arena Status</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                      Your ELO Rating: <strong style={{ color: 'var(--accent-purple)', fontSize: '16px', fontFamily: 'Space Grotesk, sans-serif' }}>{user.eloUIUX || 1000}</strong>
+                    <p style={{ fontSize: '14px', color: '#94A3B8' }}>
+                      Your ELO Rating: <strong style={{ color: 'var(--accent-purple)', fontSize: '16px', fontFamily: 'Geist Mono, monospace' }}>{user.eloUIUX || 1000}</strong>
                     </p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', lineHeight: '1.6' }}>
                       Train your visual aesthetics, relative spacing, and accessibility requirements. Climb the ELO rankings in the styling arena!
                     </p>
                   </div>
@@ -666,7 +667,7 @@ export default function Dashboard() {
                       <span className="badge" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '10px', fontWeight: 'bold' }}>Coming Soon</span>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>MarketingBattle</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
                       Copywriting battle. Write highly converting headlines or email hooks based on product specs. AI judged.
                     </p>
                   </div>
@@ -683,7 +684,7 @@ export default function Dashboard() {
                       <span className="badge" style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '10px', fontWeight: 'bold' }}>Coming Soon</span>
                     </div>
                     <h3 style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>PitchArena</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                    <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: '1.6' }}>
                       60-second pitch elevator battle. Submit your hook and description for a startup idea. AI judges structure + impact.
                     </p>
                   </div>
@@ -723,7 +724,7 @@ export default function Dashboard() {
               <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Competitive Season
               </h3>
-              <span className="badge" style={{ borderColor: 'rgba(59, 130, 246, 0.3)', color: 'var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+              <span className="badge" style={{ borderColor: 'rgba(123, 147, 219, 0.3)', color: 'var(--accent-blue)', background: 'rgba(123, 147, 219, 0.05)', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
                 {activeSeason.countdown}
               </span>
             </div>
@@ -763,8 +764,8 @@ export default function Dashboard() {
               ))}
             </div>
           ) : recentBattles.length === 0 ? (
-            <div className="glass-panel glow-primary" style={{ textAlign: 'center', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', borderStyle: 'dashed', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
-              <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '16px', borderRadius: '50%', boxShadow: '0 0 16px rgba(59, 130, 246, 0.05)' }}>
+            <div className="glass-panel glow-primary" style={{ textAlign: 'center', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', borderStyle: 'dashed', borderColor: 'rgba(123, 147, 219, 0.3)' }}>
+              <div style={{ background: 'rgba(123, 147, 219, 0.05)', border: '1px solid rgba(123, 147, 219, 0.2)', padding: '16px', borderRadius: '50%', boxShadow: '0 0 16px rgba(123, 147, 219, 0.05)' }}>
                 <History size={36} style={{ color: 'var(--accent-blue)' }} />
               </div>
               <div>
@@ -1046,8 +1047,11 @@ export default function Dashboard() {
       <div className="dashboard-profile">
         
         {/* Player Profile Summary */}
-        <div className="card-base card-shine glow-purple" style={{
-          background: 'linear-gradient(to bottom, #15151C, #0F0F15)',
+        <div style={{
+          background: '#0D1117',
+          border: '1px solid #3B82F6',
+          borderRadius: '8px',
+          padding: '24px',
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -1066,7 +1070,7 @@ export default function Dashboard() {
             justifyContent: 'center',
             fontSize: '36px',
             fontWeight: 'bold',
-            boxShadow: '0 0 24px rgba(139, 92, 246, 0.25)',
+            boxShadow: '0 0 24px rgba(123, 147, 219, 0.25)',
             border: '2px solid rgba(255, 255, 255, 0.1)'
           }}>
             {user.username[0].toUpperCase()}
@@ -1076,13 +1080,14 @@ export default function Dashboard() {
             <h2 style={{ fontSize: '22px' }}>@{user.username}</h2>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
               <span style={{
-                background: 'rgba(139, 92, 246, 0.1)',
-                border: '1px solid rgba(139, 92, 246, 0.3)',
-                color: 'var(--accent-purple)',
+                background: '#0f2a1a',
+                border: '1px solid #16a34a',
+                color: '#4ade80',
                 padding: '2px 8px',
                 borderRadius: '6px',
+                fontFamily: 'Barlow Condensed, sans-serif',
                 fontSize: '11px',
-                fontWeight: 'bold',
+                fontWeight: 600,
                 textTransform: 'uppercase'
               }}>
                 {user.rank}
@@ -1112,7 +1117,7 @@ export default function Dashboard() {
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px', marginTop: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
                   <span style={{ color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>LEVEL {level}</span>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '11px', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '11px', fontFamily: 'Geist Mono, monospace' }}>
                     {currentXp} / {minXpForNextLevel} XP
                   </span>
                 </div>
@@ -1178,28 +1183,28 @@ export default function Dashboard() {
 
           {/* ELO List */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginTop: '8px' }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>ELO BREAKDOWN</span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <span>Javascript</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-amber)' }}>
+            <span style={{ fontSize: '10px', fontFamily: 'Geist, sans-serif', fontWeight: 600, color: '#CBD5E1', letterSpacing: '0.08em' }}>ELO BREAKDOWN</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+              <span style={{ fontFamily: 'Geist, sans-serif' }}>Javascript</span>
+              <span style={{ fontWeight: 600, color: 'var(--accent-amber)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloJS} />
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <span>Python</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+              <span style={{ fontFamily: 'Geist, sans-serif' }}>Python</span>
+              <span style={{ fontWeight: 600, color: 'var(--accent-blue)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloPython} />
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <span>Java</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-red)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+              <span style={{ fontFamily: 'Geist, sans-serif' }}>Java</span>
+              <span style={{ fontWeight: 600, color: 'var(--accent-red)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloJava} />
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-              <span>UI/UX (ColorMatch)</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--accent-purple)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+              <span style={{ fontFamily: 'Geist, sans-serif' }}>UI/UX (ColorMatch)</span>
+              <span style={{ fontWeight: 600, color: 'var(--accent-purple)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloUIUX} />
               </span>
             </div>
@@ -1207,7 +1212,7 @@ export default function Dashboard() {
 
           {/* Progression Hub Section */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginTop: '8px' }}>
-            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>PROGRESSION HUB</span>
+            <span style={{ fontSize: '10px', fontFamily: 'Geist, sans-serif', fontWeight: 600, color: '#CBD5E1', letterSpacing: '0.08em' }}>PROGRESSION HUB</span>
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
@@ -1328,12 +1333,12 @@ export default function Dashboard() {
                 padding: '28px 16px', 
                 color: 'var(--text-secondary)', 
                 fontSize: '12px', 
-                border: '1px dashed rgba(139, 92, 246, 0.3)', 
+                border: '1px dashed rgba(123, 147, 219, 0.3)', 
                 borderRadius: 'var(--radius-lg)',
-                background: 'rgba(139, 92, 246, 0.01)',
+                background: 'rgba(123, 147, 219, 0.01)',
                 width: '100%'
               }}>
-                <div style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.15)', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: 'rgba(123, 147, 219, 0.05)', border: '1px solid rgba(123, 147, 219, 0.15)', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Users size={20} style={{ color: 'var(--accent-purple)' }} />
                 </div>
                 <div>

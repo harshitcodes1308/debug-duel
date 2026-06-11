@@ -25,7 +25,7 @@ export default function KbcLandingPage() {
         <div 
           className="glass-panel" 
           style={{
-            background: 'linear-gradient(135deg, rgba(245, 166, 35, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+            background: 'linear-gradient(135deg, rgba(245, 166, 35, 0.1) 0%, rgba(123, 147, 219, 0.1) 100%)',
             borderColor: 'rgba(245, 166, 35, 0.2)',
             padding: '40px',
             display: 'flex',
@@ -55,7 +55,7 @@ export default function KbcLandingPage() {
                 INTENSE CODING TRIVIA ARENA
               </span>
             </div>
-            <h1 style={{ fontSize: '42px', fontFamily: 'Space Grotesk, sans-serif', color: '#FFF' }}>
+            <h1 style={{ fontSize: '42px', fontFamily: 'Rajdhani, sans-serif', color: '#FFF' }}>
               Code <span style={{ color: 'var(--accent-amber)' }}>KBC</span>
             </h1>
             <p style={{ color: 'var(--text-secondary)', marginTop: '12px', fontSize: '15px', maxWidth: '600px', lineHeight: '24px' }}>
@@ -125,17 +125,17 @@ export default function KbcLandingPage() {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                  <div style={{ background: 'rgba(123, 147, 219, 0.1)', padding: '10px', borderRadius: '8px' }}>
                     <Play size={24} color="var(--accent-purple)" />
                   </div>
-                  <span className="badge" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Active</span>
+                  <span className="badge" style={{ borderColor: 'rgba(123, 147, 219, 0.3)', color: 'var(--accent-purple)', background: 'rgba(123, 147, 219, 0.05)' }}>Active</span>
                 </div>
                 <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#FFF' }}>Solo Challenge</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '20px' }}>
                   Answer 15 consecutive trivia questions. Each correct answer pushes you higher up the points ladder. Lifelines included.
                 </p>
               </div>
-              <Link href="/kbc/categories" className="btn interactive-lift" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', color: '#FFF', borderColor: 'rgba(139, 92, 246, 0.5)' }}>
+              <Link href="/kbc/categories" className="btn interactive-lift" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', color: '#FFF', borderColor: 'rgba(123, 147, 219, 0.5)' }}>
                 Play Solo
               </Link>
             </div>
@@ -171,17 +171,17 @@ export default function KbcLandingPage() {
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                  <div style={{ background: 'rgba(123, 147, 219, 0.1)', padding: '10px', borderRadius: '8px' }}>
                     <Users size={24} color="var(--accent-purple)" />
                   </div>
-                  <span className="badge" style={{ borderColor: 'rgba(139, 92, 246, 0.3)', color: 'var(--accent-purple)', background: 'rgba(139, 92, 246, 0.05)' }}>Active</span>
+                  <span className="badge" style={{ borderColor: 'rgba(123, 147, 219, 0.3)', color: 'var(--accent-purple)', background: 'rgba(123, 147, 219, 0.05)' }}>Active</span>
                 </div>
                 <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#FFF' }}>Play With Friend</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '20px' }}>
                   Create a custom lobby code, invite your friends, and host private coding showdowns in real-time.
                 </p>
               </div>
-              <Link href="/kbc/multiplayer" className="btn interactive-lift" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', borderColor: 'rgba(139, 92, 246, 0.5)', color: '#fff' }}>
+              <Link href="/kbc/multiplayer" className="btn interactive-lift" style={{ width: '100%', marginTop: '20px', background: 'var(--accent-purple)', borderColor: 'rgba(123, 147, 219, 0.5)', color: '#fff' }}>
                 Play with Friend
               </Link>
             </div>

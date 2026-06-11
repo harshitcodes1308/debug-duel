@@ -66,12 +66,12 @@ export default function QuestionCard({
       }
     } else if (isLocked) {
       border = '1px solid var(--accent-purple)';
-      background = 'rgba(139, 92, 246, 0.15)';
+      background = 'rgba(123, 147, 219, 0.15)';
       color = 'var(--accent-purple)';
       cursor = 'default';
     } else if (isSelected) {
       border = '1px solid var(--accent-purple)';
-      background = 'rgba(139, 92, 246, 0.08)';
+      background = 'rgba(123, 147, 219, 0.08)';
       color = '#FFF';
     }
 
@@ -121,16 +121,16 @@ export default function QuestionCard({
         }
         @keyframes pulseGlow {
           0% {
-            box-shadow: 0 0 5px rgba(139, 92, 246, 0.3), inset 0 0 5px rgba(139, 92, 246, 0.1);
-            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 0 5px rgba(123, 147, 219, 0.3), inset 0 0 5px rgba(123, 147, 219, 0.1);
+            border-color: rgba(123, 147, 219, 0.4);
           }
           50% {
-            box-shadow: 0 0 25px rgba(139, 92, 246, 0.7), inset 0 0 12px rgba(139, 92, 246, 0.3);
-            border-color: rgba(139, 92, 246, 1);
+            box-shadow: 0 0 25px rgba(123, 147, 219, 0.7), inset 0 0 12px rgba(123, 147, 219, 0.3);
+            border-color: rgba(123, 147, 219, 1);
           }
           100% {
-            box-shadow: 0 0 5px rgba(139, 92, 246, 0.3), inset 0 0 5px rgba(139, 92, 246, 0.1);
-            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 0 5px rgba(123, 147, 219, 0.3), inset 0 0 5px rgba(123, 147, 219, 0.1);
+            border-color: rgba(123, 147, 219, 0.4);
           }
         }
         @keyframes revealCorrect {
@@ -190,7 +190,7 @@ export default function QuestionCard({
             disabled={disabled || lockedOptionIndex !== null || revealedAnswer || eliminatedOptionIndices.includes(idx)}
             onMouseEnter={(e) => {
               if (disabled || lockedOptionIndex !== null || revealedAnswer || selectedOptionIndex === idx) return;
-              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+              e.currentTarget.style.borderColor = 'rgba(123, 147, 219, 0.4)';
               e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
             }}
@@ -223,7 +223,7 @@ export default function QuestionCard({
               padding: '12px 36px',
               fontSize: '14px',
               background: 'var(--accent-purple)',
-              borderColor: 'rgba(139, 92, 246, 0.4)',
+              borderColor: 'rgba(123, 147, 219, 0.4)',
               color: '#FFFFFF',
               fontWeight: 700,
               gap: 'var(--space-2)',
@@ -249,8 +249,8 @@ export default function QuestionCard({
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: '12px',
-            background: 'rgba(139, 92, 246, 0.05)',
-            border: '1px dashed rgba(139, 92, 246, 0.3)',
+            background: 'rgba(123, 147, 219, 0.05)',
+            border: '1px dashed rgba(123, 147, 219, 0.3)',
             borderRadius: 'var(--radius-md)',
             padding: '12px var(--space-4)',
             color: 'var(--accent-purple)',

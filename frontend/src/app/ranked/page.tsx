@@ -287,16 +287,16 @@ export default function RankedHub() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
-            background: 'rgba(139, 92, 246, 0.1)',
+            background: 'rgba(123, 147, 219, 0.1)',
             border: '2px solid var(--accent-purple)',
             padding: '12px',
             borderRadius: '14px',
-            boxShadow: '0 0 16px rgba(139, 92, 246, 0.2)'
+            boxShadow: '0 0 16px rgba(123, 147, 219, 0.2)'
           }}>
             <Swords size={28} color="var(--accent-purple)" />
           </div>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'Space Grotesk, sans-serif', color: '#fff', margin: 0 }}>
+            <h1 style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'Rajdhani, sans-serif', color: '#fff', margin: 0 }}>
               Ranked Arena
             </h1>
             {activeSeason && (
@@ -317,7 +317,7 @@ export default function RankedHub() {
         {/* Left Column: Queue controls */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div className="glass-panel" style={{ padding: '24px', position: 'relative' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', fontFamily: 'Space Grotesk' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', fontFamily: 'Rajdhani, sans-serif' }}>
               Select Ranked Mode
             </h2>
 
@@ -332,7 +332,7 @@ export default function RankedHub() {
                     style={{
                       padding: '16px',
                       borderRadius: '12px',
-                      background: selectedGame === 'debug' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)',
+                      background: selectedGame === 'debug' ? 'rgba(123, 147, 219, 0.08)' : 'rgba(255, 255, 255, 0.01)',
                       border: `1.5px solid ${selectedGame === 'debug' ? 'var(--accent-blue)' : 'var(--border)'}`,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
@@ -454,7 +454,7 @@ export default function RankedHub() {
                   <div style={{
                     position: 'absolute',
                     top: 0, left: 0, width: '100%', height: '100%',
-                    border: '3px solid rgba(59, 130, 246, 0.15)',
+                    border: '3px solid rgba(123, 147, 219, 0.15)',
                     borderRadius: '50%'
                   }} />
                   <div style={{
@@ -504,19 +504,19 @@ export default function RankedHub() {
                 }}>
                   <div style={{ textAlign: 'center', borderRight: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Time</div>
-                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {formatTime(queueSeconds)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'center', borderRight: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Est. Wait</div>
-                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-amber)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-amber)', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {estimatedWait}
                     </div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>In Queue</div>
-                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-blue)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-blue)', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {queueSize}
                     </div>
                   </div>
@@ -554,7 +554,7 @@ export default function RankedHub() {
 
           {/* Seasonal Stats details */}
           <div className="glass-panel" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px', fontFamily: 'Space Grotesk' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px', fontFamily: 'Rajdhani, sans-serif' }}>
               Season Performance
             </h3>
 
@@ -564,13 +564,13 @@ export default function RankedHub() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px 20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Ranked Matches</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', fontFamily: 'Space Grotesk' }}>
+                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', fontFamily: 'Rajdhani, sans-serif' }}>
                     {seasonStats.matchesPlayed}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Win Rate</span>
-                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}>
+                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-green)', fontFamily: 'Rajdhani, sans-serif' }}>
                     {seasonStats.winRate}%
                   </span>
                 </div>
@@ -625,7 +625,7 @@ export default function RankedHub() {
           <div style={{
             background: 'rgba(20, 20, 28, 0.8)',
             border: '2px solid var(--accent-blue)',
-            boxShadow: '0 0 40px rgba(59, 130, 246, 0.25)',
+            boxShadow: '0 0 40px rgba(123, 147, 219, 0.25)',
             borderRadius: '24px',
             padding: '40px 32px',
             width: '100%',
@@ -639,7 +639,7 @@ export default function RankedHub() {
             <div>
               <div style={{
                 display: 'inline-flex',
-                background: 'rgba(59, 130, 246, 0.1)',
+                background: 'rgba(123, 147, 219, 0.1)',
                 border: '1.5px solid var(--accent-blue)',
                 padding: '16px',
                 borderRadius: '50%',
@@ -651,11 +651,11 @@ export default function RankedHub() {
               </div>
               <style>{`
                 @keyframes pulseGlow {
-                  0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.1); }
-                  50% { transform: scale(1.05); box-shadow: 0 0 24px rgba(59, 130, 246, 0.4); }
+                  0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(123, 147, 219, 0.1); }
+                  50% { transform: scale(1.05); box-shadow: 0 0 24px rgba(123, 147, 219, 0.4); }
                 }
               `}</style>
-              <h2 style={{ fontSize: '24px', fontWeight: '800', fontFamily: 'Space Grotesk, sans-serif', color: '#fff', margin: '0 0 8px 0' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '800', fontFamily: 'Rajdhani, sans-serif', color: '#fff', margin: '0 0 8px 0' }}>
                 MATCH FOUND!
               </h2>
               <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
@@ -679,7 +679,7 @@ export default function RankedHub() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fff',
-                fontFamily: 'Space Grotesk'
+                fontFamily: 'Rajdhani, sans-serif'
               }}>
                 {queueStatus === 'accepted' ? (
                   <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--accent-green)', textTransform: 'uppercase' }}>Ready</span>

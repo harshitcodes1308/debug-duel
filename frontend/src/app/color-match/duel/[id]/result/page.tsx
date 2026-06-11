@@ -277,7 +277,7 @@ export default function ColorMatchResult() {
                 ? 'var(--accent-green)' 
                 : 'var(--accent-red)',
             textShadow: isWinner ? '0 0 25px rgba(0, 255, 148, 0.2)' : 'none',
-            fontFamily: 'Space Grotesk, sans-serif'
+            fontFamily: 'Rajdhani, sans-serif'
           }}>
             {isDraw ? "DRAW BATTLE" : isWinner ? "VICTORY!" : "DEFEAT."}
           </h1>
@@ -315,8 +315,8 @@ export default function ColorMatchResult() {
 
             {newRank && (
               <div style={{
-                background: 'rgba(139, 92, 246, 0.05)',
-                border: '1px solid rgba(139, 92, 246, 0.15)',
+                background: 'rgba(123, 147, 219, 0.05)',
+                border: '1px solid rgba(123, 147, 219, 0.15)',
                 padding: '8px 16px',
                 borderRadius: '8px',
                 fontSize: '13px',

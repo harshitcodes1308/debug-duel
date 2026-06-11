@@ -122,7 +122,7 @@ export default function CategorySelectionPage() {
           </Link>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontFamily: 'Space Grotesk, sans-serif', color: '#FFF' }}>
+              <h1 style={{ fontSize: '32px', fontFamily: 'Rajdhani, sans-serif', color: '#FFF' }}>
                 Select Category
               </h1>
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>

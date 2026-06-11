@@ -487,8 +487,8 @@ export default function PlayerProfile() {
 
       {/* Banner info */}
       <div className="card-base" style={{
-        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(20, 20, 25, 0.6) 100%)',
-        borderColor: 'rgba(139, 92, 246, 0.15)',
+        background: 'linear-gradient(135deg, rgba(123, 147, 219, 0.06) 0%, rgba(20, 20, 25, 0.6) 100%)',
+        borderColor: 'rgba(123, 147, 219, 0.15)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -515,9 +515,9 @@ export default function PlayerProfile() {
           </div>
 
           <div>
-            <h1 style={{ fontSize: '28px', fontFamily: 'Space Grotesk, sans-serif' }}>@{profile.username}</h1>
+            <h1 style={{ fontSize: '28px', fontFamily: 'Rajdhani, sans-serif' }}>@{profile.username}</h1>
             <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginTop: 'var(--space-2)' }}>
-              <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.15)', color: 'var(--accent-purple)', fontWeight: 'bold' }}>
+              <span className="badge" style={{ background: 'rgba(123, 147, 219, 0.08)', border: '1px solid rgba(123, 147, 219, 0.15)', color: 'var(--accent-purple)', fontWeight: 'bold' }}>
                 {profile.rank}
               </span>
               {profile.currentStreak >= 3 && (
@@ -533,14 +533,14 @@ export default function PlayerProfile() {
         {/* ELO Banner Stat */}
         <div style={{ display: 'flex', gap: 'var(--space-6)' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-blue)', fontFamily: 'Rajdhani, sans-serif' }}>
               <AnimatedCounter value={highestElo} />
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>Peak ELO</div>
           </div>
           <div style={{ width: '1px', background: 'var(--border)' }}></div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}>
               <AnimatedCounter value={profile.tokens} />
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>Tokens</div>
@@ -591,9 +591,9 @@ export default function PlayerProfile() {
               return days.map((day) => {
                 let color = 'rgba(255, 255, 255, 0.03)'; // 0
                 if (day.count > 0) {
-                  if (day.count <= 2) color = 'rgba(139, 92, 246, 0.25)'; // low
-                  else if (day.count <= 4) color = 'rgba(139, 92, 246, 0.5)'; // med
-                  else if (day.count <= 7) color = 'rgba(139, 92, 246, 0.75)'; // high
+                  if (day.count <= 2) color = 'rgba(123, 147, 219, 0.25)'; // low
+                  else if (day.count <= 4) color = 'rgba(123, 147, 219, 0.5)'; // med
+                  else if (day.count <= 7) color = 'rgba(123, 147, 219, 0.75)'; // high
                   else color = 'var(--accent-purple)'; // ultra
                 }
                 return (
@@ -618,9 +618,9 @@ export default function PlayerProfile() {
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '11px', color: 'var(--text-secondary)', alignSelf: 'flex-end', marginTop: '4px' }}>
           <span>Less</span>
           <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(255, 255, 255, 0.03)' }} />
-          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(139, 92, 246, 0.25)' }} />
-          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(139, 92, 246, 0.5)' }} />
-          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(139, 92, 246, 0.75)' }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(123, 147, 219, 0.25)' }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(123, 147, 219, 0.5)' }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'rgba(123, 147, 219, 0.75)' }} />
           <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'var(--accent-purple)' }} />
           <span>More</span>
         </div>
@@ -737,7 +737,7 @@ export default function PlayerProfile() {
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', fontFamily: 'Space Grotesk' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', fontFamily: 'Rajdhani, sans-serif' }}>
                         <AnimatedCounter value={winRate} />%
                       </span>
                     </div>
@@ -772,28 +772,28 @@ export default function PlayerProfile() {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>UI/UX Rating</span>
-                  <strong style={{ color: '#38bdf8', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloUIUX || 1000} /> ELO</strong>
+                  <strong style={{ color: '#38bdf8', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloUIUX || 1000} /> ELO</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>JavaScript Rating</span>
-                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloJS} /> ELO</strong>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloJS} /> ELO</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Python Rating</span>
-                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloPython} /> ELO</strong>
+                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloPython} /> ELO</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Java Rating</span>
-                  <strong style={{ color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.eloJava} /> ELO</strong>
+                  <strong style={{ color: 'var(--accent-red)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.eloJava} /> ELO</strong>
                 </div>
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: 'var(--space-2)', alignItems: 'center', padding: '4px 0' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Best Win Streak</span>
-                <strong style={{ color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.bestStreak} /> wins</strong>
+                <strong style={{ color: 'var(--accent-red)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.bestStreak} /> wins</strong>
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'var(--space-2)' }}>
@@ -801,17 +801,17 @@ export default function PlayerProfile() {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Daily Quests Completed</span>
-                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.dailyQuestsCompleted || 0} /></strong>
+                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.dailyQuestsCompleted || 0} /></strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Weekly Quests Completed</span>
-                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.weeklyQuestsCompleted || 0} /></strong>
+                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.weeklyQuestsCompleted || 0} /></strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Lifetime Quests Completed</span>
-                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.lifetimeQuestsCompleted || 0} /></strong>
+                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.lifetimeQuestsCompleted || 0} /></strong>
                 </div>
               </div>
 
@@ -821,37 +821,37 @@ export default function PlayerProfile() {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>KBC Runs Played</span>
-                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.totalRuns || 0} /></strong>
+                  <strong style={{ color: 'var(--accent-blue)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.kbcStats?.totalRuns || 0} /></strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Questions Answered</span>
-                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.questionsAnswered || 0} /></strong>
+                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.kbcStats?.questionsAnswered || 0} /></strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Average Accuracy</span>
-                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.averageAccuracy || 0} />%</strong>
+                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.kbcStats?.averageAccuracy || 0} />%</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Average Answer Time</span>
-                  <strong style={{ color: '#fff', fontFamily: 'Space Grotesk' }}>{profile.kbcStats?.averageTime || 0}s</strong>
+                  <strong style={{ color: '#fff', fontFamily: 'Rajdhani, sans-serif' }}>{profile.kbcStats?.averageTime || 0}s</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Fastest Answer</span>
-                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>{profile.kbcStats?.fastestAnswer || 0}s</strong>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}>{profile.kbcStats?.fastestAnswer || 0}s</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Best Run (Max Level)</span>
-                  <strong style={{ color: '#fff', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.bestRun || 0} /> / 15</strong>
+                  <strong style={{ color: '#fff', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.kbcStats?.bestRun || 0} /> / 15</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Max Token Prize Won</span>
-                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}><AnimatedCounter value={profile.kbcStats?.maxPrize || 0} /></strong>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}><AnimatedCounter value={profile.kbcStats?.maxPrize || 0} /></strong>
                 </div>
               </div>
 
@@ -861,22 +861,22 @@ export default function PlayerProfile() {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Win Rate</span>
-                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Space Grotesk' }}>{profile.analytics?.winRate || 0}%</strong>
+                  <strong style={{ color: 'var(--accent-green)', fontFamily: 'Rajdhani, sans-serif' }}>{profile.analytics?.winRate || 0}%</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>KBC Accuracy</span>
-                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}>{profile.analytics?.kbcAccuracy || 0}%</strong>
+                  <strong style={{ color: 'var(--accent-purple)', fontFamily: 'Rajdhani, sans-serif' }}>{profile.analytics?.kbcAccuracy || 0}%</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Average Answer Speed</span>
-                  <strong style={{ color: '#fff', fontFamily: 'Space Grotesk' }}>{profile.analytics?.averageAnswerSpeed || 0}s</strong>
+                  <strong style={{ color: '#fff', fontFamily: 'Rajdhani, sans-serif' }}>{profile.analytics?.averageAnswerSpeed || 0}s</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Best Streak</span>
-                  <strong style={{ color: 'var(--accent-red)', fontFamily: 'Space Grotesk' }}>{profile.analytics?.bestStreak || 0} wins</strong>
+                  <strong style={{ color: 'var(--accent-red)', fontFamily: 'Rajdhani, sans-serif' }}>{profile.analytics?.bestStreak || 0} wins</strong>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
@@ -886,7 +886,7 @@ export default function PlayerProfile() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '2px 0' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Total XP Earned</span>
-                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Space Grotesk' }}>{(profile.analytics?.totalXpEarned || 0).toLocaleString()} XP</strong>
+                  <strong style={{ color: 'var(--accent-amber)', fontFamily: 'Rajdhani, sans-serif' }}>{(profile.analytics?.totalXpEarned || 0).toLocaleString()} XP</strong>
                 </div>
               </div>
 
@@ -971,13 +971,13 @@ export default function PlayerProfile() {
             <div className="card-base" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', padding: 'var(--space-5)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Completion Rate</span>
-                <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff', fontFamily: 'Space Grotesk' }}>{count} / {total}</span>
+                <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff', fontFamily: 'Rajdhani, sans-serif' }}>{count} / {total}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <div style={{ flexGrow: 1, height: '6px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{ width: `${percentage}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-purple) 100%)', borderRadius: '3px', transition: 'width 0.5s ease-out' }}></div>
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}>{percentage}%</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-purple)', fontFamily: 'Rajdhani, sans-serif' }}>{percentage}%</span>
               </div>
             </div>
 
@@ -1295,7 +1295,7 @@ export default function PlayerProfile() {
                 <div className="card-base" style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Season</span>
-                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--accent-purple)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--accent-purple)', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {seasonStats?.seasonName || "Season 1"}
                     </span>
                   </div>
@@ -1309,28 +1309,28 @@ export default function PlayerProfile() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ranked Wins</span>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-green)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-green)', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {seasonStats?.wins || 0} W
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ranked Losses</span>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-red)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-red)', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {seasonStats?.losses || 0} L
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win Rate</span>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-blue)', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--accent-blue)', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {seasonStats?.winRate || 0}%
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Matchmaking MMR</span>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', marginTop: '4px', fontFamily: 'Space Grotesk' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#fff', marginTop: '4px', fontFamily: 'Rajdhani, sans-serif' }}>
                       {seasonStats?.overallElo || 1000} ELO
                     </span>
                   </div>
@@ -1367,7 +1367,7 @@ export default function PlayerProfile() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#fff', fontFamily: 'Space Grotesk' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#fff', fontFamily: 'Rajdhani, sans-serif' }}>
                         {historyItem.seasonName}
                       </span>
                       {historyItem.placement && (
@@ -1467,8 +1467,8 @@ export default function PlayerProfile() {
                         fontWeight: 'bold',
                         textTransform: 'uppercase',
                         padding: '3px 8px',
-                        background: reward.rewardType === 'TITLE' ? 'rgba(245, 158, 11, 0.1)' : reward.rewardType === 'BADGE' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                        border: `1px solid ${reward.rewardType === 'TITLE' ? 'rgba(245, 158, 11, 0.25)' : reward.rewardType === 'BADGE' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(59, 130, 246, 0.25)'}`,
+                        background: reward.rewardType === 'TITLE' ? 'rgba(245, 158, 11, 0.1)' : reward.rewardType === 'BADGE' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(123, 147, 219, 0.1)',
+                        border: `1px solid ${reward.rewardType === 'TITLE' ? 'rgba(245, 158, 11, 0.25)' : reward.rewardType === 'BADGE' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(123, 147, 219, 0.25)'}`,
                         color: reward.rewardType === 'TITLE' ? 'var(--accent-amber)' : reward.rewardType === 'BADGE' ? 'var(--accent-purple)' : 'var(--accent-blue)'
                       }}>
                         {reward.rewardType}
@@ -1511,7 +1511,7 @@ export default function PlayerProfile() {
 
                       {reward.rewardType === 'FRAME' && (
                         <div style={{
-                          background: 'rgba(59, 130, 246, 0.1)',
+                          background: 'rgba(123, 147, 219, 0.1)',
                           border: '1.5px solid var(--accent-blue)',
                           borderRadius: '8px',
                           padding: '8px',
@@ -1529,7 +1529,7 @@ export default function PlayerProfile() {
                           <div style={{ 
                             fontSize: '15px', 
                             fontWeight: '800', 
-                            fontFamily: 'Space Grotesk, sans-serif',
+                            fontFamily: 'Rajdhani, sans-serif',
                             color: 'var(--accent-amber)',
                             textShadow: '0 0 10px rgba(245, 158, 11, 0.3)'
                           }}>

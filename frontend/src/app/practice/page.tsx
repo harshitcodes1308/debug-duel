@@ -250,7 +250,7 @@ export default function PracticeArena() {
                 <span className="badge badge-js" style={{ fontSize: '9px', marginBottom: '8px' }}>
                   {bug.category.toUpperCase()}
                 </span>
-                <h2 style={{ fontSize: '20px', fontFamily: 'Space Grotesk, sans-serif' }}>
+                <h2 style={{ fontSize: '20px', fontFamily: 'Rajdhani, sans-serif' }}>
                   {bug.title}
                 </h2>
               </div>

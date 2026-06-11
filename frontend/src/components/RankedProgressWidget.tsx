@@ -47,8 +47,8 @@ export default function RankedProgressWidget({ rank, rp, showDetails = true }: R
         return {
           color: '#3B82F6',
           bg: 'linear-gradient(135deg, #1D4ED8 0%, #1E1B4B 100%)',
-          border: 'rgba(59, 130, 246, 0.4)',
-          glow: 'rgba(59, 130, 246, 0.3)',
+          border: 'rgba(123, 147, 219, 0.4)',
+          glow: 'rgba(123, 147, 219, 0.3)',
           icon: Award
         };
       case 'Master':

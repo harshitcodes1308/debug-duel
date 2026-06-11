@@ -176,7 +176,7 @@ export default function DesignLobby() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          fontFamily: 'Space Grotesk, sans-serif'
+          fontFamily: 'Rajdhani, sans-serif'
         }}>
           <span style={{ fontSize: '14px', color: '#38bdf8', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '16px' }}>DESIGN BATTLE READY. PREPARING CANVAS...</span>
           <h1 style={{
@@ -194,7 +194,7 @@ export default function DesignLobby() {
         
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#38bdf8', fontWeight: 'bold', fontFamily: 'Space Grotesk, sans-serif', marginBottom: '8px' }}>
+          <div style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#38bdf8', fontWeight: 'bold', fontFamily: 'Rajdhani, sans-serif', marginBottom: '8px' }}>
             <Palette size={24} /> Design Duel Lobby
           </div>
           {duelDetails && (
@@ -290,7 +290,7 @@ export default function DesignLobby() {
 
           {/* VS Divider */}
           <div style={{
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: 'Rajdhani, sans-serif',
             fontWeight: 'bold',
             color: '#71717a',
             fontSize: '20px',

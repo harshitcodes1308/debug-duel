@@ -157,9 +157,9 @@ export default function QuestPanel() {
           border: 1px solid rgba(148, 163, 184, 0.25);
         }
         .quest-tab-btn.active-weekly {
-          background: rgba(139, 92, 246, 0.12);
+          background: rgba(123, 147, 219, 0.12);
           color: var(--accent-purple);
-          border: 1px solid rgba(139, 92, 246, 0.25);
+          border: 1px solid rgba(123, 147, 219, 0.25);
         }
         .quest-card {
           background: rgba(255, 255, 255, 0.01);

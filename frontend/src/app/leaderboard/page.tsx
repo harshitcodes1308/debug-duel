@@ -118,8 +118,8 @@ export default function LeaderboardPage() {
       {/* Heading */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{
-          background: leaderboardType === 'classic' ? 'rgba(245, 166, 35, 0.1)' : 'rgba(139, 92, 246, 0.1)',
-          border: `1px solid ${leaderboardType === 'classic' ? 'rgba(245, 166, 35, 0.2)' : 'rgba(139, 92, 246, 0.2)'}`,
+          background: leaderboardType === 'classic' ? 'rgba(245, 166, 35, 0.1)' : 'rgba(123, 147, 219, 0.1)',
+          border: `1px solid ${leaderboardType === 'classic' ? 'rgba(245, 166, 35, 0.2)' : 'rgba(123, 147, 219, 0.2)'}`,
           padding: '12px',
           borderRadius: '10px'
         }}>
@@ -203,8 +203,8 @@ export default function LeaderboardPage() {
       ) : (
         activeSeason && (
           <div style={{
-            background: 'rgba(139, 92, 246, 0.05)',
-            border: '1px solid rgba(139, 92, 246, 0.15)',
+            background: 'rgba(123, 147, 219, 0.05)',
+            border: '1px solid rgba(123, 147, 219, 0.15)',
             borderRadius: '10px',
             padding: '12px 18px',
             fontSize: '14px',
@@ -322,7 +322,7 @@ export default function LeaderboardPage() {
                             <Medal size={16} color={index === 0 ? 'var(--accent-amber)' : index === 1 ? '#E5E7EB' : '#CD7F32'} />
                           </span>
                         ) : (
-                          <span style={{ paddingLeft: '10px', color: 'var(--text-secondary)', fontFamily: 'Space Grotesk' }}>{index + 1}</span>
+                          <span style={{ paddingLeft: '10px', color: 'var(--text-secondary)', fontFamily: 'Rajdhani, sans-serif' }}>{index + 1}</span>
                         )}
                       </td>
 
@@ -339,8 +339,8 @@ export default function LeaderboardPage() {
                       {/* Tier badge */}
                       <td className="hidden-mobile" style={{ padding: '16px 24px' }}>
                         <span className="badge" style={{
-                          background: leaderboardType === 'classic' ? 'rgba(139, 92, 246, 0.06)' : 'rgba(59, 130, 246, 0.06)',
-                          border: `1px solid ${leaderboardType === 'classic' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(59, 130, 246, 0.15)'}`,
+                          background: leaderboardType === 'classic' ? 'rgba(123, 147, 219, 0.06)' : 'rgba(123, 147, 219, 0.06)',
+                          border: `1px solid ${leaderboardType === 'classic' ? 'rgba(123, 147, 219, 0.15)' : 'rgba(123, 147, 219, 0.15)'}`,
                           color: leaderboardType === 'classic' ? 'var(--accent-purple)' : 'var(--accent-blue)',
                           fontSize: '11px',
                           fontWeight: 'bold'

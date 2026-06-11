@@ -73,7 +73,7 @@ export default function Header() {
             border: '1px solid var(--border)'
           }}>
             <Coins size={15} color="var(--warning)" />
-            <span style={{ fontWeight: 700, fontSize: '13px', color: '#FFF', fontFamily: 'JetBrains Mono, monospace' }}>
+            <span style={{ fontWeight: 500, fontSize: '13px', color: '#FFF', fontFamily: 'Geist Mono, monospace' }}>
               {user.tokens}
             </span>
             <span className="header-tokens-label" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>tokens</span>
@@ -89,7 +89,7 @@ export default function Header() {
               border: '1px solid rgba(239, 68, 68, 0.15)'
             }}>
               <Flame size={15} color="var(--danger)" />
-              <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--danger)', fontFamily: 'JetBrains Mono, monospace' }}>
+              <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--danger)', fontFamily: 'Geist Mono, monospace' }}>
                 {user.currentStreak}
               </span>
             </div>
@@ -116,18 +116,18 @@ export default function Header() {
           }}
           >
             <Award size={15} color="var(--rating)" />
-            <span className="header-username" style={{ fontWeight: 600, fontSize: '13px', fontFamily: 'Space Grotesk, sans-serif' }}>
+            <span className="header-username" style={{ fontWeight: 700, fontSize: '13px', fontFamily: 'Geist, sans-serif' }}>
               @{user.username}
             </span>
             <span className="badge-tactical" style={{
               fontSize: '10px',
-              background: 'rgba(59, 130, 246, 0.1)',
-              borderColor: 'rgba(59, 130, 246, 0.2)',
+              background: 'rgba(123, 147, 219, 0.1)',
+              borderColor: 'rgba(123, 147, 219, 0.2)',
               color: 'var(--rating)',
               padding: '2px 6px',
               borderRadius: '6px',
               fontWeight: 'bold',
-              fontFamily: 'JetBrains Mono, monospace'
+              fontFamily: 'Geist Mono, monospace'
             }}>
               {highestElo} ELO
             </span>

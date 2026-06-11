@@ -177,7 +177,7 @@ export default function KbcLobbyRoom() {
         alignItems: 'center',
         justifyContent: 'center',
         color: '#FFF',
-        fontFamily: 'Space Grotesk, sans-serif'
+        fontFamily: 'Rajdhani, sans-serif'
       }}>
         <div>Loading KBC Lobby Room...</div>
       </div>
@@ -205,7 +205,7 @@ export default function KbcLobbyRoom() {
           <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--accent-purple)', fontWeight: 'bold', letterSpacing: '0.2em' }}>
             CODE KBC SHOWDOWN LOBBY
           </span>
-          <h2 style={{ fontSize: '32px', fontFamily: 'Space Grotesk, sans-serif', color: '#FFF', marginTop: '6px', marginBottom: '8px' }}>
+          <h2 style={{ fontSize: '32px', fontFamily: 'Rajdhani, sans-serif', color: '#FFF', marginTop: '6px', marginBottom: '8px' }}>
             Room Code: <span style={{ color: 'var(--accent-amber)', letterSpacing: '0.05em' }}>{roomCode}</span>
           </h2>
           
@@ -266,7 +266,7 @@ export default function KbcLobbyRoom() {
 
           {/* VS Divider */}
           <div style={{
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: 'Rajdhani, sans-serif',
             fontWeight: 'bold',
             color: 'var(--text-secondary)',
             fontSize: '18px',
@@ -306,7 +306,7 @@ export default function KbcLobbyRoom() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 0 15px rgba(139, 92, 246, 0.2)'
+                  boxShadow: '0 0 15px rgba(123, 147, 219, 0.2)'
                 }}>
                   {roomState.guest.username[0].toUpperCase()}
                 </div>

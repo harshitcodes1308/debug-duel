@@ -181,6 +181,7 @@ export default function DesignArena() {
   const [phaseTimer, setPhaseTimer] = useState(180); // 3 minutes for design challenge
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const resultHandledRef = useRef(false);
 
   // 1. Fetch Challenge Details
   useEffect(() => {
@@ -268,6 +269,8 @@ export default function DesignArena() {
     });
 
     socket.on('opponent_forfeited', (payload) => {
+      if (resultHandledRef.current) return;
+      resultHandledRef.current = true;
       alert("Your opponent has forfeited! You win!");
       if (user && payload.tokenChanges?.[user.id]) {
         setUser({
@@ -282,6 +285,8 @@ export default function DesignArena() {
     });
 
     socket.on('duel_result', (payload) => {
+      if (resultHandledRef.current) return;
+      resultHandledRef.current = true;
       const myRpChange = payload.rpChanges?.[user.id] || 0;
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;

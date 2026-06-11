@@ -202,7 +202,7 @@ export default function DuelLobby() {
 
   // Standby name reveal effect (glowing card banner countdown for 3 seconds)
   useEffect(() => {
-    if (!isSpinning && realOpponent && standbyCountdown === null && !showOverlay) {
+    if (!isSpinning && realOpponent && !showOverlay) {
       setStandbyCountdown(3);
       const interval = setInterval(() => {
         setStandbyCountdown((prev) => {
@@ -220,7 +220,7 @@ export default function DuelLobby() {
 
   // Local countdown starting after the overlay is triggered
   useEffect(() => {
-    if (showOverlay && receivedCountdown !== null && receivedAt !== null && countdown === null) {
+    if (showOverlay && receivedCountdown !== null && receivedAt !== null) {
       const elapsed = (Date.now() - receivedAt) / 1000;
       // Calculate remaining time for the 12-second total duration
       const remaining = Math.max(1, Math.round(receivedCountdown - elapsed - 0.5));
@@ -290,7 +290,7 @@ export default function DuelLobby() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          fontFamily: 'Space Grotesk, sans-serif'
+          fontFamily: 'Rajdhani, sans-serif'
         }}>
           <span style={{ fontSize: '14px', color: 'var(--accent-blue)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '16px' }}>MATCH READY. INITIATING...</span>
           <h1 style={{
@@ -346,8 +346,8 @@ export default function DuelLobby() {
 
         {realOpponent && !isSpinning && standbyCountdown !== null && (
           <div style={{
-            background: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.25)',
+            background: 'rgba(123, 147, 219, 0.08)',
+            border: '1px solid rgba(123, 147, 219, 0.25)',
             borderRadius: '8px',
             padding: '16px',
             color: 'var(--accent-blue)',
@@ -356,7 +356,7 @@ export default function DuelLobby() {
             textAlign: 'center',
             fontFamily: 'JetBrains Mono, monospace',
             marginBottom: '16px',
-            boxShadow: '0 0 15px rgba(59, 130, 246, 0.1)'
+            boxShadow: '0 0 15px rgba(123, 147, 219, 0.1)'
           }}>
             ⚡ COMBATANTS LOCKED IN! DUEL BEGINS IN {standbyCountdown}...
           </div>
@@ -395,7 +395,7 @@ export default function DuelLobby() {
 
           {/* VS Divider */}
           <div style={{
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: 'Rajdhani, sans-serif',
             fontWeight: 'bold',
             color: 'var(--text-secondary)',
             fontSize: '20px',
@@ -418,7 +418,7 @@ export default function DuelLobby() {
             gap: '12px',
             padding: '24px 16px',
             borderColor: activeOpponent && !isSpinning ? 'var(--border)' : 'var(--accent-purple)',
-            boxShadow: activeOpponent && !isSpinning ? 'none' : '0 0 15px rgba(139, 92, 246, 0.15)',
+            boxShadow: activeOpponent && !isSpinning ? 'none' : '0 0 15px rgba(123, 147, 219, 0.15)',
             position: 'relative',
             overflow: 'hidden',
             transition: 'all 0.3s ease'
@@ -453,7 +453,7 @@ export default function DuelLobby() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)'
+                  boxShadow: '0 0 15px rgba(123, 147, 219, 0.4)'
                 }}>
                   {activeOpponent.user.username[0].toUpperCase()}
                 </div>

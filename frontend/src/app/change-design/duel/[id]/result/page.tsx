@@ -407,8 +407,8 @@ export default function DesignDuelResult() {
 
             {newRank && (
               <div style={{
-                background: 'rgba(139, 92, 246, 0.05)',
-                border: '1px solid rgba(139, 92, 246, 0.15)',
+                background: 'rgba(123, 147, 219, 0.05)',
+                border: '1px solid rgba(123, 147, 219, 0.15)',
                 padding: '8px 16px',
                 borderRadius: '8px',
                 fontSize: '13px',

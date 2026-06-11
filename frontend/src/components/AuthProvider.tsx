@@ -272,7 +272,7 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
           border: '2px solid var(--accent-purple)',
           borderRadius: '12px',
           padding: '20px',
-          boxShadow: '0 8px 32px rgba(139, 92, 246, 0.25)',
+          boxShadow: '0 8px 32px rgba(123, 147, 219, 0.25)',
           zIndex: 9999,
           fontFamily: 'Inter, sans-serif',
           animation: 'slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
@@ -1028,7 +1028,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
         
         <div className="card-tactical" style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column', gap: '24px', padding: '32px' }}>
           
-          {/* Logo & Header (No inheritance from .logo class to prevent SVG transparency) */}
+          {/* Logo & Header */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
             <div className="logo" style={{ fontSize: '32px' }}>
               ⚔️ DebugDuel
@@ -1368,7 +1368,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
               flexDirection: 'column',
               gap: '16px',
               border: '2px solid var(--accent-blue)',
-              boxShadow: '0 8px 32px rgba(59, 130, 246, 0.25)'
+              boxShadow: '0 8px 32px rgba(123, 147, 219, 0.25)'
             }}>
               <div className="panel-tactical-tr"></div>
               <div className="panel-tactical-bl"></div>

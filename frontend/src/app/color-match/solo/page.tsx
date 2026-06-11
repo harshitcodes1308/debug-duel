@@ -304,7 +304,7 @@ export default function ColorMatchSolo() {
         {/* Title / Info Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
           <div>
-            <h1 style={{ fontSize: '24px', fontFamily: 'Space Grotesk, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h1 style={{ fontSize: '24px', fontFamily: 'Rajdhani, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Sparkles size={24} color="var(--accent-amber)" /> ColorMatch Solo
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
@@ -402,7 +402,7 @@ export default function ColorMatchSolo() {
                 <div style={{
                   fontSize: '28px',
                   fontWeight: 'bold',
-                  fontFamily: 'Space Grotesk, sans-serif',
+                  fontFamily: 'Rajdhani, sans-serif',
                   color: countdown <= 2 ? 'var(--accent-red)' : '#fff',
                   transition: 'color 0.3s',
                   zIndex: 1

@@ -1400,6 +1400,15 @@ const COLOR_FOMO_MESSAGES = [
 
 const offlineTimeouts = new Map(); // userId -> NodeJS.Timeout
 
+// Helper: emit an event to all connected sockets of a specific user (bypasses room membership)
+function emitDirectToUser(userId, event, payload) {
+  if (onlineUsers.has(userId)) {
+    for (const sid of onlineUsers.get(userId)) {
+      io.to(sid).emit(event, payload);
+    }
+  }
+}
+
 function handleUserOffline(userId) {
   // Clear any existing offline timeout for this user
   if (offlineTimeouts.has(userId)) {
@@ -1412,10 +1421,25 @@ function handleUserOffline(userId) {
       userId: userId,
       duel: { status: 'active' }
     }
-  }).then(participant => {
+  }).then(async (participant) => {
     if (participant) {
       const duelId = participant.duelId;
-      io.to(`duel:${duelId}`).emit('opponent_offline', { userId, offline: true });
+      const offlinePayload = { userId, offline: true };
+
+      // Emit to duel room (primary)
+      io.to(`duel:${duelId}`).emit('opponent_offline', offlinePayload);
+
+      // Also emit directly to the OTHER participant's sockets (reliable fallback)
+      try {
+        const otherParticipants = await prisma.duelParticipant.findMany({
+          where: { duelId, userId: { not: userId } }
+        });
+        for (const op of otherParticipants) {
+          emitDirectToUser(op.userId, 'opponent_offline', offlinePayload);
+        }
+      } catch (err) {
+        console.error('Error emitting direct opponent_offline:', err);
+      }
 
       // 2. Schedule match auto-win if player remains offline for 20 seconds
       const timeoutId = setTimeout(async () => {
@@ -1684,6 +1708,7 @@ io.on('connection', (socket) => {
 
       socket.join(`duel:${duelId}`);
       socket.join(userId); // Join user-specific room for target emissions
+      console.log(`[join_duel] Socket ${socket.id} joined rooms duel:${duelId} and ${userId}`);
 
       const updatedDuel = await prisma.duel.findUnique({
         where: { id: duelId },
@@ -1698,6 +1723,15 @@ io.on('connection', (socket) => {
         participants: updatedDuel.participants,
         status: updatedDuel.status
       });
+
+      // Send initial offline status of opponent if duel is already active
+      if (updatedDuel.status === 'active') {
+        const otherParticipant = updatedDuel.participants.find(p => p.userId !== userId);
+        if (otherParticipant) {
+          const isOffline = !onlineUsers.has(otherParticipant.userId);
+          socket.emit('opponent_offline', { userId: otherParticipant.userId, offline: isOffline });
+        }
+      }
 
       // If lobby is full (2 players) and status is waiting, start countdown
       if (updatedDuel.participants.length === 2 && updatedDuel.status === 'waiting') {
@@ -2054,7 +2088,7 @@ io.on('connection', (socket) => {
 
       // Broadcast results if completed
       if (triggerResultBroadcast) {
-        io.to(`duel:${duelId}`).emit('duel_result', {
+        const colorResultPayload = {
           winnerId,
           isDraw,
           eloChanges,
@@ -2062,7 +2096,13 @@ io.on('connection', (socket) => {
           isRanked: duel.isRanked,
           rpChanges,
           newRanks
-        });
+        };
+        io.to(`duel:${duelId}`).emit('duel_result', colorResultPayload);
+
+        // Also emit directly to both participants for reliable delivery
+        for (const dp of duel.participants) {
+          emitDirectToUser(dp.userId, 'duel_result', colorResultPayload);
+        }
 
         // Audit achievements and quests outside transaction scope
         if (winnerId && loserId && !isDraw) {
@@ -2344,7 +2384,7 @@ io.on('connection', (socket) => {
           include: { user: true }
         });
 
-        io.to(`duel:${duelId}`).emit('duel_result', {
+        const designResultPayload = {
           winnerId,
           isDraw,
           eloChanges,
@@ -2359,7 +2399,13 @@ io.on('connection', (socket) => {
             submittedDesign: p.submittedDesign,
             isWinner: p.isWinner
           }))
-        });
+        };
+        io.to(`duel:${duelId}`).emit('duel_result', designResultPayload);
+
+        // Also emit directly to both participants for reliable delivery
+        for (const dp of finalParticipants) {
+          emitDirectToUser(dp.userId, 'duel_result', designResultPayload);
+        }
 
         // Audit achievements and quests outside transaction scope
         if (winnerId && loserId && !isDraw) {
@@ -2580,7 +2626,7 @@ io.on('connection', (socket) => {
       });
 
       // Broadcast results
-      io.to(`duel:${duelId}`).emit('duel_result', {
+      const resultPayload = {
         winnerId,
         winnerCode: participant.submittedCode,
         explanation: duel.bug.explanation,
@@ -2591,7 +2637,12 @@ io.on('connection', (socket) => {
         isRanked: duel.isRanked,
         rpChanges,
         newRanks
-      });
+      };
+      io.to(`duel:${duelId}`).emit('duel_result', resultPayload);
+
+      // Also emit directly to both participants for reliable delivery
+      emitDirectToUser(winnerId, 'duel_result', resultPayload);
+      if (loserId) emitDirectToUser(loserId, 'duel_result', resultPayload);
 
       // Audit achievements and quests outside transaction scope
       checkAchievements(winnerId, null, io).catch(console.error);
@@ -2663,6 +2714,12 @@ io.on('connection', (socket) => {
           include: { user: true }
         });
 
+        // Check if any participant is offline. If so, they forfeit instead of both being defeated.
+        const offlineParticipant = dbParticipants.find(p => !onlineUsers.has(p.userId));
+        if (offlineParticipant) {
+          throw new Error("OPPONENT_OFFLINE_FORFEIT:" + offlineParticipant.userId);
+        }
+
         const bet = dbDuel.betAmount;
 
         if (isRankedGame) {
@@ -2727,19 +2784,25 @@ io.on('connection', (socket) => {
         timeout: 15000
       });
 
-      io.to(`duel:${duelId}`).emit('match_timed_out', {
+      const timeoutPayload = {
         eloChanges,
         tokenChanges,
         isRanked: isRankedGame,
         rpChanges,
         newRanks
-      });
+      };
+      io.to(`duel:${duelId}`).emit('match_timed_out', timeoutPayload);
 
-      // Audit achievements and quests for both
+      // Also emit directly to both participants for reliable delivery
       const dbParticipants = await prisma.duelParticipant.findMany({
         where: { duelId }
       });
 
+      for (const p of dbParticipants) {
+        emitDirectToUser(p.userId, 'match_timed_out', timeoutPayload);
+      }
+
+      // Audit achievements and quests for both
       for (const p of dbParticipants) {
         const userId = p.userId;
         checkAchievements(userId, null, io).catch(console.error);
@@ -2752,6 +2815,10 @@ io.on('connection', (socket) => {
     } catch (e) {
       if (e.message === "ALREADY_COMPLETED") {
         console.log(`Timeout for duel ${duelId} was already resolved.`);
+      } else if (e.message.startsWith("OPPONENT_OFFLINE_FORFEIT:")) {
+        const loserId = e.message.split(":")[1];
+        console.log(`Timeout hit but user ${loserId} is offline. Resolving as forfeit instead of double defeat.`);
+        await resolveForfeit(duelId, loserId);
       } else {
         console.error(e);
       }
@@ -2912,14 +2979,23 @@ async function resolveForfeit(duelId, loserId) {
     timeout: 15000
   });
 
-  io.to(`duel:${duelId}`).emit('opponent_forfeited', {
+  const forfeitPayload = {
     winnerId,
     eloChanges,
     tokenChanges,
     isRanked: isRankedGame,
     rpChanges,
     newRanks
-  });
+  };
+
+  // Emit to duel room (primary)
+  io.to(`duel:${duelId}`).emit('opponent_forfeited', forfeitPayload);
+
+  // Also emit directly to the winner's sockets for reliable delivery
+  if (winnerId) {
+    console.log(`[resolveForfeit] Emitting opponent_forfeited directly to winner ${winnerId}`);
+    emitDirectToUser(winnerId, 'opponent_forfeited', forfeitPayload);
+  }
 
   if (winnerId) {
     checkAchievements(winnerId, null, io).catch(console.error);

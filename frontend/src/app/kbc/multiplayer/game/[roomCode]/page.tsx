@@ -389,7 +389,7 @@ export default function KbcMultiplayerGame() {
           )}
 
           <div>
-            <h1 style={{ fontSize: '32px', fontFamily: 'Space Grotesk, sans-serif' }}>
+            <h1 style={{ fontSize: '32px', fontFamily: 'Rajdhani, sans-serif' }}>
               {isWinner ? "Jackpot Winner!" : isDraw ? "It's a Perfect Draw!" : "Game Over"}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '6px' }}>
@@ -460,8 +460,8 @@ export default function KbcMultiplayerGame() {
           {isRanked && (
             <div style={{
               width: '100%',
-              background: 'rgba(139, 92, 246, 0.04)',
-              border: '1px solid rgba(139, 92, 246, 0.15)',
+              background: 'rgba(123, 147, 219, 0.04)',
+              border: '1px solid rgba(123, 147, 219, 0.15)',
               borderRadius: '12px',
               padding: '20px',
               display: 'flex',
@@ -687,7 +687,7 @@ export default function KbcMultiplayerGame() {
                     zIndex: 10,
                     color: timeLeft <= 10 ? 'var(--accent-red)' : 'var(--accent-purple)',
                     fontWeight: 'bold',
-                    fontFamily: 'Space Grotesk, sans-serif'
+                    fontFamily: 'Rajdhani, sans-serif'
                   }}>
                     <Clock size={16} />
                     <span style={{ fontSize: '18px' }}>{timeLeft}s</span>

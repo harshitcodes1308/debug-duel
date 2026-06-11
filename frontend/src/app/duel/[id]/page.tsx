@@ -38,6 +38,7 @@ export default function DuelArena() {
   const [hintCostDeducted, setHintCostDeducted] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
+  const resultHandledRef = useRef(false);
 
   // Sound effects & tension ticking
   useEffect(() => {
@@ -66,7 +67,7 @@ export default function DuelArena() {
   useEffect(() => {
     async function loadDuel() {
       try {
-        const res = await fetch(`http://localhost:5001/api/duel/${duelId}`);
+        const res = await fetch(`http://localhost:5001/api/duel/${duelId}?t=${Date.now()}`);
         if (!res.ok) {
           router.push('/');
           return;
@@ -106,12 +107,12 @@ export default function DuelArena() {
 
   // 3. Auto forfeit if timer runs out
   useEffect(() => {
-    if (secondsLeft === 0 && currentDuel?.status === 'active') {
+    if (secondsLeft === 0 && currentDuel?.status === 'active' && !opponentOffline) {
       if (socketRef.current) {
         socketRef.current.emit('match_timeout', { duelId });
       }
     }
-  }, [secondsLeft, currentDuel?.status, duelId]);
+  }, [secondsLeft, currentDuel?.status, duelId, opponentOffline]);
 
   // 4. Socket Connection inside Arena
   useEffect(() => {
@@ -144,6 +145,8 @@ export default function DuelArena() {
 
     // Opponent forfeited
     socket.on('opponent_forfeited', (payload) => {
+      if (resultHandledRef.current) return;
+      resultHandledRef.current = true;
       KbcAudio.playWin(); // Win fanfare
       alert("Your opponent has forfeited! You win!");
       if (user && payload.tokenChanges?.[user.id]) {
@@ -155,15 +158,18 @@ export default function DuelArena() {
       const myRpChange = payload.rpChanges?.[user.id] || 0;
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
-      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
+      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}&outcome=won`);
     });
 
     // Final result broadcast
     socket.on('duel_result', (payload) => {
+      if (resultHandledRef.current) return;
+      resultHandledRef.current = true;
       const myRpChange = payload.rpChanges?.[user.id] || 0;
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
-      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
+      const outcome = payload.winnerId === user.id ? 'won' : payload.winnerId ? 'lost' : 'draw';
+      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}&outcome=${outcome}`);
     });
 
     // Opponent online/offline state sync
@@ -175,6 +181,8 @@ export default function DuelArena() {
 
     // Match timed out (double defeat)
     socket.on('match_timed_out', (payload) => {
+      if (resultHandledRef.current) return;
+      resultHandledRef.current = true;
       KbcAudio.playWrong(); // error buzzer sound
       alert("Time expired! Both players failed to resolve the bug in time and suffered ELO/Token deductions.");
       if (user && payload.tokenChanges?.[user.id]) {
@@ -186,7 +194,7 @@ export default function DuelArena() {
       const myRpChange = payload.rpChanges?.[user.id] || 0;
       const myNewRank = payload.newRanks?.[user.id] || '';
       const myEloChange = payload.eloChanges?.[user.id] || 0;
-      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}`);
+      router.push(`/duel/${duelId}/result?rpChange=${myRpChange}&newRank=${encodeURIComponent(myNewRank)}&eloChange=${myEloChange}&outcome=draw`);
     });
 
     // Error handling to prevent getting stuck
@@ -492,7 +500,7 @@ export default function DuelArena() {
                 ) : opponentSubmitted ? (
                   <span className="badge" style={{ fontSize: '9px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>SUBMITTED</span>
                 ) : (
-                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>ONLINE</span>
+                  <span className="badge" style={{ fontSize: '9px', background: 'rgba(123, 147, 219, 0.15)', color: 'var(--accent-blue)', borderColor: 'rgba(123, 147, 219, 0.2)' }}>ONLINE</span>
                 )}
               </div>
 
@@ -549,7 +557,7 @@ export default function DuelArena() {
             ) : (
               <button 
                 className="btn btn-secondary" 
-                style={{ width: '100%', fontSize: '13px', borderStyle: 'dashed', gap: '4px', fontFamily: 'Space Grotesk, sans-serif' }}
+                style={{ width: '100%', fontSize: '13px', borderStyle: 'dashed', gap: '4px', fontFamily: 'Rajdhani, sans-serif' }}
                 onClick={handleGetHint}
               >
                 <HelpCircle size={14} /> Buy Hint (-15 tokens)
@@ -580,7 +588,7 @@ export default function DuelArena() {
             borderColor: 'rgba(239, 68, 68, 0.4)', 
             color: 'var(--accent-red)',
             background: 'rgba(239, 68, 68, 0.05)',
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: 'Rajdhani, sans-serif',
             display: 'flex',
             alignItems: 'center',
             gap: '8px'
@@ -597,7 +605,7 @@ export default function DuelArena() {
             fontSize: '15px', 
             color: 'black', 
             gap: '8px',
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: 'Rajdhani, sans-serif',
             boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)'
           }}
         >
@@ -637,7 +645,7 @@ export default function DuelArena() {
             <div style={{ textAlign: 'center' }}>
               <div className="flex-center" style={{ gap: '8px', color: 'var(--accent-amber)', marginBottom: '8px' }}>
                 <Sparkles size={28} className="pulse-glow" style={{ color: 'var(--accent-amber)' }} />
-                <h2 style={{ fontSize: '22px', color: '#fff', fontFamily: 'Space Grotesk, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <h2 style={{ fontSize: '22px', color: '#fff', fontFamily: 'Rajdhani, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Few moments away from result...
                 </h2>
               </div>
@@ -706,7 +714,7 @@ export default function DuelArena() {
               <button
                 onClick={() => setShowExplanationModal(false)}
                 className="btn btn-secondary"
-                style={{ flex: 1, height: '48px', fontFamily: 'Space Grotesk, sans-serif' }}
+                style={{ flex: 1, height: '48px', fontFamily: 'Rajdhani, sans-serif' }}
                 disabled={submittingExplanation}
               >
                 CANCEL
@@ -719,7 +727,7 @@ export default function DuelArena() {
                   height: '48px', 
                   color: 'black', 
                   gap: '8px', 
-                  fontFamily: 'Space Grotesk, sans-serif',
+                  fontFamily: 'Rajdhani, sans-serif',
                   fontWeight: 700,
                   boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)'
                 }}

@@ -178,7 +178,7 @@ export default function ColorMatchLobby() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          fontFamily: 'Space Grotesk, sans-serif'
+          fontFamily: 'Rajdhani, sans-serif'
         }}>
           <span style={{ fontSize: '14px', color: 'var(--accent-amber)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '16px' }}>MATCH READY. INITIATING...</span>
           <h1 style={{
@@ -283,7 +283,7 @@ export default function ColorMatchLobby() {
 
           {/* VS Divider */}
           <div style={{
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: 'Rajdhani, sans-serif',
             fontWeight: 'bold',
             color: 'var(--text-secondary)',
             fontSize: '20px',

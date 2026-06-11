@@ -178,7 +178,7 @@ export default function LifelinesPanel({
             position: 'relative',
             opacity: usedLifelines.expertAdvice ? 0.4 : 1,
             cursor: usedLifelines.expertAdvice ? 'not-allowed' : 'pointer',
-            borderColor: usedLifelines.expertAdvice ? 'transparent' : 'rgba(139, 92, 246, 0.2)',
+            borderColor: usedLifelines.expertAdvice ? 'transparent' : 'rgba(123, 147, 219, 0.2)',
             background: 'rgba(26, 26, 34, 0.4)',
             height: '80px',
             gap: '6px'
@@ -358,7 +358,7 @@ export default function LifelinesPanel({
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 12px',
-                boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)'
+                boxShadow: '0 0 15px rgba(123, 147, 219, 0.4)'
               }}>
                 <Terminal size={28} color="#FFF" />
               </div>
