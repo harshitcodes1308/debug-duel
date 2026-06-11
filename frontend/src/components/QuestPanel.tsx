@@ -162,18 +162,16 @@ export default function QuestPanel() {
           border: 1px solid rgba(123, 147, 219, 0.25);
         }
         .quest-card {
-          background: rgba(255, 255, 255, 0.01);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-          border-radius: 8px;
+          background: transparent;
+          border-bottom: 1px solid #1E2737;
           padding: 12px;
           display: flex;
           flex-direction: column;
           gap: 10px;
-          transition: var(--transition);
+          transition: background 150ms ease;
         }
         .quest-card:hover {
-          background: rgba(255, 255, 255, 0.02);
-          border-color: rgba(255, 255, 255, 0.08);
+          background: #0D1117;
         }
       `}</style>
 
@@ -233,36 +231,18 @@ export default function QuestPanel() {
             const canClaim = isCompleted && !isClaimed;
 
             // Rarity / tab borders
-            const questBorder = isClaimed 
-              ? 'rgba(255, 255, 255, 0.02)' 
+            const borderLeftColor = isClaimed 
+              ? '#4ade80'
               : canClaim
-                ? activeTab === 'DAILY' 
-                  ? 'rgba(148, 163, 184, 0.25)' 
-                  : 'rgba(192, 132, 252, 0.35)'
-                : 'rgba(255, 255, 255, 0.04)';
-
-            const questBg = isClaimed
-              ? 'rgba(255, 255, 255, 0.005)'
-              : canClaim
-                ? activeTab === 'DAILY'
-                  ? 'rgba(148, 163, 184, 0.03)'
-                  : 'rgba(192, 132, 252, 0.04)'
-                : 'rgba(255, 255, 255, 0.01)';
-
-            const questGlow = canClaim 
-              ? activeTab === 'DAILY'
-                ? '0 0 12px rgba(148, 163, 184, 0.08)'
-                : '0 0 16px rgba(192, 132, 252, 0.12)'
-              : 'none';
+                ? '#3B82F6'
+                : '#1E2737';
 
             return (
               <div 
                 key={uq.id} 
                 className="quest-card"
                 style={{
-                  borderColor: questBorder,
-                  backgroundColor: questBg,
-                  boxShadow: questGlow,
+                  borderLeft: `3px solid ${borderLeftColor}`,
                   opacity: isClaimed ? 0.5 : 1
                 }}
               >

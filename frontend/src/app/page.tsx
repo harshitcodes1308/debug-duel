@@ -384,7 +384,7 @@ export default function Dashboard() {
               background: 'radial-gradient(circle, rgba(123, 147, 219, 0.15) 0%, transparent 70%)',
               pointerEvents: 'none'
             }} />
-            <div style={{ zIndex: 1 }}>
+            <div style={{ zIndex: 1, maxWidth: '600px' }}>
               <span style={{ fontSize: '11px', fontFamily: 'Geist, sans-serif', textTransform: 'uppercase', color: '#CBD5E1', fontWeight: 600, letterSpacing: '0.08em' }}>WELCOME BACK TO THE ARENA</span>
               <h1 style={{ fontSize: '32px', marginTop: '8px', fontFamily: 'Geist, sans-serif', fontWeight: 700, color: '#FFF' }}>
                 Ready to code, <span style={{ color: 'var(--accent-blue)', fontFamily: 'Geist, sans-serif', fontWeight: 700 }}>@{user.username}</span>?
@@ -444,10 +444,11 @@ export default function Dashboard() {
               display: 'grid',
               gridTemplateColumns: 'repeat(2, minmax(130px, 1fr))',
               gap: '16px 24px',
-              flex: 1
+              flex: 1,
+              maxWidth: '700px'
             }}>
               {/* Stat 1: Win Rate */}
-              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
+              <div className="stat-box" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', minWidth: '180px', maxWidth: '320px', flex: 1 }}>
                 <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   <Award size={18} color="var(--accent-green)" />
                 </div>
@@ -460,7 +461,7 @@ export default function Dashboard() {
               </div>
 
               {/* Stat 2: Current Streak */}
-              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
+              <div className="stat-box" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', minWidth: '180px', maxWidth: '320px', flex: 1 }}>
                 <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                   <Flame size={18} color="var(--accent-red)" />
                 </div>
@@ -473,7 +474,7 @@ export default function Dashboard() {
               </div>
 
               {/* Stat 3: Total Tokens Won */}
-              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
+              <div className="stat-box" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', minWidth: '180px', maxWidth: '320px', flex: 1 }}>
                 <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
                   <Coins size={18} color="var(--accent-amber)" />
                 </div>
@@ -486,7 +487,7 @@ export default function Dashboard() {
               </div>
 
               {/* Stat 4: Average Solve Time */}
-              <div className="valorant-card" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
+              <div className="stat-box" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', minWidth: '180px', maxWidth: '320px', flex: 1 }}>
                 <div style={{ background: 'rgba(123, 147, 219, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(123, 147, 219, 0.2)' }}>
                   <Clock size={18} color="var(--accent-blue)" />
                 </div>
@@ -500,7 +501,7 @@ export default function Dashboard() {
             </div>
 
             {/* Visualization Component */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '140px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '140px', maxWidth: '280px', width: '100%' }}>
               {renderSparkline()}
             </div>
 
@@ -748,7 +749,7 @@ export default function Dashboard() {
           {loadingBattles ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[1, 2, 3].map((i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'rgba(255, 255, 255, 0.005)' }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid #1E2737', background: 'transparent' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '50%' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                       <div className="skeleton-box" style={{ width: '60px', height: '10px' }} />
@@ -821,18 +822,15 @@ export default function Dashboard() {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '12px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'rgba(255, 255, 255, 0.01)',
-                      border: '1px solid var(--border)',
-                      transition: 'var(--transition)'
+                      borderBottom: '1px solid #1E2737',
+                      background: 'transparent',
+                      transition: 'background 150ms ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                      e.currentTarget.style.background = '#0D1117';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.01)';
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.background = 'transparent';
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
@@ -1184,25 +1182,25 @@ export default function Dashboard() {
           {/* ELO List */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginTop: '8px' }}>
             <span style={{ fontSize: '10px', fontFamily: 'Geist, sans-serif', fontWeight: 600, color: '#CBD5E1', letterSpacing: '0.08em' }}>ELO BREAKDOWN</span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
               <span style={{ fontFamily: 'Geist, sans-serif' }}>Javascript</span>
               <span style={{ fontWeight: 600, color: 'var(--accent-amber)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloJS} />
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
               <span style={{ fontFamily: 'Geist, sans-serif' }}>Python</span>
               <span style={{ fontWeight: 600, color: 'var(--accent-blue)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloPython} />
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
               <span style={{ fontFamily: 'Geist, sans-serif' }}>Java</span>
               <span style={{ fontWeight: 600, color: 'var(--accent-red)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloJava} />
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: '#0D1117', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1F2937' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '8px 4px', borderBottom: '1px solid #1E2737' }}>
               <span style={{ fontFamily: 'Geist, sans-serif' }}>UI/UX (ColorMatch)</span>
               <span style={{ fontWeight: 600, color: 'var(--accent-purple)', fontFamily: 'Geist Mono, monospace' }}>
                 <AnimatedCounter value={user.eloUIUX} />

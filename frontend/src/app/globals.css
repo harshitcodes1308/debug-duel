@@ -34,10 +34,10 @@
   --space-10: 40px;
 
   /* Border Radiuses */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
   --radius-full: 9999px;
 
   /* Box Shadows — minimal, no color emission */
@@ -97,7 +97,7 @@ code, pre {
 
 /* Layout Utilities */
 .container {
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 var(--space-6);
 }
@@ -111,10 +111,11 @@ code, pre {
 /* Card System — clean, solid, no blur/glow */
 .card-base, .glass-panel {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid #1E2737;
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   transition: border-color 180ms ease;
+  box-shadow: none !important;
 }
 
 .card-base:hover, .glass-panel:hover {
@@ -283,13 +284,26 @@ code, pre {
 
 .valorant-card {
   background: #0D1117 !important;
-  border: 1px solid #1F2937 !important;
-  border-radius: 8px !important;
+  border: none !important;
+  border-top: 2px solid #3B82F6 !important;
+  border-radius: 4px !important;
   transition: all 150ms ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 .valorant-card:hover {
-  border-color: #3B82F6 !important;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.15) !important;
+  background: #111827 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.stat-box {
+  background: #0D1117 !important;
+  border: none !important;
+  border-left: 3px solid #3B82F6 !important;
+  border-radius: 4px !important;
+  transition: background 150ms ease !important;
+}
+.stat-box:hover {
+  background: #111827 !important;
 }
 
 .badge-js {
