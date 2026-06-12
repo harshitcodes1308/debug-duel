@@ -161,7 +161,7 @@ export default function CommandCenter({ isOpen, onClose }: CommandCenterProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px'
+        padding: 'var(--cc-padding, 24px)'
       }}
       onClick={onClose}
     >
@@ -203,13 +203,13 @@ export default function CommandCenter({ isOpen, onClose }: CommandCenterProps) {
               outline: 'none',
             }}
           />
-          <div className="flex-center" style={{ gap: '4px', background: 'rgba(255,255,255,0.04)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>
+          <div className="flex-center hide-on-mobile" style={{ gap: '4px', background: 'rgba(255,255,255,0.04)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>
             <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>ESC</span>
           </div>
         </div>
 
         {/* User Quick Stats strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', background: 'rgba(255,255,255,0.01)', borderBottom: '1px solid var(--border)', padding: '12px 20px', gap: '16px' }}>
+        <div className="cc-stats-strip">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Coins size={14} color="var(--accent-amber)" />
             <div style={{ fontSize: '12px' }}>
@@ -234,10 +234,10 @@ export default function CommandCenter({ isOpen, onClose }: CommandCenterProps) {
         </div>
 
         {/* Main Command Menu Area */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', height: '340px' }}>
+        <div className="cc-menu-grid">
           
           {/* Action List */}
-          <div style={{ borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '12px' }}>
+          <div className="cc-action-list">
             <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 8px', display: 'block', marginBottom: '8px' }}>Commands</span>
             
             {filteredActions.length === 0 ? (
@@ -276,9 +276,9 @@ export default function CommandCenter({ isOpen, onClose }: CommandCenterProps) {
                       }}>
                         {action.icon}
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '13px', fontWeight: 'bold', color: isAct ? '#FFF' : 'var(--text-primary)' }}>{action.title}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '280px' }}>{action.subtitle}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{action.subtitle}</div>
                       </div>
                     </div>
                   );
@@ -287,8 +287,8 @@ export default function CommandCenter({ isOpen, onClose }: CommandCenterProps) {
             )}
           </div>
 
-          {/* Details / Notification Sidebar */}
-          <div style={{ padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(255,255,255,0.005)' }}>
+          {/* Details / Notification Sidebar - Hidden on Mobile */}
+          <div className="hide-on-mobile" style={{ padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(255,255,255,0.005)', width: '100%' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                 <Bell size={13} color="var(--accent-purple)" />
