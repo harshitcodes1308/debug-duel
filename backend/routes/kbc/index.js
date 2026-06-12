@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 const { awardXP } = require('../../utils/xp');
 const { checkAchievements } = require('../../services/achievements');
 const { updateQuestProgress } = require('../../services/quests');
+const { requireAuth } = require('../../middleware/auth');
 
 // Helper to generate a 6-character room code
 function generateRoomCode() {
@@ -49,8 +50,10 @@ router.post('/verify', (req, res) => {
 });
 
 // Create KBC Private Room
-router.post('/room/create', async (req, res) => {
-  const { userId, category, wager = 0 } = req.body;
+router.post('/room/create', requireAuth, async (req, res) => {
+  // Use JWT-authenticated userId, ignore any client-supplied userId
+  const userId = req.userId;
+  const { category, wager = 0 } = req.body;
   if (!userId || !category) {
     return res.status(400).json({ error: "Missing userId or category" });
   }
@@ -160,8 +163,10 @@ router.get('/config', (req, res) => {
 });
 
 // End KBC Solo Challenge run and store stats & rewards
-router.post('/solo/end', async (req, res) => {
-  const { userId, questionsCleared, timePerQuestion, lifelinesUsed, status } = req.body;
+router.post('/solo/end', requireAuth, async (req, res) => {
+  // Use JWT-authenticated userId, ignore any client-supplied userId
+  const userId = req.userId;
+  const { questionsCleared, timePerQuestion, lifelinesUsed, status } = req.body;
   if (!userId) {
     return res.status(400).json({ error: "Missing userId" });
   }
@@ -293,11 +298,9 @@ router.post('/solo/end', async (req, res) => {
 });
 
 // Fetch daily challenge questions
-router.get('/daily/questions', async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) {
-    return res.status(400).json({ error: "Missing userId" });
-  }
+router.get('/daily/questions', requireAuth, async (req, res) => {
+  // Use JWT-authenticated userId
+  const userId = req.userId;
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -339,8 +342,10 @@ router.get('/daily/questions', async (req, res) => {
 });
 
 // End KBC Daily Challenge run and store stats & rewards (double tokens)
-router.post('/daily/end', async (req, res) => {
-  const { userId, questionsCleared, timePerQuestion, status } = req.body;
+router.post('/daily/end', requireAuth, async (req, res) => {
+  // Use JWT-authenticated userId, ignore any client-supplied userId
+  const userId = req.userId;
+  const { questionsCleared, timePerQuestion, status } = req.body;
   if (!userId) {
     return res.status(400).json({ error: "Missing userId" });
   }

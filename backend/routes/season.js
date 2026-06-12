@@ -4,6 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getOrCreateActiveSeason, getSeasonCountdown } = require('../services/season');
 const { getRankFromPoints } = require('../services/rank');
+const { requireAuth } = require('../middleware/auth');
 
 // 1. Get Active Season Info & Countdown
 router.get('/active', async (req, res) => {
@@ -117,11 +118,9 @@ router.get('/leaderboard', async (req, res) => {
 });
 
 // 4. Get Friends Ranked Leaderboard
-router.get('/leaderboard/friends', async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) {
-    return res.status(400).json({ error: "Missing userId parameter" });
-  }
+router.get('/leaderboard/friends', requireAuth, async (req, res) => {
+  // Use JWT-authenticated userId, do NOT trust client query param
+  const userId = req.userId;
 
   try {
     const activeSeason = await getOrCreateActiveSeason();
@@ -168,11 +167,9 @@ router.get('/leaderboard/friends', async (req, res) => {
 });
 
 // 5. Get User's Prestige Rewards
-router.get('/rewards/my', async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) {
-    return res.status(400).json({ error: "Missing userId" });
-  }
+router.get('/rewards/my', requireAuth, async (req, res) => {
+  // Use JWT-authenticated userId, do NOT trust client query param
+  const userId = req.userId;
 
   try {
     // Find all claims for this user across all seasons
@@ -275,7 +272,12 @@ function calculateSoftResetRp(oldRp) {
 }
 
 // 6. Developer End Season and Distribute Rewards
+// Protected by a static admin secret to prevent abuse from regular users
 router.post('/dev-end', async (req, res) => {
+  const adminSecret = req.headers['x-admin-secret'];
+  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
+    return res.status(403).json({ error: 'Forbidden: admin access required' });
+  }
   try {
     // 1. Get current active season
     const activeSeason = await prisma.season.findFirst({

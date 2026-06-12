@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 const { awardXP } = require('../utils/xp');
 const { updateQuestProgress } = require('../services/quests');
 const { checkAchievements } = require('../services/achievements');
+const { requireAuth } = require('../middleware/auth');
 
 // Get all challenges
 router.get('/', (req, res) => {
@@ -23,8 +24,10 @@ router.get('/:id', (req, res) => {
 });
 
 // Grade solo design practice
-router.post('/solo/grade', async (req, res) => {
-  const { challengeId, submittedDesign, userId } = req.body;
+router.post('/solo/grade', requireAuth, async (req, res) => {
+  // userId derived from JWT token, not client body
+  const userId = req.userId;
+  const { challengeId, submittedDesign } = req.body;
   if (!challengeId || !submittedDesign) {
     return res.status(400).json({ error: "Missing challengeId or submittedDesign" });
   }

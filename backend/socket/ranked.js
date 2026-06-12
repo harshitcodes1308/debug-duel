@@ -11,7 +11,9 @@ function setupRankedSocket(io) {
   io.on('connection', (socket) => {
     
     // Join Ranked Queue
-    socket.on('ranked_queue_join', async ({ userId, username, gameType, language }) => {
+    socket.on('ranked_queue_join', async ({ username, gameType, language }) => {
+      // Use JWT-authenticated userId from socket middleware
+      const userId = socket.userId;
       if (!userId || !gameType) {
         socket.emit('ranked_queue_error', { message: "Invalid parameters to join queue" });
         return;
@@ -49,7 +51,8 @@ function setupRankedSocket(io) {
     });
 
     // Leave Ranked Queue
-    socket.on('ranked_queue_leave', ({ userId }) => {
+    socket.on('ranked_queue_leave', () => {
+      const userId = socket.userId;
       if (!userId) return;
       const left = matchmaker.leaveQueue(userId);
       if (left) {
@@ -58,7 +61,8 @@ function setupRankedSocket(io) {
     });
 
     // Accept Pending Ranked Match
-    socket.on('ranked_match_accept', async ({ matchId, userId }) => {
+    socket.on('ranked_match_accept', async ({ matchId }) => {
+      const userId = socket.userId;
       if (!matchId || !userId) return;
       const result = await matchmaker.acceptMatch(matchId, userId, io);
       if (!result.success) {
@@ -67,7 +71,8 @@ function setupRankedSocket(io) {
     });
 
     // Decline Pending Ranked Match
-    socket.on('ranked_match_decline', ({ matchId, userId }) => {
+    socket.on('ranked_match_decline', ({ matchId }) => {
+      const userId = socket.userId;
       if (!matchId || !userId) return;
       matchmaker.declineMatch(matchId, userId, io);
     });

@@ -404,7 +404,9 @@ function setupKbcSocket(io) {
   io.on('connection', (socket) => {
 
     // 1. Join waiting room / active game
-    socket.on('kbc_join_lobby', async ({ roomCode, userId }) => {
+    socket.on('kbc_join_lobby', async ({ roomCode }) => {
+      // Use JWT-authenticated userId from socket middleware, reject any client-supplied userId
+      const userId = socket.userId;
       if (!roomCode || !userId) return;
       const code = roomCode.toUpperCase();
       const room = kbcRooms.get(code);
@@ -518,7 +520,8 @@ function setupKbcSocket(io) {
       const code = roomCode.toUpperCase();
       const room = kbcRooms.get(code);
 
-      if (!room || room.host.socketId !== socket.id) return;
+      // Verify caller is the authenticated host — check JWT userId against room host, not just socket.id
+      if (!room || room.host.userId !== socket.userId) return;
       if (!room.guest) return; // Cannot start without a guest
 
       try {
