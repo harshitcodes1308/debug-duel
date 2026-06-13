@@ -187,7 +187,10 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!user) return;
 
-    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
+    const token = localStorage.getItem('dd_token');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'), {
+      auth: { token }
+    });
 
     const handleConnect = () => {
       socket.emit('register_user', { userId: user.id });
@@ -239,8 +242,12 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
 
   const handleAccept = () => {
     if (!invite || !user) return;
-    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
-    socket.emit('accept_duel_invite', { duelId: invite.duelId, friendId: user.id });
+    const token = localStorage.getItem('dd_token');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'), {
+      auth: { token }
+    });
+    // friendId is now derived from socket.userId on the server
+    socket.emit('accept_duel_invite', { duelId: invite.duelId });
     
     socket.once('invite_accepted_confirm', ({ duelId, gameType }) => {
       socket.disconnect();
@@ -258,7 +265,10 @@ function SocketNotificationWrapper({ children }: { children: React.ReactNode }) 
 
   const handleDecline = () => {
     if (!invite) return;
-    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'));
+    const token = localStorage.getItem('dd_token');
+    const socket = io((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'), {
+      auth: { token }
+    });
     socket.emit('decline_duel_invite', { duelId: invite.duelId });
     socket.disconnect();
     setInvite(null);
@@ -567,14 +577,18 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadSession() {
       const cachedId = localStorage.getItem('dd_user_id');
-      if (cachedId) {
+      const cachedToken = localStorage.getItem('dd_token');
+      if (cachedId && cachedToken) {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/auth/me/${cachedId}`);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/auth/me/${cachedId}`, {
+            headers: { 'Authorization': `Bearer ${cachedToken}` }
+          });
           if (res.ok) {
             const data = await res.json();
             setUser(data);
           } else {
             localStorage.removeItem('dd_user_id');
+            localStorage.removeItem('dd_token');
           }
         } catch (e) {
           console.error(e);
@@ -626,27 +640,26 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
                 const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/google', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    accessToken: tokenResponse.access_token,
-                    isSandbox: false
-                  })
+                  // Only send accessToken — server verifies identity server-side
+                  body: JSON.stringify({ accessToken: tokenResponse.access_token })
                 });
 
                 if (res.ok) {
-                  const userProfile = await res.json();
-                  if (userProfile.registrationRequired) {
+                  const data = await res.json();
+                  if (data.registrationRequired) {
                     KbcAudio.playSelect();
                     setGoogleRegisterData({
-                      email: userProfile.email,
-                      fullName: userProfile.fullName,
-                      googleId: userProfile.googleId,
+                      email: '',
+                      fullName: data.fullName || '',
+                      googleId: '',
                       accessToken: tokenResponse.access_token,
                       isSandbox: false
                     });
                   } else {
-                    localStorage.setItem('dd_user_id', userProfile.id);
+                    localStorage.setItem('dd_user_id', data.user.id);
+                    localStorage.setItem('dd_token', data.token);
                     KbcAudio.playCorrect();
-                    setUser(userProfile);
+                    setUser(data.user);
                   }
                 } else {
                   const errData = await res.json();
@@ -676,47 +689,10 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleSandboxSelect = async (email: string, name: string) => {
-    KbcAudio.playLock();
+  // Sandbox mode removed — Google auth is always server-side verified in production
+  const handleSandboxSelect = async (_email: string, _name: string) => {
     setShowGoogleSandboxModal(false);
-    setLoading(true);
-    try {
-      const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          fullName: name,
-          isSandbox: true
-        })
-      });
-      if (res.ok) {
-        const userProfile = await res.json();
-        if (userProfile.registrationRequired) {
-          KbcAudio.playSelect();
-          setGoogleRegisterData({
-            email: userProfile.email,
-            fullName: userProfile.fullName,
-            googleId: userProfile.googleId,
-            accessToken: null,
-            isSandbox: true
-          });
-        } else {
-          localStorage.setItem('dd_user_id', userProfile.id);
-          KbcAudio.playCorrect();
-          setUser(userProfile);
-        }
-      } else {
-        const errData = await res.json();
-        setErrorMsg(errData.error || "Sandbox login failed");
-        KbcAudio.playWrong();
-      }
-    } catch (e) {
-      setErrorMsg("Server connection error during sandbox auth");
-      KbcAudio.playWrong();
-    } finally {
-      setLoading(false);
-    }
+    setErrorMsg("Sandbox Google Auth is no longer supported. Please use real Google Sign-In.");
   };
 
   const handleSandboxSubmit = (e: React.FormEvent) => {
@@ -822,21 +798,19 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // Send accessToken so server can re-verify identity, plus the chosen username
         body: JSON.stringify({
-          email: googleRegisterData.email,
-          fullName: googleRegisterData.fullName,
-          googleId: googleRegisterData.googleId,
           accessToken: googleRegisterData.accessToken,
-          isSandbox: googleRegisterData.isSandbox,
           username: googleUsername.trim()
         })
       });
 
       if (res.ok) {
-        const userProfile = await res.json();
-        localStorage.setItem('dd_user_id', userProfile.id);
+        const data = await res.json();
+        localStorage.setItem('dd_user_id', data.user.id);
+        localStorage.setItem('dd_token', data.token);
         KbcAudio.playCorrect();
-        setUser(userProfile);
+        setUser(data.user);
         setGoogleRegisterData(null);
         setGoogleUsername('');
       } else {
@@ -910,10 +884,11 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (res.ok) {
-        const userProfile = await res.json();
-        localStorage.setItem('dd_user_id', userProfile.id);
-        KbcAudio.playCorrect(); // Triumphant sound on success
-        setUser(userProfile);
+        const data = await res.json();
+        localStorage.setItem('dd_user_id', data.user.id);
+        localStorage.setItem('dd_token', data.token);
+        KbcAudio.playCorrect();
+        setUser(data.user);
       } else {
         const errData = await res.json();
         setErrorMsg(errData.error || "Signup failed");
@@ -950,10 +925,11 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (res.ok) {
-        const userProfile = await res.json();
-        localStorage.setItem('dd_user_id', userProfile.id);
-        KbcAudio.playCorrect(); // Success chime
-        setUser(userProfile);
+        const data = await res.json();
+        localStorage.setItem('dd_user_id', data.user.id);
+        localStorage.setItem('dd_token', data.token);
+        KbcAudio.playCorrect();
+        setUser(data.user);
       } else {
         const errData = await res.json();
         setErrorMsg(errData.error || "Invalid username/email or password");
@@ -971,6 +947,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
     KbcAudio.playSelect();
     setUser(null);
     localStorage.removeItem('dd_user_id');
+    localStorage.removeItem('dd_token');
     setFullName('');
     setUsername('');
     setEmail('');
@@ -979,7 +956,7 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
     setErrorMsg('');
   };
 
-  // Mock dev login action for backward compatibility
+  // Dev login action
   const loginAsDev = async (usr: string) => {
     setLoading(true);
     try {
@@ -989,9 +966,10 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ usernameOrEmail: usr, password: 'DevUserPassword123!' })
       });
       if (res.ok) {
-        const userProfile = await res.json();
-        localStorage.setItem('dd_user_id', userProfile.id);
-        setUser(userProfile);
+        const data = await res.json();
+        localStorage.setItem('dd_user_id', data.user.id);
+        localStorage.setItem('dd_token', data.token);
+        setUser(data.user);
       } else {
         const regRes = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/auth/register', {
           method: 'POST',
@@ -1004,13 +982,14 @@ function DevModeAuthProvider({ children }: { children: React.ReactNode }) {
           })
         });
         if (regRes.ok) {
-          const userProfile = await regRes.json();
-          localStorage.setItem('dd_user_id', userProfile.id);
-          setUser(userProfile);
+          const data = await regRes.json();
+          localStorage.setItem('dd_user_id', data.user.id);
+          localStorage.setItem('dd_token', data.token);
+          setUser(data.user);
         }
       }
     } catch (e) {
-      console.error("Mock login fallback failed", e);
+      console.error("Dev login fallback failed", e);
     } finally {
       setLoading(false);
     }
