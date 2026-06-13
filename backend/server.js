@@ -60,7 +60,7 @@ const JWT_SECRET = process.env.JWT_SECRET || (() => {
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:3000', 'http://localhost:3001'];
+  : ['http://localhost:3000', 'http://localhost:3001', 'https://debugduel.tech', 'https://debug-duel.vercel.app'];
 
 app.use(helmet());
 app.use(cors({
