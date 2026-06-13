@@ -8,6 +8,9 @@ const { PrismaClient } = require('@prisma/client');
 const { GoogleGenAI } = require('@google/generative-ai');
 const OpenAI = require('openai');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const jwt = require('jsonwebtoken');
 
 // Clean up empty environment variables so dotenv can load them from another file or they can be overridden
 for (const key of ['OPENAI_API_KEY', 'GEMINI_API_KEY', 'CLERK_SECRET_KEY', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY']) {
@@ -48,11 +51,45 @@ const { resolveRankedMatch } = require('./services/rank');
 const app = express();
 const server = http.createServer(app);
 
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+  return 'dev-secret-change-in-production';
+})();
+
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'http://localhost:3001'];
+
+app.use(helmet());
 app.use(cors({
-  origin: '*', // For local development accessibility
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+
+// ==================== RATE LIMITERS ====================
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/auth', authLimiter);
+app.use('/api', generalLimiter);
 
 // ==================== SECURITY SANITIZATION MIDDLEWARE ====================
 function sanitizeObject(obj) {
@@ -90,9 +127,11 @@ app.use((req, res, next) => {
 // ==================== CRYPTO HELPERS ====================
 const crypto = require('crypto');
 
+const PBKDF2_ITERATIONS = 310000;
+
 function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  const salt = crypto.randomBytes(32).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, 64, 'sha512').toString('hex');
   return `${salt}:${hash}`;
 }
 
@@ -101,10 +140,42 @@ function verifyPassword(password, storedPasswordHash) {
   try {
     const [salt, originalHash] = storedPasswordHash.split(':');
     if (!salt || !originalHash) return false;
-    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    return hash === originalHash;
+    // Support legacy hashes (1000 iterations) during migration
+    const iterations = salt.length === 32 ? PBKDF2_ITERATIONS : 1000;
+    const hash = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(originalHash, 'hex'));
   } catch (err) {
     return false;
+  }
+}
+
+// ==================== JWT AUTH HELPERS ====================
+function issueToken(userId) {
+  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: '7d', algorithm: 'HS256' });
+}
+
+function requireAuth(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Authentication required' });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    req.userId = payload.sub;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+function requireAuthSocket(socket, next) {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (!token) return next(new Error('Authentication required'));
+  try {
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    socket.userId = payload.sub;
+    next();
+  } catch (err) {
+    next(new Error('Invalid or expired token'));
   }
 }
 
@@ -191,7 +262,8 @@ app.post('/api/auth/register', async (req, res) => {
       }
     });
 
-    return res.json(user);
+    const token = issueToken(user.id);
+    return res.json({ token, user });
   } catch (error) {
     console.error("Registration error:", error);
     return res.status(500).json({ error: "Failed to register user" });
@@ -223,7 +295,8 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
-    return res.json(user);
+    const token = issueToken(user.id);
+    return res.json({ token, user });
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).json({ error: "Login failed" });
@@ -231,8 +304,11 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Session user details
-app.get('/api/auth/me/:id', async (req, res) => {
+app.get('/api/auth/me/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
+  if (req.userId !== id) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
   try {
     const user = await prisma.user.findUnique({
       where: { id }
@@ -249,40 +325,37 @@ app.get('/api/auth/me/:id', async (req, res) => {
 
 // Google Auth Login / Register
 app.post('/api/auth/google', async (req, res) => {
-  const { email, fullName, googleId, accessToken, isSandbox, username } = req.body;
+  const { accessToken, username } = req.body;
 
-  if (!email && isSandbox) {
-    return res.status(400).json({ error: "Email is required in sandbox mode" });
+  if (!accessToken) {
+    return res.status(400).json({ error: "Google access token is required" });
   }
 
-  let verifiedEmail = email ? email.toLowerCase().trim() : null;
-  let verifiedName = fullName || "Google User";
-  let verifiedGoogleId = googleId || "";
+  let verifiedEmail = null;
+  let verifiedName = "Google User";
+  let verifiedGoogleId = "";
 
-  if (!isSandbox && accessToken) {
-    try {
-      const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
-      if (response.ok) {
-        const payload = await response.json();
-        verifiedEmail = payload.email.toLowerCase().trim();
-        verifiedName = payload.name || verifiedName;
-        verifiedGoogleId = payload.sub || verifiedGoogleId;
-      } else {
-        return res.status(400).json({ error: "Failed to verify Google access token" });
-      }
-    } catch (err) {
-      console.error("Google userinfo fetch failed:", err);
-      return res.status(500).json({ error: "Google Auth verification error" });
+  try {
+    const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+    if (response.ok) {
+      const payload = await response.json();
+      verifiedEmail = payload.email ? payload.email.toLowerCase().trim() : null;
+      verifiedName = payload.name || verifiedName;
+      verifiedGoogleId = payload.sub || verifiedGoogleId;
+    } else {
+      return res.status(400).json({ error: "Failed to verify Google access token" });
     }
+  } catch (err) {
+    console.error("Google userinfo fetch failed:", err);
+    return res.status(500).json({ error: "Google Auth verification error" });
   }
 
   if (!verifiedEmail) {
     return res.status(400).json({ error: "Could not retrieve email from Google" });
   }
 
-  // Ensure verifiedGoogleId is not empty (especially in sandbox)
   if (!verifiedGoogleId) {
-    verifiedGoogleId = "sandbox-" + verifiedEmail.split('@')[0];
+    return res.status(400).json({ error: "Could not retrieve Google ID" });
   }
 
   try {
@@ -299,16 +372,16 @@ app.post('/api/auth/google', async (req, res) => {
           data: { clerkId: `google-${verifiedGoogleId}` }
         });
       }
-      return res.json(user);
+      const token = issueToken(user.id);
+      return res.json({ token, user });
     }
 
     // 2. Register flow - requires a username selection
     if (!username) {
       return res.json({
         registrationRequired: true,
-        email: verifiedEmail,
-        fullName: verifiedName,
-        googleId: verifiedGoogleId
+        // Only return non-sensitive info needed for registration form
+        fullName: verifiedName
       });
     }
 
@@ -340,7 +413,8 @@ app.post('/api/auth/google', async (req, res) => {
       }
     });
 
-    return res.json(user);
+    const token = issueToken(user.id);
+    return res.json({ token, user });
   } catch (error) {
     console.error("Google Auth register/login error:", error);
     return res.status(500).json({ error: "Failed to authenticate with Google" });
@@ -349,10 +423,11 @@ app.post('/api/auth/google', async (req, res) => {
 
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST']
   }
 });
+io.use(requireAuthSocket);
 app.set('io', io);
 
 const PORT = process.env.PORT || 5000;
@@ -683,12 +758,7 @@ Add a random seed: ${Math.random().toString(36).substring(7)} to guarantee uniqu
 // ==================== REST ENDPOINTS ====================
 
 function generateFriendKey() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let key = 'sk_dd_';
-  for (let i = 0; i < 8; i++) {
-    key += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return key;
+  return 'sk_dd_' + crypto.randomBytes(6).toString('hex');
 }
 
 // User sync (Login / Register)
@@ -727,8 +797,8 @@ app.post('/api/user/sync', async (req, res) => {
 });
 
 // Friends list with live statuses and requests
-app.get('/api/friends', async (req, res) => {
-  const { userId } = req.query;
+app.get('/api/friends', requireAuth, async (req, res) => {
+  const userId = req.userId;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
   try {
     const friendships = await prisma.friendship.findMany({
@@ -797,10 +867,11 @@ app.get('/api/friends', async (req, res) => {
 });
 
 // Add friend by key
-app.post('/api/friends/add', async (req, res) => {
-  const { userId, friendKey } = req.body;
+app.post('/api/friends/add', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const { friendKey } = req.body;
   if (!userId || !friendKey) {
-    return res.status(400).json({ error: "Missing userId or friendKey" });
+    return res.status(400).json({ error: "Missing friendKey" });
   }
 
   try {
@@ -862,8 +933,9 @@ app.post('/api/friends/add', async (req, res) => {
 });
 
 // Accept Friend Request
-app.post('/api/friends/accept', async (req, res) => {
-  const { userId, friendId } = req.body;
+app.post('/api/friends/accept', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const { friendId } = req.body;
   try {
     const existingReq = await prisma.friendship.findFirst({
       where: { userId: friendId, friendId: userId, status: "PENDING" }
@@ -893,8 +965,9 @@ app.post('/api/friends/accept', async (req, res) => {
 });
 
 // Deny Friend Request
-app.post('/api/friends/deny', async (req, res) => {
-  const { userId, friendId } = req.body;
+app.post('/api/friends/deny', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const { friendId } = req.body;
   try {
     await prisma.friendship.deleteMany({
       where: { userId: friendId, friendId: userId, status: "PENDING" }
@@ -907,8 +980,8 @@ app.post('/api/friends/deny', async (req, res) => {
 });
 
 // Daily Login Claim
-app.post('/api/user/dailylogin', async (req, res) => {
-  const { userId } = req.body;
+app.post('/api/user/dailylogin', requireAuth, async (req, res) => {
+  const userId = req.userId;
   if (!userId) {
     return res.status(400).json({ error: "Missing userId" });
   }
@@ -1017,8 +1090,8 @@ app.post('/api/user/dailylogin', async (req, res) => {
 });
 
 // Get active daily and weekly quests for a user
-app.get('/api/quests', async (req, res) => {
-  const { userId } = req.query;
+app.get('/api/quests', requireAuth, async (req, res) => {
+  const userId = req.userId;
   if (!userId) return res.status(400).json({ error: "Missing userId" });
 
   try {
@@ -1031,10 +1104,10 @@ app.get('/api/quests', async (req, res) => {
 });
 
 // Claim quest reward
-app.post('/api/quests/claim/:id', async (req, res) => {
+app.post('/api/quests/claim/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { userId } = req.body;
-  
+  const userId = req.userId;
+
   if (!userId) return res.status(400).json({ error: "Missing userId" });
 
   try {
@@ -1302,14 +1375,15 @@ app.get('/api/profile/:username', async (req, res) => {
 });
 
 // Leaderboard Top 50
+const LEADERBOARD_ORDER_FIELDS = {
+  uiux: 'eloUIUX',
+  kbc: 'eloKbc',
+  all: 'eloDebugDuel'
+};
+
 app.get('/api/leaderboard', async (req, res) => {
-  const { language } = req.query; // "javascript" | "python" | "java" | "uiux"
-  let orderByField = "eloDebugDuel";
-  if (language === 'uiux') orderByField = "eloUIUX";
-  if (language === 'kbc') orderByField = "eloKbc";
-  if (language && language !== 'all' && language !== 'uiux' && language !== 'kbc') {
-    orderByField = "eloDebugDuel";
-  }
+  const { language } = req.query;
+  const orderByField = LEADERBOARD_ORDER_FIELDS[language] || 'eloDebugDuel';
 
   try {
     const topPlayers = await prisma.user.findMany({
@@ -1323,8 +1397,9 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 // Create Duel Lobby
-app.post('/api/duel/create', async (req, res) => {
-  const { userId, gameType = "debug", language, difficulty, betAmount } = req.body;
+app.post('/api/duel/create', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const { gameType = "debug", language, difficulty, betAmount } = req.body;
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1533,7 +1608,8 @@ io.on('connection', (socket) => {
 
   // Register user online
   socket.on('register_user', ({ userId }) => {
-    if (!userId) return;
+    // Only allow registering as the authenticated user
+    if (!userId || userId !== socket.userId) return;
     
     // Clear any pending offline timeout
     if (offlineTimeouts.has(userId)) {
@@ -1578,7 +1654,8 @@ io.on('connection', (socket) => {
   });
 
   // Send duel invite
-  socket.on('send_duel_invite', async ({ hostId, hostUsername, friendId, gameType = 'debug', language, difficulty, betAmount }) => {
+  socket.on('send_duel_invite', async ({ friendId, gameType = 'debug', language, difficulty, betAmount }) => {
+    const hostId = socket.userId;
     try {
       const host = await prisma.user.findUnique({ where: { id: hostId } });
       const friend = await prisma.user.findUnique({ where: { id: friendId } });
@@ -1649,7 +1726,7 @@ io.on('connection', (socket) => {
       io.to(`user:${friendId}`).emit('duel_invite_received', {
         duelId: duel.id,
         hostId,
-        hostUsername,
+        hostUsername: host.username,
         gameType,
         language,
         difficulty,
@@ -1688,7 +1765,8 @@ io.on('connection', (socket) => {
   });
 
   // Accept duel invite
-  socket.on('accept_duel_invite', async ({ duelId, friendId }) => {
+  socket.on('accept_duel_invite', async ({ duelId }) => {
+    const friendId = socket.userId;
     try {
       const duel = await prisma.duel.findUnique({
         where: { id: duelId },
@@ -1739,7 +1817,8 @@ io.on('connection', (socket) => {
   });
 
   // Join lobby
-  socket.on('join_duel', async ({ duelId, userId }) => {
+  socket.on('join_duel', async ({ duelId }) => {
+    const userId = socket.userId;
     try {
       if (userId) {
         if (!onlineUsers.has(userId)) {
@@ -1938,8 +2017,14 @@ io.on('connection', (socket) => {
   });
 
   // Submit code for verification
-  socket.on('submit_code', async ({ duelId, userId, code }) => {
+  socket.on('submit_code', async ({ duelId, code }) => {
+    const userId = socket.userId;
     try {
+      if (typeof code !== 'string' || code.length > 10000) {
+        socket.emit('code_judged', { passed: false, reason: "Invalid code submission." });
+        return;
+      }
+
       const duel = await prisma.duel.findUnique({
         where: { id: duelId },
         include: { bug: true }
@@ -1947,6 +2032,15 @@ io.on('connection', (socket) => {
 
       if (!duel || duel.status !== 'active') {
         socket.emit('code_judged', { passed: false, reason: "Duel is not active." });
+        return;
+      }
+
+      // Verify the submitting user is a participant
+      const participant = await prisma.duelParticipant.findFirst({
+        where: { duelId, userId }
+      });
+      if (!participant) {
+        socket.emit('code_judged', { passed: false, reason: "Not a participant in this duel." });
         return;
       }
 
@@ -1971,7 +2065,8 @@ io.on('connection', (socket) => {
   });
 
   // Submit color guess
-  socket.on('submit_color_guess', async ({ duelId, userId, r, g, b }) => {
+  socket.on('submit_color_guess', async ({ duelId, r, g, b }) => {
+    const userId = socket.userId;
     try {
       const duel = await prisma.duel.findUnique({
         where: { id: duelId },
