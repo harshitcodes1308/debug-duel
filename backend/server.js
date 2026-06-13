@@ -53,7 +53,8 @@ const server = http.createServer(app);
 
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET must be set in production');
+    console.warn('⚠️ WARNING: JWT_SECRET is not set! Using a random temporary secret. All users will be logged out on next deploy.');
+    return require('crypto').randomBytes(64).toString('hex');
   }
   return 'dev-secret-change-in-production';
 })();
