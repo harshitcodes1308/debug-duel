@@ -391,10 +391,13 @@ export default function PlayerProfile() {
     const profileId = profile.id;
     async function fetchRankedData() {
       setLoadingRanked(true);
+      const token = localStorage.getItem('dd_token');
       try {
         const [statsRes, rewardsRes, historyRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/season/stats/${username}`),
-          fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/season/rewards/my?userId=${profileId}`),
+          fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/season/rewards/my?userId=${profileId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
           fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/season/history/${username}`)
         ]);
         if (statsRes.ok) {

@@ -29,9 +29,13 @@ export default function CreateColorMatch() {
     setError('');
 
     try {
+      const token = localStorage.getItem('dd_token');
       const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/duel/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           userId: user.id,
           gameType: 'color_match',

@@ -40,8 +40,13 @@ export default function QuestPanel() {
 
   const fetchQuests = async () => {
     if (!user) return;
+    const token = localStorage.getItem('dd_token');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/quests?userId=${user.id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/quests?userId=${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setQuests(data);
@@ -63,10 +68,14 @@ export default function QuestPanel() {
   const handleClaim = async (userQuestId: string) => {
     if (!user || claimingId) return;
     setClaimingId(userQuestId);
+    const token = localStorage.getItem('dd_token');
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/quests/claim/${userQuestId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: user.id })
       });
       if (res.ok) {

@@ -281,9 +281,13 @@ export default function SoloDesignSandbox() {
     setGradeResult(null);
 
     try {
+      const token = localStorage.getItem('dd_token');
       const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/design-challenge/solo/grade', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           challengeId: selectedChallenge.id,
           submittedDesign: designTree,

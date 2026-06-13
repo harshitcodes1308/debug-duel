@@ -141,8 +141,11 @@ export default function Dashboard() {
 
   const fetchFriends = async () => {
     if (!user) return;
+    const token = localStorage.getItem('dd_token');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/friends?userId=${user.id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001'}/api/friends?userId=${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         setFriends(data.friends || []);
@@ -165,10 +168,14 @@ export default function Dashboard() {
     setAddingFriend(true);
     setAddFriendError('');
     setAddFriendSuccess('');
+    const token = localStorage.getItem('dd_token');
     try {
       const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/friends/add', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: user.id, friendKey: friendKeyInput.trim() })
       });
       const data = await res.json();
@@ -188,10 +195,14 @@ export default function Dashboard() {
 
   const handleAcceptRequest = async (friendId: string) => {
     if (!user) return;
+    const token = localStorage.getItem('dd_token');
     try {
       const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/friends/accept', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: user.id, friendId })
       });
       if (res.ok) fetchFriends();
@@ -202,10 +213,14 @@ export default function Dashboard() {
 
   const handleDenyRequest = async (friendId: string) => {
     if (!user) return;
+    const token = localStorage.getItem('dd_token');
     try {
       const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/friends/deny', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: user.id, friendId })
       });
       if (res.ok) fetchFriends();
@@ -283,10 +298,14 @@ export default function Dashboard() {
   const handleDailyClaim = async () => {
     if (!user || claiming) return;
     setClaiming(true);
+    const token = localStorage.getItem('dd_token');
     try {
       const res = await fetch((process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5001') + '/api/user/dailylogin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId: user.id })
       });
       if (res.ok) {
