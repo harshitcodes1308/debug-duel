@@ -66,10 +66,26 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    // Allow if no origin (e.g. mobile apps, curl) or if it's localhost
+    if (!origin || origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    
+    // Check against explicit list
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Always allow the production domain and vercel previews as a fallback
+    if (origin.includes('debugduel.tech') || origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+
+    console.warn(`Blocked CORS request from origin: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
-  methods: ['GET', 'POST']
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true
 }));
 app.use(express.json({ limit: '100kb' }));
 
@@ -141,8 +157,8 @@ function verifyPassword(password, storedPasswordHash) {
   try {
     const [salt, originalHash] = storedPasswordHash.split(':');
     if (!salt || !originalHash) return false;
-    // Support legacy hashes (1000 iterations) during migration
-    const iterations = salt.length === 32 ? PBKDF2_ITERATIONS : 1000;
+    // Support legacy hashes (1000 iterations) during migration. New salts are 32 bytes (64 hex chars).
+    const iterations = salt.length === 64 ? PBKDF2_ITERATIONS : 1000;
     const hash = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
     return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(originalHash, 'hex'));
   } catch (err) {
@@ -424,7 +440,25 @@ app.post('/api/auth/google', async (req, res) => {
 
 const io = new Server(server, {
   cors: {
-    origin: ALLOWED_ORIGINS,
+    origin: (origin, callback) => {
+      // Allow if no origin (e.g. mobile apps, curl) or if it's localhost
+      if (!origin || origin.startsWith('http://localhost:')) {
+        return callback(null, true);
+      }
+      
+      // Check against explicit list
+      if (ALLOWED_ORIGINS.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Always allow the production domain and vercel previews as a fallback
+      if (origin.includes('debugduel.tech') || origin.includes('vercel.app')) {
+        return callback(null, true);
+      }
+
+      console.warn(`Blocked Socket.IO CORS request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST']
   }
 });
